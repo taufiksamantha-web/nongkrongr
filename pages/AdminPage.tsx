@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Cafe, Amenity, Vibe, Review, Spot } from '../types';
+import { CafeContext } from '../context/CafeContext';
 import { cafeService } from '../services/cafeService';
+import { cloudinaryService } from '../services/cloudinaryService';
 import { AMENITIES, VIBES, DISTRICTS } from '../constants';
 import { PriceTier } from '../types';
+import { fileToBase64 } from '../utils/fileUtils';
 
 const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void, onCancel: () => void }> = ({ cafe, onSave, onCancel }) => {
     const [formData, setFormData] = useState({
@@ -10,7 +13,8 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
         address: cafe?.address || '',
         district: cafe?.district || DISTRICTS[0],
         priceTier: cafe?.priceTier || PriceTier.STANDARD,
-        coverUrl: cafe?.coverUrl || 'https://picsum.photos/800/600',
+        logoUrl: cafe?.logoUrl || '',
+        coverUrl: cafe?.coverUrl || '',
         openingHours: cafe?.openingHours || '09:00 - 22:00',
         lat: cafe?.coords.lat || -2.97,
         lng: cafe?.coords.lng || 104.77,
@@ -22,6 +26,11 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
         spots: cafe?.spots || [],
     });
 
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [coverFile, setCoverFile] = useState<File | null>(null);
+    const [spotFiles, setSpotFiles] = useState<(File | null)[]>(cafe?.spots.map(() => null) || []);
+    const [isUploading, setIsUploading] = useState(false);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
         if (type === 'checkbox') {
@@ -29,6 +38,18 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
             setFormData(prev => ({...prev, [name]: checked}));
         } else {
             setFormData(prev => ({...prev, [name]: value}));
+        }
+    };
+
+    const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setLogoFile(e.target.files[0]);
+        }
+    };
+
+    const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setCoverFile(e.target.files[0]);
         }
     };
     
@@ -48,14 +69,23 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
         setFormData(prev => ({ ...prev, spots: updatedSpots }));
     };
 
+    const handleSpotFileChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const newSpotFiles = [...spotFiles];
+            newSpotFiles[index] = e.target.files[0];
+            setSpotFiles(newSpotFiles);
+        }
+    };
+
     const handleAddSpot = () => {
         setFormData(prev => ({
             ...prev,
             spots: [
                 ...prev.spots,
-                { id: `new-${Date.now()}`, title: '', tip: '', photoUrl: 'https://picsum.photos/600/400' }
+                { id: `new-${Date.now()}`, title: '', tip: '', photoUrl: '' }
             ]
         }));
+        setSpotFiles(prev => [...prev, null]);
     };
 
     const handleRemoveSpot = (indexToRemove: number) => {
@@ -63,20 +93,59 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
             ...prev,
             spots: prev.spots.filter((_, index) => index !== indexToRemove)
         }));
+        setSpotFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+    };
+    
+    /**
+     * Helper function to upload an image to Cloudinary if a new file is provided.
+     * @param file The new file object, or null.
+     * @param existingUrl The existing URL for the image.
+     * @returns The new Cloudinary URL if a file was uploaded, otherwise the existing URL.
+     */
+    const uploadImageIfPresent = async (file: File | null, existingUrl: string): Promise<string> => {
+        if (!file) {
+            return existingUrl;
+        }
+        const base64 = await fileToBase64(file);
+        return await cloudinaryService.uploadImage(base64);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const dataToSave = {
-            ...formData,
-            priceTier: Number(formData.priceTier),
-            coords: { lat: Number(formData.lat), lng: Number(formData.lng) },
-            sponsoredUntil: formData.sponsoredUntil ? new Date(formData.sponsoredUntil) : null,
-            sponsoredRank: Number(formData.sponsoredRank),
-            vibes: formData.vibes.map(id => VIBES.find(v => v.id === id)).filter(Boolean) as Vibe[],
-            amenities: formData.amenities.map(id => AMENITIES.find(a => a.id === id)).filter(Boolean) as Amenity[],
-        };
-        onSave(dataToSave);
+        setIsUploading(true);
+        try {
+            // Upload all images concurrently
+            const [finalLogoUrl, finalCoverUrl] = await Promise.all([
+                uploadImageIfPresent(logoFile, formData.logoUrl),
+                uploadImageIfPresent(coverFile, formData.coverUrl)
+            ]);
+
+            const finalSpots = await Promise.all(
+                formData.spots.map(async (spot, index) => {
+                    const finalPhotoUrl = await uploadImageIfPresent(spotFiles[index], spot.photoUrl);
+                    return { ...spot, photoUrl: finalPhotoUrl };
+                })
+            );
+            
+            const dataToSave = {
+                ...formData,
+                logoUrl: finalLogoUrl,
+                coverUrl: finalCoverUrl,
+                spots: finalSpots,
+                priceTier: Number(formData.priceTier),
+                coords: { lat: Number(formData.lat), lng: Number(formData.lng) },
+                sponsoredUntil: formData.sponsoredUntil ? new Date(formData.sponsoredUntil) : null,
+                sponsoredRank: Number(formData.sponsoredRank),
+                vibes: formData.vibes.map(id => VIBES.find(v => v.id === id)).filter(Boolean) as Vibe[],
+                amenities: formData.amenities.map(id => AMENITIES.find(a => a.id === id)).filter(Boolean) as Amenity[],
+            };
+            onSave(dataToSave);
+        } catch (error) {
+            console.error("Failed to save cafe:", error);
+            alert(`Gagal menyimpan data. Mungkin ada masalah saat mengupload gambar. Pastikan preset 'nongkrongr_uploads' sudah dikonfigurasi sebagai 'unsigned' di dashboard Cloudinary Anda.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setIsUploading(false);
+        }
     };
     
     const inputClass = "w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400";
@@ -87,7 +156,25 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
                 <h2 className="text-2xl font-bold font-jakarta">{cafe ? 'Edit Cafe' : 'Tambah Cafe Baru'}</h2>
                 <input name="name" value={formData.name} onChange={handleChange} placeholder="Nama Cafe" className={inputClass} required />
                 <input name="address" value={formData.address} onChange={handleChange} placeholder="Alamat" className={inputClass} required />
-                 <input name="openingHours" value={formData.openingHours} onChange={handleChange} placeholder="Jam Buka (e.g., 08:00 - 22:00)" className={inputClass} required />
+                <input name="openingHours" value={formData.openingHours} onChange={handleChange} placeholder="Jam Buka (e.g., 08:00 - 22:00)" className={inputClass} required />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="font-semibold block mb-2">Logo (Opsional)</label>
+                    {(logoFile || formData.logoUrl) && (
+                        <img src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} alt="Logo preview" className="w-24 h-24 object-contain rounded-xl mb-2 bg-gray-100 dark:bg-gray-700 p-1" />
+                    )}
+                    <input type="file" accept="image/*" onChange={handleLogoFileChange} className={`${inputClass} p-2`} />
+                  </div>
+                  <div>
+                    <label className="font-semibold block mb-2">Cover Image</label>
+                    {(coverFile || formData.coverUrl) && (
+                        <img src={coverFile ? URL.createObjectURL(coverFile) : formData.coverUrl} alt="Cover preview" className="w-full h-24 object-cover rounded-xl mb-2" />
+                    )}
+                    <input type="file" accept="image/*" onChange={handleCoverFileChange} className={`${inputClass} p-2`} />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                     <input name="lat" type="number" step="any" value={formData.lat} onChange={handleChange} placeholder="Latitude" className={inputClass} required />
                     <input name="lng" type="number" step="any" value={formData.lng} onChange={handleChange} placeholder="Longitude" className={inputClass} required />
@@ -121,44 +208,19 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
                     <div className="space-y-4">
                         {formData.spots.map((spot, index) => (
                             <div key={index} className="border dark:border-gray-700 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 relative pt-6">
-                                <button 
-                                    type="button" 
-                                    onClick={() => handleRemoveSpot(index)} 
-                                    className="absolute top-2 right-2 bg-red-100 text-red-600 rounded-full h-6 w-6 flex items-center justify-center font-bold text-lg leading-none hover:bg-red-500 hover:text-white transition-all">
-                                    &times;
-                                </button>
+                                <button type="button" onClick={() => handleRemoveSpot(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 rounded-full h-6 w-6 flex items-center justify-center font-bold text-lg leading-none hover:bg-red-500 hover:text-white transition-all">&times;</button>
                                 <div className="grid grid-cols-1 gap-2">
-                                    <input 
-                                        name="title" 
-                                        value={spot.title} 
-                                        onChange={(e) => handleSpotChange(index, e)} 
-                                        placeholder="Judul Spot" 
-                                        className="w-full p-2 border rounded-md dark:bg-gray-600 dark:border-gray-500" 
-                                    />
-                                    <input 
-                                        name="tip" 
-                                        value={spot.tip} 
-                                        onChange={(e) => handleSpotChange(index, e)} 
-                                        placeholder="Tips Foto" 
-                                        className="w-full p-2 border rounded-md dark:bg-gray-600 dark:border-gray-500" 
-                                    />
-                                    <input 
-                                        name="photoUrl" 
-                                        value={spot.photoUrl} 
-                                        onChange={(e) => handleSpotChange(index, e)} 
-                                        placeholder="URL Foto" 
-                                        className="w-full p-2 border rounded-md dark:bg-gray-600 dark:border-gray-500" 
-                                    />
+                                    {(spotFiles[index] || spot.photoUrl) && (
+                                        <img src={spotFiles[index] ? URL.createObjectURL(spotFiles[index]!) : spot.photoUrl} alt="Spot preview" className="w-full h-32 object-cover rounded-md mb-2" />
+                                    )}
+                                    <input type="file" accept="image/*" onChange={(e) => handleSpotFileChange(index, e)} className="w-full p-2 border rounded-md dark:bg-gray-600 dark:border-gray-500" />
+                                    <input name="title" value={spot.title} onChange={(e) => handleSpotChange(index, e)} placeholder="Judul Spot" className="w-full p-2 border rounded-md dark:bg-gray-600 dark:border-gray-500" />
+                                    <input name="tip" value={spot.tip} onChange={(e) => handleSpotChange(index, e)} placeholder="Tips Foto" className="w-full p-2 border rounded-md dark:bg-gray-600 dark:border-gray-500" />
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <button 
-                        type="button" 
-                        onClick={handleAddSpot} 
-                        className="mt-4 w-full bg-primary/10 dark:bg-primary/20 text-primary font-semibold py-2 rounded-lg hover:bg-primary/20 dark:hover:bg-primary/30 transition-all">
-                        + Tambah Spot Foto
-                    </button>
+                    <button type="button" onClick={handleAddSpot} className="mt-4 w-full bg-primary/10 dark:bg-primary/20 text-primary font-semibold py-2 rounded-lg hover:bg-primary/20 dark:hover:bg-primary/30 transition-all">+ Tambah Spot Foto</button>
                 </fieldset>
                 
                 <h3 className="font-semibold pt-2">Vibes</h3>
@@ -173,7 +235,9 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
 
                 <div className="flex justify-end gap-4 pt-4">
                     <button type="button" onClick={onCancel} className="px-6 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold">Batal</button>
-                    <button type="submit" className="px-6 py-2 bg-primary text-white rounded-xl font-semibold">Simpan</button>
+                    <button type="submit" className="px-6 py-2 bg-primary text-white rounded-xl font-semibold" disabled={isUploading}>
+                        {isUploading ? 'Uploading...' : 'Simpan'}
+                    </button>
                 </div>
             </form>
         </div>
@@ -182,29 +246,19 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
 
 type PendingReview = Review & { cafeName: string; cafeId: string };
 
-const PendingReviews: React.FC<{ onAction: () => void }> = ({ onAction }) => {
+const PendingReviews: React.FC = () => {
+    const { cafes, updateReviewStatus } = useContext(CafeContext)!;
     const [reviews, setReviews] = useState<PendingReview[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    const fetchReviews = useCallback(async () => {
-        setLoading(true);
-        const data = await cafeService.getPendingReviews();
-        setReviews(data);
-        setLoading(false);
-    }, []);
-
-    useEffect(() => {
-        fetchReviews();
-    }, [fetchReviews]);
     
+    useEffect(() => {
+        const pending = cafeService.getPendingReviews(cafes);
+        setReviews(pending);
+    }, [cafes]);
+
     const handleUpdateStatus = async (reviewId: string, status: Review['status']) => {
-        await cafeService.updateReviewStatus(reviewId, status);
-        fetchReviews();
-        onAction(); // Reload cafes in parent
+        await updateReviewStatus(reviewId, status);
     };
     
-    if (loading) return <p>Loading reviews...</p>;
-
     return (
          <div className="mt-12">
             <h2 className="text-3xl font-bold font-jakarta mb-6">Moderasi Review ({reviews.length})</h2>
@@ -244,39 +298,25 @@ const PendingReviews: React.FC<{ onAction: () => void }> = ({ onAction }) => {
 
 const AdminPage: React.FC = () => {
     const [loggedIn, setLoggedIn] = useState(false);
-    const [cafes, setCafes] = useState<Cafe[]>([]);
-    const [loading, setLoading] = useState(false);
+    const cafeContext = useContext(CafeContext);
+    const { cafes, loading, addCafe, updateCafe, deleteCafe } = cafeContext!;
+    
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingCafe, setEditingCafe] = useState<Cafe | null>(null);
 
-    const loadCafes = useCallback(async () => {
-        setLoading(true);
-        const data = await cafeService.getCafes();
-        setCafes(data);
-        setLoading(false);
-    }, []);
-
-    useEffect(() => {
-        if (loggedIn) {
-            loadCafes();
-        }
-    }, [loggedIn, loadCafes]);
-
     const handleSave = async (data: any) => {
         if (editingCafe) {
-            await cafeService.updateCafe(editingCafe.id, data);
+            await updateCafe(editingCafe.id, data);
         } else {
-            await cafeService.addCafe(data);
+            await addCafe(data);
         }
         setIsFormOpen(false);
         setEditingCafe(null);
-        loadCafes();
     };
 
     const handleDelete = async (id: string) => {
         if (window.confirm("Yakin mau hapus cafe ini?")) {
-            await cafeService.deleteCafe(id);
-            loadCafes();
+            await deleteCafe(id);
         }
     };
     
@@ -326,7 +366,7 @@ const AdminPage: React.FC = () => {
                 </div>
             )}
             
-            <PendingReviews onAction={loadCafes} />
+            <PendingReviews />
 
             {isFormOpen && <AdminCafeForm cafe={editingCafe} onSave={handleSave} onCancel={() => { setIsFormOpen(false); setEditingCafe(null); }} />}
         </div>

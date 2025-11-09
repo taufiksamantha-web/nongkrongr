@@ -6,6 +6,7 @@ import DetailPage from './pages/DetailPage';
 import AdminPage from './pages/AdminPage';
 import WelcomeModal from './components/WelcomeModal';
 import Footer from './components/Footer';
+import { CafeProvider } from './context/CafeContext';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
 
 type Theme = 'light' | 'dark';
@@ -30,7 +31,7 @@ const Header: React.FC = () => {
     <header className="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-md dark:bg-gray-800/80 dark:shadow-none dark:border-b dark:border-gray-700">
       <nav className="container mx-auto px-4 py-2 flex flex-col md:flex-row md:justify-between md:items-center">
         <Link to="/" className="flex items-center justify-center md:justify-start py-2">
-          <img src="https://res.cloudinary.com/dovouihq8/image/upload/v1762697055/Logo_pdlclg.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
+          <img src="https://res.cloudinary.com/dovouihq8/image/upload/c_scale,w_200,f_auto,q_auto/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
         </Link>
         <div className="flex items-center justify-center space-x-2 md:space-x-4 mt-2 md:mt-0">
           <NavLink to="/" className={({ isActive }) => `hidden md:block ${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
@@ -80,6 +81,7 @@ const App: React.FC = () => {
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      <CafeProvider>
         <div className="bg-gray-50 min-h-screen font-sans text-gray-800 dark:bg-gray-900 dark:text-gray-200 flex flex-col">
         {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
         <HashRouter>
@@ -95,6 +97,7 @@ const App: React.FC = () => {
             <Footer />
         </HashRouter>
         </div>
+      </CafeProvider>
     </ThemeContext.Provider>
   );
 };

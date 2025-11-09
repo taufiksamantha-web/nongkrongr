@@ -1,7 +1,8 @@
 import { MOCK_CAFES } from '../constants';
 import { Cafe, Review } from '../types';
 
-let cafes: Cafe[] = JSON.parse(JSON.stringify(MOCK_CAFES));
+// This service now contains pure functions for data manipulation.
+// The state (`cafes` array) is managed in CafeContext.
 
 const recalculateAverages = (cafe: Cafe): Cafe => {
     const approvedReviews = cafe.reviews.filter(r => r.status === 'approved');
@@ -32,19 +33,9 @@ const recalculateAverages = (cafe: Cafe): Cafe => {
 };
 
 export const cafeService = {
-  getCafes: async (): Promise<Cafe[]> => {
-    await new Promise(res => setTimeout(res, 500));
-    return cafes;
-  },
-
-  getCafeBySlug: async (slug: string): Promise<Cafe | undefined> => {
-    await new Promise(res => setTimeout(res, 300));
-    return cafes.find(cafe => cafe.slug === slug);
-  },
-
-  addReview: async (slug: string, review: Omit<Review, 'id' | 'createdAt' | 'status'>): Promise<Cafe | null> => {
-    await new Promise(res => setTimeout(res, 700));
-    const cafeIndex = cafes.findIndex(c => c.slug === slug);
+  addReview: (currentCafes: Cafe[], slug: string, review: Omit<Review, 'id' | 'createdAt' | 'status'>): Cafe[] => {
+    const newCafes = [...currentCafes];
+    const cafeIndex = newCafes.findIndex(c => c.slug === slug);
     if (cafeIndex > -1) {
         const newReview: Review = {
             ...review,
@@ -52,54 +43,46 @@ export const cafeService = {
             createdAt: new Date(),
             status: 'pending',
         };
-        cafes[cafeIndex].reviews.push(newReview);
-        // Averages are NOT recalculated until review is approved
-        return cafes[cafeIndex];
+        newCafes[cafeIndex].reviews.push(newReview);
     }
-    return null;
+    return newCafes;
   },
   
-  addCafe: async (cafe: Omit<Cafe, 'id' | 'slug' | 'reviews' | 'avgAestheticScore' | 'avgWorkScore' | 'avgCrowdEvening' | 'avgCrowdMorning' | 'avgCrowdAfternoon'>): Promise<Cafe> => {
-    await new Promise(res => setTimeout(res, 500));
+  addCafe: (currentCafes: Cafe[], cafe: Omit<Cafe, 'id' | 'slug' | 'reviews' | 'avgAestheticScore' | 'avgWorkScore' | 'avgCrowdEvening' | 'avgCrowdMorning' | 'avgCrowdAfternoon'>): Cafe[] => {
     const newCafe: Cafe = {
       ...cafe,
       id: `${Date.now()}`,
-      slug: cafe.name.toLowerCase().replace(/\s+/g, '-'),
+      slug: cafe.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''),
+      logoUrl: cafe.logoUrl || '',
       reviews: [],
       avgAestheticScore: 0,
       avgWorkScore: 0,
       avgCrowdMorning: 0,
       avgCrowdAfternoon: 0,
       avgCrowdEvening: 0
-    }
-    cafes.push(newCafe);
-    return newCafe;
+    };
+    return [...currentCafes, newCafe];
   },
 
-  updateCafe: async (id: string, updatedData: Partial<Cafe>): Promise<Cafe | null> => {
-     await new Promise(res => setTimeout(res, 500));
-     const cafeIndex = cafes.findIndex(c => c.id === id);
+  updateCafe: (currentCafes: Cafe[], id: string, updatedData: Partial<Cafe>): Cafe[] => {
+     const newCafes = [...currentCafes];
+     const cafeIndex = newCafes.findIndex(c => c.id === id);
      if (cafeIndex > -1) {
-        cafes[cafeIndex] = { ...cafes[cafeIndex], ...updatedData };
-        if (updatedData.reviews) {
-            cafes[cafeIndex] = recalculateAverages(cafes[cafeIndex]);
+        newCafes[cafeIndex] = { ...newCafes[cafeIndex], ...updatedData };
+        if (updatedData.reviews) { // If reviews are part of the update, recalculate
+            newCafes[cafeIndex] = recalculateAverages(newCafes[cafeIndex]);
         }
-        return cafes[cafeIndex];
      }
-     return null;
+     return newCafes;
   },
   
-  deleteCafe: async (id: string): Promise<boolean> => {
-     await new Promise(res => setTimeout(res, 500));
-     const initialLength = cafes.length;
-     cafes = cafes.filter(c => c.id !== id);
-     return cafes.length < initialLength;
+  deleteCafe: (currentCafes: Cafe[], id: string): Cafe[] => {
+     return currentCafes.filter(c => c.id !== id);
   },
 
-  getPendingReviews: async (): Promise<(Review & { cafeName: string; cafeId: string })[]> => {
-    await new Promise(res => setTimeout(res, 400));
+  getPendingReviews: (currentCafes: Cafe[]): (Review & { cafeName: string; cafeId: string })[] => {
     const pendingReviews: (Review & { cafeName: string; cafeId: string })[] = [];
-    cafes.forEach(cafe => {
+    currentCafes.forEach(cafe => {
         cafe.reviews.forEach(review => {
             if (review.status === 'pending') {
                 pendingReviews.push({
@@ -113,16 +96,16 @@ export const cafeService = {
     return pendingReviews;
   },
 
-  updateReviewStatus: async (reviewId: string, status: Review['status']): Promise<boolean> => {
-    await new Promise(res => setTimeout(res, 600));
-    for (let i = 0; i < cafes.length; i++) {
-        const reviewIndex = cafes[i].reviews.findIndex(r => r.id === reviewId);
+  updateReviewStatus: (currentCafes: Cafe[], reviewId: string, status: Review['status']): Cafe[] => {
+    const newCafes = JSON.parse(JSON.stringify(currentCafes)); // Deep copy to avoid mutation issues
+    for (let i = 0; i < newCafes.length; i++) {
+        const reviewIndex = newCafes[i].reviews.findIndex((r: Review) => r.id === reviewId);
         if (reviewIndex > -1) {
-            cafes[i].reviews[reviewIndex].status = status;
-            cafes[i] = recalculateAverages(cafes[i]);
-            return true;
+            newCafes[i].reviews[reviewIndex].status = status;
+            newCafes[i] = recalculateAverages(newCafes[i]);
+            break; // Exit loop once found and updated
         }
     }
-    return false;
+    return newCafes;
   }
 };

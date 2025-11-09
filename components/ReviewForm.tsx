@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Review } from '../types';
+import { cloudinaryService } from '../services/cloudinaryService';
+import { fileToBase64 } from '../utils/fileUtils';
 
 interface ReviewFormProps {
     onSubmit: (review: Omit<Review, 'id' | 'createdAt' | 'status'>) => void;
@@ -17,16 +19,22 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
     const [priceSpent, setPriceSpent] = useState('');
     const [photo, setPhoto] = useState<string | null>(null); // Store as base64 string
     const [photoName, setPhotoName] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             setPhotoName(file.name);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPhoto(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            try {
+                const base64 = await fileToBase64(file);
+                setPhoto(base64);
+            } catch (error) {
+                console.error("Error converting file to base64", error);
+                alert("Gagal memproses file. Silakan coba file lain.");
+                setPhoto(null);
+                setPhotoName('');
+            }
         }
     };
 
@@ -43,9 +51,23 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
         setPhotoName('');
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isSubmitting) return;
+        if (isSubmitting || isUploading) return;
+        
+        let uploadedPhotoUrl = '';
+        if (photo) {
+            setIsUploading(true);
+            try {
+                uploadedPhotoUrl = await cloudinaryService.uploadImage(photo);
+            } catch (error) {
+                console.error(error);
+                alert("Gagal mengupload foto. Pastikan preset 'nongkrongr_uploads' sudah dikonfigurasi sebagai 'unsigned' di dashboard Cloudinary Anda.");
+                setIsUploading(false);
+                return;
+            }
+            setIsUploading(false);
+        }
 
         onSubmit({
             author,
@@ -56,10 +78,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
             crowdAfternoon,
             crowdEvening,
             priceSpent: Number(priceSpent) || 0,
-            photos: photo ? [photo] : [],
+            photos: uploadedPhotoUrl ? [uploadedPhotoUrl] : [],
         });
         resetForm();
     };
+    
+    const totalSubmitting = isSubmitting || isUploading;
     
     return (
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm space-y-4">
@@ -116,8 +140,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
             </div>
              {photo && <img src={photo} alt="Preview" className="mt-2 rounded-lg max-h-40 mx-auto" />}
             
-            <button type="submit" disabled={isSubmitting} className="w-full bg-primary text-white font-bold py-3 rounded-2xl hover:bg-primary/90 transition-all disabled:bg-primary/50 disabled:cursor-not-allowed">
-                {isSubmitting ? 'Mengirim...' : 'Kirim Review'}
+            <button type="submit" disabled={totalSubmitting} className="w-full bg-primary text-white font-bold py-3 rounded-2xl hover:bg-primary/90 transition-all disabled:bg-primary/50 disabled:cursor-not-allowed">
+                {isUploading ? 'Uploading Foto...' : (isSubmitting ? 'Mengirim...' : 'Kirim Review')}
             </button>
         </form>
     );

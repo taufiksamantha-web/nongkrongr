@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams } from 'react-router-dom';
 import { Cafe, Review } from '../types';
-import { cafeService } from '../services/cafeService';
+import { CafeContext } from '../context/CafeContext';
 import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/solid';
 import ReviewForm from '../components/ReviewForm';
 
@@ -17,29 +17,25 @@ const ScoreDisplay: React.FC<{ icon: React.ReactNode, label: string, score: numb
 
 const DetailPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
+    const cafeContext = useContext(CafeContext);
+    const { cafes, loading, addReview } = cafeContext!;
+    
     const [cafe, setCafe] = useState<Cafe | null>(null);
-    const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const fetchCafe = useCallback(async () => {
-        if (!slug) return;
-        setLoading(true);
-        const data = await cafeService.getCafeBySlug(slug);
-        setCafe(data || null);
-        setLoading(false);
-    }, [slug]);
-
     useEffect(() => {
-        fetchCafe();
-    }, [fetchCafe]);
+        if (slug) {
+            const currentCafe = cafes.find(c => c.slug === slug);
+            setCafe(currentCafe || null);
+        }
+    }, [slug, cafes]);
 
     const handleAddReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status'>) => {
         if (!slug) return;
         setIsSubmitting(true);
-        await cafeService.addReview(slug, review);
+        await addReview(slug, review);
         setIsSubmitting(false);
         alert("Review kamu telah dikirim dan sedang menunggu moderasi. Terima kasih!");
-        // We don't update state directly, user will see review once approved.
     };
 
     if (loading) return <div className="text-center py-20">Loading...</div>;
@@ -55,7 +51,12 @@ const DetailPage: React.FC = () => {
                 <div className="lg:col-span-2">
                     {/* Header */}
                     <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm mb-8">
-                        <h1 className="text-5xl font-extrabold font-jakarta mb-2">{cafe.name}</h1>
+                        <div className="flex items-center mb-2">
+                            {cafe.logoUrl && (
+                                <img src={cafe.logoUrl} alt={`${cafe.name} logo`} className="w-16 h-16 rounded-2xl object-contain mr-4 shadow-md bg-gray-50 dark:bg-gray-700 p-1" />
+                            )}
+                            <h1 className="text-5xl font-extrabold font-jakarta">{cafe.name}</h1>
+                        </div>
                         <div className="flex items-center text-gray-600 dark:text-gray-400 mb-2">
                             <MapPinIcon className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
                             <span>{cafe.address}</span>

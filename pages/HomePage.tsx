@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { Cafe, Review } from '../types';
 import { VIBES } from '../constants';
-import { cafeService } from '../services/cafeService';
+import { CafeContext } from '../context/CafeContext';
 import CafeCard from '../components/CafeCard';
 import FeaturedCafeCard from '../components/FeaturedCafeCard';
 import ReviewCard from '../components/ReviewCard';
@@ -10,18 +10,17 @@ import ReviewCard from '../components/ReviewCard';
 type TopReview = Review & { cafeName: string; cafeSlug: string };
 
 const HomePage: React.FC = () => {
+  const cafeContext = useContext(CafeContext);
+  const { cafes, loading } = cafeContext!;
+  
   const [trendingCafes, setTrendingCafes] = useState<Cafe[]>([]);
   const [recommendedCafe, setRecommendedCafe] = useState<Cafe | null>(null);
   const [topReviews, setTopReviews] = useState<TopReview[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCafes = async () => {
-      setLoading(true);
-      const allCafes = await cafeService.getCafes();
-      
+    if (cafes.length > 0) {
       // Trending cafes based on aesthetic score
-      const sortedByAesthetic = [...allCafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
+      const sortedByAesthetic = [...cafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
       setTrendingCafes(sortedByAesthetic.slice(0, 4));
 
       // Dynamic Recommendation Logic
@@ -39,18 +38,18 @@ const HomePage: React.FC = () => {
         return score;
       };
 
-      const recommended = allCafes
+      const recommended = cafes
         .map(cafe => ({ cafe, score: calculateRecommendationScore(cafe) }))
         .sort((a, b) => b.score - a.score);
 
       if (recommended.length > 0 && recommended[0].score > 0) {
         setRecommendedCafe(recommended[0].cafe);
-      } else if (allCafes.length > 0) {
+      } else if (cafes.length > 0) {
         setRecommendedCafe(sortedByAesthetic[0]);
       }
 
       // --- New Top Reviews Logic ---
-      const allApprovedReviews = allCafes.flatMap(cafe =>
+      const allApprovedReviews = cafes.flatMap(cafe =>
         cafe.reviews
           .filter(review => review.status === 'approved' && review.text.length > 20)
           .map(review => ({
@@ -70,12 +69,8 @@ const HomePage: React.FC = () => {
       });
 
       setTopReviews(allApprovedReviews.slice(0, 4));
-      // --- End of Top Reviews Logic ---
-
-      setLoading(false);
-    };
-    fetchCafes();
-  }, []);
+    }
+  }, [cafes]);
 
   return (
     <div>

@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier } from '../types';
-import { cafeService } from '../services/cafeService';
+import { CafeContext } from '../context/CafeContext';
 import { DISTRICTS, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
 
 const ExplorePage: React.FC = () => {
-  const [cafes, setCafes] = useState<Cafe[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cafeContext = useContext(CafeContext);
+  const { cafes, loading } = cafeContext!;
+  
   const [searchParams, setSearchParams] = useSearchParams();
-
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
@@ -20,16 +20,6 @@ const ExplorePage: React.FC = () => {
     priceTier: parseInt(searchParams.get('price_tier') || '4', 10) as PriceTier,
     crowd: parseInt(searchParams.get('crowd') || '5', 10),
   });
-
-  useEffect(() => {
-    const fetchCafes = async () => {
-      setLoading(true);
-      const allCafes = await cafeService.getCafes();
-      setCafes(allCafes);
-      setLoading(false);
-    };
-    fetchCafes();
-  }, []);
   
   const handleFilterChange = <K extends keyof typeof filters,>(key: K, value: (typeof filters)[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));

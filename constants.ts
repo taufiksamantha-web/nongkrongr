@@ -117,6 +117,7 @@ export const MOCK_CAFES: Cafe[] = [
     isSponsored: true,
     sponsoredUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     sponsoredRank: 1,
+    logoUrl: 'https://picsum.photos/200/200?random=101',
     coverUrl: 'https://picsum.photos/800/600?random=1',
     vibes: [VIBES[0], VIBES[3]], // Cozy, Tropical
     amenities: [AMENITIES[0], AMENITIES[1], AMENITIES[2], AMENITIES[3]],
@@ -160,6 +161,7 @@ export const MOCK_CAFES: Cafe[] = [
     isSponsored: false,
     sponsoredUntil: null,
     sponsoredRank: 0,
+    logoUrl: 'https://picsum.photos/200/200?random=103',
     coverUrl: 'https://picsum.photos/800/600?random=6',
     vibes: [VIBES[2]], // Industrial
     amenities: [AMENITIES[0], AMENITIES[1], AMENITIES[3], AMENITIES[6]],
@@ -517,6 +519,7 @@ export const MOCK_CAFES: Cafe[] = [
     isSponsored: true,
     sponsoredUntil: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
     sponsoredRank: 0, // Top tier
+    logoUrl: 'https://picsum.photos/200/200?random=120',
     coverUrl: 'https://picsum.photos/800/600?random=40',
     vibes: [VIBES[0]], // Cozy (in a luxurious way)
     amenities: [AMENITIES[0], AMENITIES[2], AMENITIES[4], AMENITIES[6]],

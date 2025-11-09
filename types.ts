@@ -53,6 +53,7 @@ export interface Cafe {
   isSponsored: boolean;
   sponsoredUntil: Date | null;
   sponsoredRank: number; // for ordering sponsored results
+  logoUrl?: string; // Optional: URL for the cafe's logo
   coverUrl: string;
   vibes: Vibe[];
   amenities: Amenity[];
