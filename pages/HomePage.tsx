@@ -81,8 +81,10 @@ const HomePage: React.FC = () => {
     <div>
       {/* Hero Section */}
       <div className="container mx-auto px-6 py-20 text-center">
-        <h1 className="text-5xl md:text-7xl font-extrabold font-jakarta bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent-pink leading-tight">
-          Temukan Spot Nongkrong Estetikmu
+        <h1 className="text-5xl md:text-7xl font-extrabold font-jakarta bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent-pink leading-snug">
+          Temukan Spot Nongkrong
+          <br />
+          Estetikmu
         </h1>
         <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
           Jelajahi cafe-cafe paling hits dan instagramable di Palembang. Dari tempat nugas super cozy sampai spot foto OOTD terbaik.
