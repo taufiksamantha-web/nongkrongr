@@ -26,9 +26,16 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setLoading(true);
         setError(null);
         try {
-            // Cache-busting query parameter
+            // Cache-busting query parameter is still useful as a fallback
             const url = `${DATABASE_URL}?_=${new Date().getTime()}`;
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                cache: 'no-store', // Most important for modern browsers
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache', // For HTTP/1.0 proxies
+                    'Expires': '0', // For older caches
+                },
+            });
             if (!response.ok) {
                 throw new Error(`Failed to fetch database from Cloudinary: ${response.statusText}`);
             }

@@ -11,7 +11,7 @@ const ExplorePage: React.FC = () => {
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 12;
 
   const [filters, setFilters] = useState({
     district: searchParams.get('district') || 'all',

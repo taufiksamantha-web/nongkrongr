@@ -1,4 +1,4 @@
-import { Cafe, Amenity, Vibe, PriceTier, Review } from './types';
+import { Cafe, Amenity, Vibe, PriceTier, Review, User } from './types';
 
 export const AMENITIES: Amenity[] = [
   { id: 'wifi', name: 'WiFi Cepat', icon: '📶' },
@@ -22,6 +22,12 @@ export const DISTRICTS: string[] = [
     "Ilir Timur I", "Ilir Timur II", "Ilir Timur III", "Ilir Barat I", "Ilir Barat II",
     "Sukarami", "Sako", "Sematang Borang", "Alang-Alang Lebar", "Kemuning", "Kalidoni",
     "Bukit Kecil", "Kertapati", "Plaju", "Seberang Ulu I", "Seberang Ulu II", "Jakabaring", "Gandus"
+];
+
+export const MOCK_USERS: User[] = [
+    { id: 'u1', username: 'admin', password: '12345', role: 'admin' },
+    { id: 'u2', username: 'user1', password: 'password', role: 'user' },
+    { id: 'u3', username: 'user2', password: 'password', role: 'user' },
 ];
 
 const calculateAverages = (reviews: Review[]) => {

@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { Cafe, Amenity, Vibe, Review, Spot } from '../types';
+import React, { useState, useEffect, useContext } from 'react';
+import { Cafe, Amenity, Vibe, Review, Spot, User } from '../types';
 import { CafeContext } from '../context/CafeContext';
+import { useAuth } from '../context/AuthContext';
 import { cafeService } from '../services/cafeService';
 import { cloudinaryService } from '../services/cloudinaryService';
 import { AMENITIES, VIBES, DISTRICTS } from '../constants';
 import { PriceTier } from '../types';
 import { fileToBase64 } from '../utils/fileUtils';
+import { userService } from '../services/userService';
+import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void, onCancel: () => void }> = ({ cafe, onSave, onCancel }) => {
     const [formData, setFormData] = useState({
@@ -96,12 +99,6 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
         setSpotFiles(prev => prev.filter((_, index) => index !== indexToRemove));
     };
     
-    /**
-     * Helper function to upload an image to Cloudinary if a new file is provided.
-     * @param file The new file object, or null.
-     * @param existingUrl The existing URL for the image.
-     * @returns The new Cloudinary URL if a file was uploaded, otherwise the existing URL.
-     */
     const uploadImageIfPresent = async (file: File | null, existingUrl: string): Promise<string> => {
         if (!file) {
             return existingUrl;
@@ -114,7 +111,6 @@ const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void,
         e.preventDefault();
         setIsUploading(true);
         try {
-            // Upload all images concurrently
             const [finalLogoUrl, finalCoverUrl] = await Promise.all([
                 uploadImageIfPresent(logoFile, formData.logoUrl),
                 uploadImageIfPresent(coverFile, formData.coverUrl)
@@ -295,14 +291,181 @@ const PendingReviews: React.FC = () => {
     );
 };
 
+const LoginForm: React.FC = () => {
+    const { login } = useAuth();
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
-const AdminPage: React.FC = () => {
-    const [loggedIn, setLoggedIn] = useState(false);
-    const cafeContext = useContext(CafeContext);
-    const { cafes, loading, addCafe, updateCafe, deleteCafe } = cafeContext!;
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        const success = login(username, password);
+        if (!success) {
+            setError('Username atau password salah.');
+        }
+    };
+
+    return (
+        <div className="max-w-md mx-auto mt-20">
+            <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-lg space-y-6">
+                <h1 className="text-3xl font-bold font-jakarta text-center">Dashboard Login</h1>
+                {error && <p className="bg-red-100 text-red-700 p-3 rounded-xl text-center">{error}</p>}
+                <div>
+                    <label className="font-semibold">Username</label>
+                    <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="mt-2 w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600"
+                        required
+                    />
+                </div>
+                <div>
+                    <label className="font-semibold">Password</label>
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="mt-2 w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600"
+                        required
+                    />
+                </div>
+                <button type="submit" className="w-full bg-primary text-white font-bold py-3 rounded-2xl text-lg hover:bg-primary/90 transition-all">
+                    Login
+                </button>
+            </form>
+        </div>
+    );
+};
+
+const UserDashboard: React.FC = () => {
+    const { cafes, loading } = useContext(CafeContext)!;
+
+    return (
+        <div>
+            <h1 className="text-4xl font-bold font-jakarta mb-6">Daftar Cafe</h1>
+            {loading ? <p>Loading cafes...</p> : (
+                <div className="bg-white dark:bg-gray-800 p-2 rounded-3xl shadow-sm overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="border-b-2 border-gray-100 dark:border-gray-700">
+                                <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Logo</th>
+                                <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nama Cafe</th>
+                                <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Alamat</th>
+                                <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vibes</th>
+                                <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fasilitas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {cafes.map(cafe => (
+                                <tr key={cafe.id} className="border-b border-gray-100 dark:border-gray-700">
+                                    <td className="p-4">
+                                        <img src={cafe.logoUrl || cafe.coverUrl} alt={cafe.name} className="h-12 w-12 object-cover rounded-lg bg-gray-100 dark:bg-gray-700 p-1" />
+                                    </td>
+                                    <td className="p-4 font-semibold text-gray-800 dark:text-gray-200">{cafe.name}</td>
+                                    <td className="p-4 text-sm text-gray-600 dark:text-gray-400">{cafe.address}</td>
+                                    <td className="p-4 text-sm text-gray-600 dark:text-gray-400">
+                                        {cafe.vibes.map(v => v.name).join(', ')}
+                                    </td>
+                                    <td className="p-4 text-lg text-gray-600 dark:text-gray-400">
+                                        {cafe.amenities.map(a => a.icon).join(' ')}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const UserManagementPanel: React.FC = () => {
+    const [users, setUsers] = useState<User[]>([]);
     
+    useEffect(() => {
+        setUsers(userService.getUsers());
+    }, []);
+    
+    // NOTE: User management functions below are placeholders.
+    // In a real application, these would call a backend service to persist changes.
+    // The current in-memory `userService` changes will be lost on page reload.
+    const handleAddUser = () => alert("Fungsi Tambah Pengguna tidak diimplementasikan dalam demo ini. Perubahan tidak akan disimpan.");
+    const handleEditUser = (user: User) => alert(`Fungsi Edit Pengguna untuk ${user.username} tidak diimplementasikan.`);
+    const handleDeleteUser = (id: string) => alert(`Fungsi Hapus Pengguna untuk ID ${id} tidak diimplementasikan.`);
+
+    return (
+        <div className="mt-12">
+            <div className="flex justify-between items-center mb-6">
+                 <h2 className="text-3xl font-bold font-jakarta">User Management</h2>
+                 <button onClick={handleAddUser} className="bg-secondary text-black font-bold py-2 px-6 rounded-2xl">
+                    + Tambah User
+                </button>
+            </div>
+             <div className="bg-white dark:bg-gray-800 p-2 rounded-3xl shadow-sm overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead>
+                        <tr className="border-b-2 border-gray-100 dark:border-gray-700">
+                            <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Username</th>
+                            <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+                            <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {users.map(user => (
+                            <tr key={user.id} className="border-b border-gray-100 dark:border-gray-700">
+                                <td className="p-4 font-semibold text-gray-800 dark:text-gray-200">{user.username}</td>
+                                <td className="p-4 text-gray-600 dark:text-gray-400">{user.role}</td>
+                                <td className="p-4 space-x-4">
+                                    <button onClick={() => handleEditUser(user)} className="text-primary font-bold hover:underline">Edit</button>
+                                    <button onClick={() => handleDeleteUser(user.id)} className="text-accent-pink font-bold hover:underline">Delete</button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+             </div>
+        </div>
+    );
+}
+
+const StatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => {
+    const colorClasses = {
+        primary: {
+            bg: 'bg-primary/10 dark:bg-primary/20',
+            text: 'text-primary'
+        },
+        green: {
+            bg: 'bg-green-100 dark:bg-green-500/20',
+            text: 'text-green-600 dark:text-green-400'
+        },
+        red: {
+            bg: 'bg-red-100 dark:bg-red-500/20',
+            text: 'text-red-600 dark:text-red-400'
+        }
+    };
+
+    const selectedColor = colorClasses[color as keyof typeof colorClasses] || colorClasses.primary;
+
+    return (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm flex items-center space-x-4">
+            <div className={`p-4 rounded-2xl ${selectedColor.bg}`}>
+                {icon}
+            </div>
+            <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-semibold">{title}</p>
+                <p className={`text-3xl font-bold font-jakarta ${selectedColor.text}`}>{value}</p>
+            </div>
+        </div>
+    );
+};
+
+const AdminDashboard: React.FC = () => {
+    const { cafes, loading, addCafe, updateCafe, deleteCafe } = useContext(CafeContext)!;
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingCafe, setEditingCafe] = useState<Cafe | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleSave = async (data: any) => {
         if (editingCafe) {
@@ -320,23 +483,65 @@ const AdminPage: React.FC = () => {
         }
     };
     
-    if (!loggedIn) {
-        return (
-            <div className="text-center py-20">
-                <h1 className="text-4xl font-bold font-jakarta mb-4">Admin Dashboard</h1>
-                <button onClick={() => setLoggedIn(true)} className="bg-primary text-white font-bold py-3 px-8 rounded-2xl text-lg">Login</button>
-            </div>
-        );
-    }
+    const handleSaveChangesToCloud = async () => {
+        if (window.confirm("Ini akan menimpa database di Cloudinary dengan data lokal saat ini. Lanjutkan?")) {
+            setIsSaving(true);
+            try {
+                await cloudinaryService.uploadDatabase(cafes);
+                alert("Database berhasil disimpan ke Cloudinary!");
+            } catch (error) {
+                console.error("Gagal menyimpan database ke Cloudinary:", error);
+                alert(`Gagal menyimpan database: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            } finally {
+                setIsSaving(false);
+            }
+        }
+    };
+    
+    const totalCafes = cafes.length;
+    const sponsoredCafes = cafes.filter(cafe => cafe.isSponsored).length;
+    const nonSponsoredCafes = totalCafes - sponsoredCafes;
 
     return (
-        <div className="container mx-auto px-6 py-8">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-4xl font-bold font-jakarta">Manage Cafes</h1>
-                <button onClick={() => { setEditingCafe(null); setIsFormOpen(true); }} className="bg-primary text-white font-bold py-2 px-6 rounded-2xl">
-                    + Tambah Cafe
-                </button>
+        <>
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+                <h1 className="text-4xl font-bold font-jakarta">Dashboard Overview</h1>
+                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={handleSaveChangesToCloud}
+                        className="bg-green-500 text-white font-bold py-2 px-6 rounded-2xl disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-600 transition-colors"
+                        disabled={isSaving || loading}
+                    >
+                        {isSaving ? 'Menyimpan...' : 'Simpan Manual ke Cloud'}
+                    </button>
+                    <button onClick={() => { setEditingCafe(null); setIsFormOpen(true); }} className="bg-primary text-white font-bold py-2 px-6 rounded-2xl">
+                        + Tambah Cafe
+                    </button>
+                </div>
             </div>
+            
+             {/* Stats Panel */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <StatCard 
+                    title="Total Cafe" 
+                    value={totalCafes} 
+                    icon={<BuildingStorefrontIcon className="h-8 w-8 text-primary" />} 
+                    color="primary" 
+                />
+                <StatCard 
+                    title="Sponsored" 
+                    value={sponsoredCafes} 
+                    icon={<CheckBadgeIcon className="h-8 w-8 text-green-600 dark:text-green-400" />} 
+                    color="green" 
+                />
+                <StatCard 
+                    title="Regular" 
+                    value={nonSponsoredCafes} 
+                    icon={<XCircleIcon className="h-8 w-8 text-red-600 dark:text-red-400" />} 
+                    color="red" 
+                />
+            </div>
+
 
             {loading ? <p>Loading cafes...</p> : (
                 <div className="bg-white dark:bg-gray-800 p-2 rounded-3xl shadow-sm overflow-x-auto">
@@ -367,8 +572,33 @@ const AdminPage: React.FC = () => {
             )}
             
             <PendingReviews />
+            <UserManagementPanel />
 
             {isFormOpen && <AdminCafeForm cafe={editingCafe} onSave={handleSave} onCancel={() => { setIsFormOpen(false); setEditingCafe(null); }} />}
+        </>
+    );
+};
+
+const AdminPage: React.FC = () => {
+    const { currentUser, logout } = useAuth();
+    
+    if (!currentUser) {
+        return <LoginForm />;
+    }
+
+    return (
+        <div className="container mx-auto px-6 py-8">
+            <div className="flex justify-between items-start mb-8 flex-wrap gap-4">
+                <div>
+                    <h2 className="text-xl">Welcome, <span className="font-bold text-primary">{currentUser.username}</span></h2>
+                    <p className="text-gray-500">You are logged in as: <span className="font-semibold">{currentUser.role.toUpperCase()}</span></p>
+                </div>
+                <button onClick={logout} className="bg-accent-pink text-white font-bold py-2 px-6 rounded-2xl hover:bg-accent-pink/90 transition-all">
+                    Logout
+                </button>
+            </div>
+            
+            {currentUser.role === 'admin' ? <AdminDashboard /> : <UserDashboard />}
         </div>
     );
 };

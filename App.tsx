@@ -7,6 +7,7 @@ import AdminPage from './pages/AdminPage';
 import WelcomeModal from './components/WelcomeModal';
 import Footer from './components/Footer';
 import { CafeProvider } from './context/CafeContext';
+import { AuthProvider } from './context/AuthContext';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
 
 type Theme = 'light' | 'dark';
@@ -36,7 +37,6 @@ const Header: React.FC = () => {
         <div className="flex items-center justify-center space-x-2 md:space-x-4 mt-2 md:mt-0">
           <NavLink to="/" className={({ isActive }) => `hidden md:block ${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
           <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
-          <NavLink to="/admin" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Admin</NavLink>
           <button 
             onClick={toggleTheme} 
             className="p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
@@ -81,23 +81,25 @@ const App: React.FC = () => {
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      <CafeProvider>
-        <div className="bg-gray-50 min-h-screen font-sans text-gray-800 dark:bg-gray-900 dark:text-gray-200 flex flex-col">
-        {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
-        <HashRouter>
-            <Header />
-            <main className="flex-grow">
-            <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/explore" element={<ExplorePage />} />
-                <Route path="/cafe/:slug" element={<DetailPage />} />
-                <Route path="/admin" element={<AdminPage />} />
-            </Routes>
-            </main>
-            <Footer />
-        </HashRouter>
-        </div>
-      </CafeProvider>
+      <AuthProvider>
+        <CafeProvider>
+          <div className="bg-gray-50 min-h-screen font-sans text-gray-800 dark:bg-gray-900 dark:text-gray-200 flex flex-col">
+          {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
+          <HashRouter>
+              <Header />
+              <main className="flex-grow">
+              <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/explore" element={<ExplorePage />} />
+                  <Route path="/cafe/:slug" element={<DetailPage />} />
+                  <Route path="/admin" element={<AdminPage />} />
+              </Routes>
+              </main>
+              <Footer />
+          </HashRouter>
+          </div>
+        </CafeProvider>
+      </AuthProvider>
     </ThemeContext.Provider>
   );
 };
