@@ -8,7 +8,8 @@ import { AMENITIES, VIBES, DISTRICTS } from '../constants';
 import { PriceTier } from '../types';
 import { fileToBase64 } from '../utils/fileUtils';
 import { userService } from '../services/userService';
-import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const AdminCafeForm: React.FC<{ cafe?: Cafe | null, onSave: (cafe: any) => void, onCancel: () => void }> = ({ cafe, onSave, onCancel }) => {
     const [formData, setFormData] = useState({
@@ -251,8 +252,8 @@ const PendingReviews: React.FC = () => {
         setReviews(pending);
     }, [cafes]);
 
-    const handleUpdateStatus = async (reviewId: string, status: Review['status']) => {
-        await updateReviewStatus(reviewId, status);
+    const handleUpdateStatus = (reviewId: string, status: Review['status']) => {
+        updateReviewStatus(reviewId, status);
     };
     
     return (
@@ -381,25 +382,105 @@ const UserDashboard: React.FC = () => {
     );
 };
 
+const UserFormModal: React.FC<{ userToEdit?: User | null, onSave: (user: Omit<User, 'id'> | User) => void, onCancel: () => void }> = ({ userToEdit, onSave, onCancel }) => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [role, setRole] = useState<'admin' | 'user'>('user');
+
+    useEffect(() => {
+        if (userToEdit) {
+            setUsername(userToEdit.username);
+            setPassword(''); 
+            setRole(userToEdit.role);
+        }
+    }, [userToEdit]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!username || (!userToEdit && !password)) {
+            alert("Username dan password wajib diisi untuk user baru.");
+            return;
+        }
+
+        const userData = {
+            username,
+            password,
+            role,
+        };
+        
+        if (userToEdit) {
+            onSave({ ...userData, id: userToEdit.id, password: password || userToEdit.password });
+        } else {
+            onSave(userData);
+        }
+    };
+
+    const inputClass = "w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400";
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl w-full max-w-md space-y-4">
+                <h2 className="text-2xl font-bold font-jakarta">{userToEdit ? 'Edit User' : 'Tambah User Baru'}</h2>
+                <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" className={inputClass} required />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={userToEdit ? 'Password Baru (opsional)' : 'Password'} className={inputClass} />
+                <select value={role} onChange={e => setRole(e.target.value as 'admin' | 'user')} className={inputClass}>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <div className="flex justify-end gap-4 pt-4">
+                    <button type="button" onClick={onCancel} className="px-6 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold">Batal</button>
+                    <button type="submit" className="px-6 py-2 bg-primary text-white rounded-xl font-semibold">Simpan</button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
 const UserManagementPanel: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
+    const [isUserFormOpen, setIsUserFormOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [userToDelete, setUserToDelete] = useState<User | null>(null);
     
     useEffect(() => {
         setUsers(userService.getUsers());
     }, []);
     
-    // NOTE: User management functions below are placeholders.
-    // In a real application, these would call a backend service to persist changes.
-    // The current in-memory `userService` changes will be lost on page reload.
-    const handleAddUser = () => alert("Fungsi Tambah Pengguna tidak diimplementasikan dalam demo ini. Perubahan tidak akan disimpan.");
-    const handleEditUser = (user: User) => alert(`Fungsi Edit Pengguna untuk ${user.username} tidak diimplementasikan.`);
-    const handleDeleteUser = (id: string) => alert(`Fungsi Hapus Pengguna untuk ID ${id} tidak diimplementasikan.`);
+    const handleSaveUser = (userData: Omit<User, 'id'> | User) => {
+        let updatedUsers;
+        if ('id' in userData) {
+            updatedUsers = userService.updateUser(userData.id, userData);
+        } else {
+            updatedUsers = userService.addUser(userData);
+        }
+        setUsers(updatedUsers);
+        setIsUserFormOpen(false);
+        setEditingUser(null);
+    };
+
+    const handleOpenAddForm = () => {
+        setEditingUser(null);
+        setIsUserFormOpen(true);
+    };
+
+    const handleOpenEditForm = (user: User) => {
+        setEditingUser(user);
+        setIsUserFormOpen(true);
+    };
+
+    const handleConfirmDeleteUser = () => {
+        if (userToDelete) {
+            const updatedUsers = userService.deleteUser(userToDelete.id);
+            setUsers(updatedUsers);
+            setUserToDelete(null); 
+        }
+    };
 
     return (
         <div className="mt-12">
             <div className="flex justify-between items-center mb-6">
                  <h2 className="text-3xl font-bold font-jakarta">User Management</h2>
-                 <button onClick={handleAddUser} className="bg-secondary text-black font-bold py-2 px-6 rounded-2xl">
+                 <button onClick={handleOpenAddForm} className="bg-secondary text-black font-bold py-2 px-6 rounded-2xl">
                     + Tambah User
                 </button>
             </div>
@@ -418,14 +499,23 @@ const UserManagementPanel: React.FC = () => {
                                 <td className="p-4 font-semibold text-gray-800 dark:text-gray-200">{user.username}</td>
                                 <td className="p-4 text-gray-600 dark:text-gray-400">{user.role}</td>
                                 <td className="p-4 space-x-4">
-                                    <button onClick={() => handleEditUser(user)} className="text-primary font-bold hover:underline">Edit</button>
-                                    <button onClick={() => handleDeleteUser(user.id)} className="text-accent-pink font-bold hover:underline">Delete</button>
+                                    <button onClick={() => handleOpenEditForm(user)} className="text-primary font-bold hover:underline">Edit</button>
+                                    <button onClick={() => setUserToDelete(user)} className="text-accent-pink font-bold hover:underline">Delete</button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
              </div>
+             {isUserFormOpen && <UserFormModal userToEdit={editingUser} onSave={handleSaveUser} onCancel={() => setIsUserFormOpen(false)} />}
+             {userToDelete && (
+                <ConfirmationModal
+                    title="Hapus Pengguna"
+                    message={`Apakah Anda yakin ingin menghapus pengguna "${userToDelete.username}"?`}
+                    onConfirm={handleConfirmDeleteUser}
+                    onCancel={() => setUserToDelete(null)}
+                />
+            )}
         </div>
     );
 }
@@ -461,41 +551,70 @@ const StatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; 
     );
 };
 
+const FloatingNotification: React.FC<{ message: string; type: 'success' | 'error'; onClose: () => void }> = ({ message, type, onClose }) => {
+    const isSuccess = type === 'success';
+    const bgColor = isSuccess ? 'bg-green-100 dark:bg-green-500/20' : 'bg-red-100 dark:bg-red-500/20';
+    const textColor = isSuccess ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300';
+    const icon = isSuccess ? <CheckCircleIcon className="h-6 w-6" /> : <ExclamationTriangleIcon className="h-6 w-6" />;
+    
+    useEffect(() => {
+        const timer = setTimeout(onClose, 5000);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <div className="fixed top-20 right-6 z-[100] w-full max-w-sm animate-fade-in-down">
+             <div className={`flex items-center p-4 rounded-2xl shadow-lg ${bgColor} ${textColor}`}>
+                <div className="flex-shrink-0">{icon}</div>
+                <div className="ml-3 text-sm font-semibold">{message}</div>
+                <button onClick={onClose} className="ml-auto -mx-1.5 -my-1.5 p-1.5 rounded-lg inline-flex h-8 w-8 hover:bg-black/10 focus:ring-2 focus:ring-black/20">
+                    <span className="sr-only">Dismiss</span>
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                </button>
+            </div>
+        </div>
+    )
+};
+
 const AdminDashboard: React.FC = () => {
-    const { cafes, loading, addCafe, updateCafe, deleteCafe } = useContext(CafeContext)!;
+    const { cafes, loading, addCafe, updateCafe, deleteCafe, saveChangesToCloud, hasUnsavedChanges } = useContext(CafeContext)!;
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingCafe, setEditingCafe] = useState<Cafe | null>(null);
+    const [cafeToDelete, setCafeToDelete] = useState<Cafe | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-    const handleSave = async (data: any) => {
+    const handleSave = (data: any) => {
         if (editingCafe) {
-            await updateCafe(editingCafe.id, data);
+            updateCafe(editingCafe.id, data);
         } else {
-            await addCafe(data);
+            addCafe(data);
         }
         setIsFormOpen(false);
         setEditingCafe(null);
     };
 
-    const handleDelete = async (id: string) => {
-        if (window.confirm("Yakin mau hapus cafe ini?")) {
-            await deleteCafe(id);
+    const handleConfirmDeleteCafe = () => {
+        if (cafeToDelete) {
+            deleteCafe(cafeToDelete.id);
+            setCafeToDelete(null);
         }
     };
     
     const handleSaveChangesToCloud = async () => {
-        if (window.confirm("Ini akan menimpa database di Cloudinary dengan data lokal saat ini. Lanjutkan?")) {
-            setIsSaving(true);
-            try {
-                await cloudinaryService.uploadDatabase(cafes);
-                alert("Database berhasil disimpan ke Cloudinary!");
-            } catch (error) {
-                console.error("Gagal menyimpan database ke Cloudinary:", error);
-                alert(`Gagal menyimpan database: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            } finally {
-                setIsSaving(false);
-            }
+        setIsSaving(true);
+        setNotification(null);
+        
+        const result = await saveChangesToCloud();
+
+        if (result.success) {
+            setNotification({ message: 'Perubahan berhasil disimpan!', type: 'success' });
+        } else {
+            const detailedMessage = `Gagal menyimpan: ${result.error || 'Silakan cek konsol untuk detail.'}`;
+            setNotification({ message: detailedMessage, type: 'error' });
         }
+        
+        setIsSaving(false);
     };
     
     const totalCafes = cafes.length;
@@ -504,15 +623,16 @@ const AdminDashboard: React.FC = () => {
 
     return (
         <>
+            {notification && <FloatingNotification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
                 <h1 className="text-4xl font-bold font-jakarta">Dashboard Overview</h1>
                  <div className="flex items-center gap-4">
                     <button
                         onClick={handleSaveChangesToCloud}
-                        className="bg-green-500 text-white font-bold py-2 px-6 rounded-2xl disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-600 transition-colors"
-                        disabled={isSaving || loading}
+                        className={`font-bold py-2 px-6 rounded-2xl transition-all duration-300 ${hasUnsavedChanges ? 'bg-green-500 text-white hover:bg-green-600 animate-pulse' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
+                        disabled={isSaving || loading || !hasUnsavedChanges}
                     >
-                        {isSaving ? 'Menyimpan...' : 'Simpan Manual ke Cloud'}
+                        {isSaving ? 'Menyimpan...' : (hasUnsavedChanges ? 'Simpan Perubahan' : '✓ Tersimpan')}
                     </button>
                     <button onClick={() => { setEditingCafe(null); setIsFormOpen(true); }} className="bg-primary text-white font-bold py-2 px-6 rounded-2xl">
                         + Tambah Cafe
@@ -542,7 +662,6 @@ const AdminDashboard: React.FC = () => {
                 />
             </div>
 
-
             {loading ? <p>Loading cafes...</p> : (
                 <div className="bg-white dark:bg-gray-800 p-2 rounded-3xl shadow-sm overflow-x-auto">
                     <table className="w-full text-left">
@@ -562,7 +681,7 @@ const AdminDashboard: React.FC = () => {
                                     <td className="p-4 text-gray-600 dark:text-gray-400">{cafe.isSponsored ? '✅' : '❌'}</td>
                                     <td className="p-4 space-x-4">
                                         <button onClick={() => { setEditingCafe(cafe); setIsFormOpen(true); }} className="text-primary font-bold hover:underline">Edit</button>
-                                        <button onClick={() => handleDelete(cafe.id)} className="text-accent-pink font-bold hover:underline">Delete</button>
+                                        <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Delete</button>
                                     </td>
                                 </tr>
                             ))}
@@ -575,6 +694,14 @@ const AdminDashboard: React.FC = () => {
             <UserManagementPanel />
 
             {isFormOpen && <AdminCafeForm cafe={editingCafe} onSave={handleSave} onCancel={() => { setIsFormOpen(false); setEditingCafe(null); }} />}
+            {cafeToDelete && (
+                <ConfirmationModal
+                    title="Hapus Cafe"
+                    message={`Apakah Anda yakin ingin menghapus "${cafeToDelete.name}"? Perubahan ini akan disimpan secara lokal.`}
+                    onConfirm={handleConfirmDeleteCafe}
+                    onCancel={() => setCafeToDelete(null)}
+                />
+            )}
         </>
     );
 };

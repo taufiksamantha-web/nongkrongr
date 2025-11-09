@@ -7,12 +7,14 @@ interface CafeContextType {
     cafes: Cafe[];
     loading: boolean;
     error: string | null;
+    hasUnsavedChanges: boolean;
     fetchCafes: () => void;
-    addCafe: (cafeData: Omit<Cafe, 'id' | 'slug' | 'reviews' | 'avgAestheticScore' | 'avgWorkScore' | 'avgCrowdEvening' | 'avgCrowdMorning' | 'avgCrowdAfternoon'>) => Promise<void>;
-    updateCafe: (id: string, updatedData: Partial<Cafe>) => Promise<void>;
-    deleteCafe: (id: string) => Promise<void>;
-    addReview: (slug: string, review: Omit<Review, 'id' | 'createdAt' | 'status'>) => Promise<void>;
-    updateReviewStatus: (reviewId: string, status: Review['status']) => Promise<void>;
+    addCafe: (cafeData: Omit<Cafe, 'id' | 'slug' | 'reviews' | 'avgAestheticScore' | 'avgWorkScore' | 'avgCrowdEvening' | 'avgCrowdMorning' | 'avgCrowdAfternoon'>) => void;
+    updateCafe: (id: string, updatedData: Partial<Cafe>) => void;
+    deleteCafe: (id: string) => void;
+    addReview: (slug: string, review: Omit<Review, 'id' | 'createdAt' | 'status'>) => void;
+    updateReviewStatus: (reviewId: string, status: Review['status']) => void;
+    saveChangesToCloud: () => Promise<{ success: boolean; error?: string }>;
 }
 
 export const CafeContext = createContext<CafeContextType | undefined>(undefined);
@@ -21,6 +23,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [cafes, setCafes] = useState<Cafe[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
     const fetchCafes = useCallback(async () => {
         setLoading(true);
@@ -41,6 +44,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             const data: Cafe[] = await response.json();
             setCafes(data);
+            setHasUnsavedChanges(false); // Reset on a fresh fetch
         } catch (err) {
             console.error(err);
             setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -53,46 +57,55 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fetchCafes();
     }, [fetchCafes]);
 
-    const handleDataUpdate = async (updatedCafes: Cafe[]) => {
+    const saveChangesToCloud = async (): Promise<{ success: boolean; error?: string }> => {
         try {
-            await cloudinaryService.uploadDatabase(updatedCafes);
-            setCafes(updatedCafes);
+            await cloudinaryService.uploadDatabase(cafes);
+            setHasUnsavedChanges(false);
+            return { success: true };
         } catch (uploadError) {
+            const errorMessage = uploadError instanceof Error ? uploadError.message : 'An unknown error occurred during upload.';
             console.error("Failed to upload database update:", uploadError);
-            alert("Gagal menyimpan perubahan ke database. Perubahan Anda mungkin tidak tersimpan. Silakan coba lagi.");
-            // Optionally revert local state on failure
-            fetchCafes();
+            return { success: false, error: errorMessage };
         }
     };
 
-    const addCafe = async (cafeData: Omit<Cafe, 'id' | 'slug' | 'reviews' | 'avgAestheticScore' | 'avgWorkScore' | 'avgCrowdEvening' | 'avgCrowdMorning' | 'avgCrowdAfternoon'>) => {
+    const addCafe = (cafeData: Omit<Cafe, 'id' | 'slug' | 'reviews' | 'avgAestheticScore' | 'avgWorkScore' | 'avgCrowdEvening' | 'avgCrowdMorning' | 'avgCrowdAfternoon'>) => {
         const updatedCafes = cafeService.addCafe(cafes, cafeData);
-        await handleDataUpdate(updatedCafes);
+        setCafes(updatedCafes);
+        setHasUnsavedChanges(true);
     };
 
-    const updateCafe = async (id: string, updatedData: Partial<Cafe>) => {
+    const updateCafe = (id: string, updatedData: Partial<Cafe>) => {
         const updatedCafes = cafeService.updateCafe(cafes, id, updatedData);
-        await handleDataUpdate(updatedCafes);
+        setCafes(updatedCafes);
+        setHasUnsavedChanges(true);
     };
 
-    const deleteCafe = async (id: string) => {
+    const deleteCafe = (id: string) => {
         const updatedCafes = cafeService.deleteCafe(cafes, id);
-        await handleDataUpdate(updatedCafes);
+        setCafes(updatedCafes);
+        setHasUnsavedChanges(true);
     };
     
-    const addReview = async (slug: string, review: Omit<Review, 'id' | 'createdAt' | 'status'>) => {
+    const addReview = (slug: string, review: Omit<Review, 'id' | 'createdAt' | 'status'>) => {
         const updatedCafes = cafeService.addReview(cafes, slug, review);
-        await handleDataUpdate(updatedCafes);
+        setCafes(updatedCafes);
+        setHasUnsavedChanges(true);
     };
     
-    const updateReviewStatus = async (reviewId: string, status: Review['status']) => {
+    const updateReviewStatus = (reviewId: string, status: Review['status']) => {
         const updatedCafes = cafeService.updateReviewStatus(cafes, reviewId, status);
-        await handleDataUpdate(updatedCafes);
+        setCafes(updatedCafes);
+        setHasUnsavedChanges(true);
     };
 
 
     return (
-        <CafeContext.Provider value={{ cafes, loading, error, fetchCafes, addCafe, updateCafe, deleteCafe, addReview, updateReviewStatus }}>
+        <CafeContext.Provider value={{ 
+            cafes, loading, error, hasUnsavedChanges, fetchCafes, 
+            addCafe, updateCafe, deleteCafe, addReview, updateReviewStatus,
+            saveChangesToCloud
+         }}>
             {children}
         </CafeContext.Provider>
     );

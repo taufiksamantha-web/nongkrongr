@@ -16,8 +16,9 @@ export const userService = {
         ...user,
         id: `u${Date.now()}`,
     };
-    users.push(newUser);
-    return [...users];
+    // Re-assign to a new array instead of mutating the existing one
+    users = [...users, newUser];
+    return users;
   },
   
   updateUser: (id: string, updatedData: Partial<User>): User[] => {
