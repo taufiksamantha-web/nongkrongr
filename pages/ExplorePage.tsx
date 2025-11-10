@@ -4,6 +4,7 @@ import { Cafe, PriceTier } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { DISTRICTS, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 
 const ExplorePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
@@ -14,6 +15,7 @@ const ExplorePage: React.FC = () => {
   const ITEMS_PER_PAGE = 12;
 
   const [filters, setFilters] = useState({
+    search: searchParams.get('search') || '',
     district: searchParams.get('district') || 'all',
     vibes: searchParams.getAll('vibe') || [],
     amenities: searchParams.getAll('amenity') || [],
@@ -27,6 +29,7 @@ const ExplorePage: React.FC = () => {
 
   const filteredCafes = useMemo(() => {
     return cafes.filter(cafe => {
+      if (filters.search && !cafe.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
       if (filters.district !== 'all' && cafe.district !== filters.district) return false;
       if (filters.vibes.length > 0 && !filters.vibes.every(v => cafe.vibes.some(cv => cv.id === v))) return false;
       if (filters.amenities.length > 0 && !filters.amenities.every(a => cafe.amenities.some(ca => ca.id === a))) return false;
@@ -159,6 +162,16 @@ const ExplorePage: React.FC = () => {
 
       {/* Main Content */}
       <div className="flex-1">
+        <div className="relative mb-8">
+            <MagnifyingGlassIcon className="h-6 w-6 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+            <input
+                type="text"
+                placeholder="Cari berdasarkan nama cafe..."
+                value={filters.search}
+                onChange={e => handleFilterChange('search', e.target.value)}
+                className="w-full p-4 pl-12 text-lg rounded-2xl border-2 border-gray-200 focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all duration-300 shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-400"
+            />
+        </div>
         <div className="bg-gray-200 dark:bg-gray-800 h-64 rounded-3xl mb-8 text-center flex items-center justify-center">
             <p className="text-gray-500 dark:text-gray-400">Interactive Map Placeholder</p>
         </div>

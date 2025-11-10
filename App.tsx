@@ -30,13 +30,21 @@ const Header: React.FC = () => {
 
   return (
     <header className="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-md dark:bg-gray-800/80 dark:shadow-none dark:border-b dark:border-gray-700">
-      <nav className="container mx-auto px-4 py-2 flex flex-col md:flex-row md:justify-between md:items-center">
-        <Link to="/" className="flex items-center justify-center md:justify-start py-2">
+      <nav className="container mx-auto px-4 py-2 flex items-center justify-between relative">
+        {/* Left: Logo */}
+        <Link to="/" className="flex items-center py-2">
           <img src="https://res.cloudinary.com/dovouihq8/image/upload/c_scale,w_200,f_auto,q_auto/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
         </Link>
-        <div className="flex items-center justify-center space-x-2 md:space-x-4 mt-2 md:mt-0">
-          <NavLink to="/" className={({ isActive }) => `hidden md:block ${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
+        
+        {/* Center (Desktop): Nav Links */}
+        <div className="hidden md:flex items-center space-x-4 absolute left-1/2 -translate-x-1/2">
+          <NavLink to="/" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
           <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
+        </div>
+
+        {/* Right: Mobile Explore + Theme Toggle */}
+        <div className="flex items-center space-x-2">
+          <NavLink to="/explore" className={({ isActive }) => `md:hidden ${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
           <button 
             onClick={toggleTheme} 
             className="p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
