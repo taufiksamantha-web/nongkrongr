@@ -31,11 +31,17 @@ const DetailPage: React.FC = () => {
     }, [slug, cafes]);
 
     const handleAddReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status'>) => {
-        if (!slug) return;
+        if (!cafe) return;
         setIsSubmitting(true);
-        await addReview(slug, review);
-        setIsSubmitting(false);
-        alert("Review kamu telah dikirim dan sedang menunggu moderasi. Terima kasih!");
+        try {
+            await addReview(cafe.id, review);
+            alert("Review kamu telah dikirim dan sedang menunggu moderasi. Terima kasih!");
+        } catch (error) {
+            console.error(error);
+            alert("Gagal mengirim review. Silakan coba lagi.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (loading) return <div className="text-center py-20">Loading...</div>;

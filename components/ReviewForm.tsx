@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Review } from '../types';
-import { cloudinaryService } from '../services/cloudinaryService';
-import { fileToBase64 } from '../utils/fileUtils';
+import { supabase } from '../services/supabaseClient';
 
 interface ReviewFormProps {
     onSubmit: (review: Omit<Review, 'id' | 'createdAt' | 'status'>) => void;
@@ -17,24 +16,16 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
     const [crowdAfternoon, setCrowdAfternoon] = useState(3);
     const [crowdEvening, setCrowdEvening] = useState(3);
     const [priceSpent, setPriceSpent] = useState('');
-    const [photo, setPhoto] = useState<string | null>(null); // Store as base64 string
-    const [photoName, setPhotoName] = useState('');
+    const [photoFile, setPhotoFile] = useState<File | null>(null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
 
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setPhotoName(file.name);
-            try {
-                const base64 = await fileToBase64(file);
-                setPhoto(base64);
-            } catch (error) {
-                console.error("Error converting file to base64", error);
-                alert("Gagal memproses file. Silakan coba file lain.");
-                setPhoto(null);
-                setPhotoName('');
-            }
+            setPhotoFile(file);
+            setPhotoPreview(URL.createObjectURL(file));
         }
     };
 
@@ -47,8 +38,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
         setCrowdAfternoon(3);
         setCrowdEvening(3);
         setPriceSpent('');
-        setPhoto(null);
-        setPhotoName('');
+        setPhotoFile(null);
+        setPhotoPreview(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -56,13 +47,25 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
         if (isSubmitting || isUploading) return;
         
         let uploadedPhotoUrl = '';
-        if (photo) {
+        if (photoFile) {
             setIsUploading(true);
             try {
-                uploadedPhotoUrl = await cloudinaryService.uploadImage(photo);
+                const fileName = `${Date.now()}_${photoFile.name}`;
+                const { data, error } = await supabase.storage
+                    .from('cafe-images')
+                    .upload(fileName, photoFile);
+                
+                if (error) throw error;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('cafe-images')
+                    .getPublicUrl(data.path);
+                
+                uploadedPhotoUrl = publicUrl;
+
             } catch (error) {
                 console.error(error);
-                alert("Gagal mengupload foto. Pastikan preset 'nongkrongr_uploads' sudah dikonfigurasi sebagai 'unsigned' di dashboard Cloudinary Anda.");
+                alert("Gagal mengupload foto ke Supabase Storage. Pastikan bucket 'cafe-images' ada dan bersifat publik.");
                 setIsUploading(false);
                 return;
             }
@@ -133,12 +136,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
                  <div>
                     <label className="font-semibold block mb-1">Foto (Opsional)</label>
                     <label htmlFor="photo-upload" className="w-full text-center cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-xl border-2 border-dashed dark:border-gray-600 block hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                        {photoName ? `✔️ ${photoName}` : '📸 Pilih Foto'}
+                        {photoFile ? `✔️ ${photoFile.name}` : '📸 Pilih Foto'}
                     </label>
                     <input id="photo-upload" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
                 </div>
             </div>
-             {photo && <img src={photo} alt="Preview" className="mt-2 rounded-lg max-h-40 mx-auto" />}
+             {photoPreview && <img src={photoPreview} alt="Preview" className="mt-2 rounded-lg max-h-40 mx-auto" />}
             
             <button type="submit" disabled={totalSubmitting} className="w-full bg-primary text-white font-bold py-3 rounded-2xl hover:bg-primary/90 transition-all disabled:bg-primary/50 disabled:cursor-not-allowed">
                 {isUploading ? 'Uploading Foto...' : (isSubmitting ? 'Mengirim...' : 'Kirim Review')}
