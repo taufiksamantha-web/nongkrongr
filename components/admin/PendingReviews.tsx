@@ -1,35 +1,23 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Review } from '../../types';
 import { CafeContext } from '../../context/CafeContext';
+import { cafeService } from '../../services/cafeService';
 
 type PendingReview = Review & { cafeName: string; cafeId: string };
 
 const PendingReviews: React.FC = () => {
-    const { getPendingReviews, updateReviewStatus } = useContext(CafeContext)!;
+    const { cafes, updateReviewStatus } = useContext(CafeContext)!;
     const [reviews, setReviews] = useState<PendingReview[]>([]);
-    const [loading, setLoading] = useState(true);
     
-    const fetchPendingReviews = async () => {
-        setLoading(true);
-        const pending = await getPendingReviews();
-        setReviews(pending);
-        setLoading(false);
-    };
-
     useEffect(() => {
-        fetchPendingReviews();
-    }, [getPendingReviews]);
+        const pending = cafeService.getPendingReviews(cafes);
+        setReviews(pending);
+    }, [cafes]);
 
-    const handleUpdateStatus = async (reviewId: string, cafeId: string, status: Review['status']) => {
-        await updateReviewStatus(reviewId, cafeId, status);
-        // Refetch to update the list after a status change
-        fetchPendingReviews();
+    const handleUpdateStatus = (reviewId: string, status: Review['status']) => {
+        updateReviewStatus(reviewId, status);
     };
     
-    if (loading) {
-        return <div className="mt-12"><h2 className="text-3xl font-bold font-jakarta mb-6">Moderasi Review</h2><p>Loading reviews...</p></div>
-    }
-
     return (
          <div className="mt-12">
             <h2 className="text-3xl font-bold font-jakarta mb-6">Moderasi Review ({reviews.length})</h2>
@@ -48,8 +36,8 @@ const PendingReviews: React.FC = () => {
                                 )}
                            </div>
                            <div className="flex gap-2 flex-shrink-0 ml-4 mt-2 sm:mt-0">
-                               <button onClick={() => handleUpdateStatus(review.id, review.cafeId, 'approved')} className="bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300 px-3 py-1 rounded-lg font-semibold text-sm">Approve</button>
-                               <button onClick={() => handleUpdateStatus(review.id, review.cafeId, 'rejected')} className="bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300 px-3 py-1 rounded-lg font-semibold text-sm">Reject</button>
+                               <button onClick={() => handleUpdateStatus(review.id, 'approved')} className="bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300 px-3 py-1 rounded-lg font-semibold text-sm">Approve</button>
+                               <button onClick={() => handleUpdateStatus(review.id, 'rejected')} className="bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300 px-3 py-1 rounded-lg font-semibold text-sm">Reject</button>
                            </div>
                         </div>
                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">

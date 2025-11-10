@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Cafe, Amenity, Vibe, Spot } from '../../types';
-import { supabase } from '../../services/supabaseClient';
+import { cloudinaryService } from '../../services/cloudinaryService';
 import { AMENITIES, VIBES, DISTRICTS } from '../../constants';
 import { PriceTier } from '../../types';
+import { fileToBase64 } from '../../utils/fileUtils';
 
 interface AdminCafeFormProps {
     cafe?: Cafe | null, 
@@ -24,8 +25,8 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
         isSponsored: cafe?.isSponsored || false,
         sponsoredUntil: cafe?.sponsoredUntil ? new Date(cafe.sponsoredUntil).toISOString().split('T')[0] : '',
         sponsoredRank: cafe?.sponsoredRank || 0,
-        vibes: cafe?.vibes || [],
-        amenities: cafe?.amenities || [],
+        vibes: cafe?.vibes.map(v => v.id) || [],
+        amenities: cafe?.amenities.map(a => a.id) || [],
         spots: cafe?.spots || [],
     });
 
@@ -43,18 +44,23 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
             setFormData(prev => ({...prev, [name]: value}));
         }
     };
-    
-    const handleFileChange = (setter: React.Dispatch<React.SetStateAction<File | null>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-        setter(e.target.files[0]);
-      }
+
+    const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setLogoFile(e.target.files[0]);
+        }
     };
 
-    const handleMultiSelectChange = (field: 'vibes' | 'amenities', item: Vibe | Amenity) => {
+    const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setCoverFile(e.target.files[0]);
+        }
+    };
+    
+    const handleMultiSelectChange = (field: 'vibes' | 'amenities', id: string) => {
         setFormData(prev => {
-            const current = prev[field] as (Vibe | Amenity)[];
-            const isSelected = current.some(i => i.id === item.id);
-            const newSelection = isSelected ? current.filter(i => i.id !== item.id) : [...current, item];
+            const current = prev[field];
+            const newSelection = current.includes(id) ? current.filter(itemId => itemId !== id) : [...current, id];
             return {...prev, [field]: newSelection};
         });
     };
@@ -95,20 +101,11 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
     };
     
     const uploadImageIfPresent = async (file: File | null, existingUrl: string): Promise<string> => {
-        if (!file) return existingUrl;
-        
-        const fileName = `${Date.now()}_${file.name}`;
-        const { data, error } = await supabase.storage
-            .from('cafe-images')
-            .upload(fileName, file);
-        
-        if (error) throw error;
-
-        const { data: { publicUrl } } = supabase.storage
-            .from('cafe-images')
-            .getPublicUrl(data.path);
-            
-        return publicUrl;
+        if (!file) {
+            return existingUrl;
+        }
+        const base64 = await fileToBase64(file);
+        return await cloudinaryService.uploadImage(base64);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -134,14 +131,15 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
                 spots: finalSpots,
                 priceTier: Number(formData.priceTier),
                 coords: { lat: Number(formData.lat), lng: Number(formData.lng) },
-                sponsoredUntil: formData.sponsoredUntil ? new Date(formData.sponsoredUntil).toISOString() : null,
+                sponsoredUntil: formData.sponsoredUntil ? new Date(formData.sponsoredUntil) : null,
                 sponsoredRank: Number(formData.sponsoredRank),
+                vibes: formData.vibes.map(id => VIBES.find(v => v.id === id)).filter(Boolean) as Vibe[],
+                amenities: formData.amenities.map(id => AMENITIES.find(a => a.id === id)).filter(Boolean) as Amenity[],
             };
-
             onSave(dataToSave);
         } catch (error) {
             console.error("Failed to save cafe:", error);
-            alert(`Gagal menyimpan data. Pastikan bucket 'cafe-images' ada dan bersifat publik.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            alert(`Gagal menyimpan data. Mungkin ada masalah saat mengupload gambar. Pastikan preset 'nongkrongr_uploads' sudah dikonfigurasi sebagai 'unsigned' di dashboard Cloudinary Anda.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsUploading(false);
         }
@@ -163,14 +161,14 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
                     {(logoFile || formData.logoUrl) && (
                         <img src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} alt="Logo preview" className="w-24 h-24 object-contain rounded-xl mb-2 bg-gray-100 dark:bg-gray-700 p-1" />
                     )}
-                    <input type="file" accept="image/*" onChange={handleFileChange(setLogoFile)} className={`${inputClass} p-2`} />
+                    <input type="file" accept="image/*" onChange={handleLogoFileChange} className={`${inputClass} p-2`} />
                   </div>
                   <div>
                     <label className="font-semibold block mb-2">Cover Image</label>
                     {(coverFile || formData.coverUrl) && (
                         <img src={coverFile ? URL.createObjectURL(coverFile) : formData.coverUrl} alt="Cover preview" className="w-full h-24 object-cover rounded-xl mb-2" />
                     )}
-                    <input type="file" accept="image/*" onChange={handleFileChange(setCoverFile)} className={`${inputClass} p-2`} />
+                    <input type="file" accept="image/*" onChange={handleCoverFileChange} className={`${inputClass} p-2`} />
                   </div>
                 </div>
 
@@ -224,12 +222,12 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
                 
                 <h3 className="font-semibold pt-2">Vibes</h3>
                 <div className="flex flex-wrap gap-2">
-                    {VIBES.map(v => <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v)} className={`px-3 py-1 rounded-full border-2 dark:border-gray-500 ${formData.vibes.some(fv => fv.id === v.id) ? 'bg-primary text-white border-primary' : 'dark:text-gray-300'}`}>{v.name}</button>)}
+                    {VIBES.map(v => <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v.id)} className={`px-3 py-1 rounded-full border-2 dark:border-gray-500 ${formData.vibes.includes(v.id) ? 'bg-primary text-white border-primary' : 'dark:text-gray-300'}`}>{v.name}</button>)}
                 </div>
 
                 <h3 className="font-semibold pt-2">Fasilitas</h3>
                 <div className="flex flex-wrap gap-2">
-                    {AMENITIES.map(a => <button type="button" key={a.id} onClick={() => handleMultiSelectChange('amenities', a)} className={`px-3 py-1 rounded-full border-2 dark:border-gray-500 ${formData.amenities.some(fa => fa.id === a.id) ? 'bg-primary text-white border-primary' : 'dark:text-gray-300'}`}>{a.icon} {a.name}</button>)}
+                    {AMENITIES.map(a => <button type="button" key={a.id} onClick={() => handleMultiSelectChange('amenities', a.id)} className={`px-3 py-1 rounded-full border-2 dark:border-gray-500 ${formData.amenities.includes(a.id) ? 'bg-primary text-white border-primary' : 'dark:text-gray-300'}`}>{a.icon} {a.name}</button>)}
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">

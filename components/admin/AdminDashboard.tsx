@@ -10,48 +10,44 @@ import UserManagementPanel from './UserManagementPanel';
 import StatCard from './StatCard';
 
 const AdminDashboard: React.FC = () => {
-    const { cafes, loading, addCafe, updateCafe, deleteCafe } = useContext(CafeContext)!;
+    const { cafes, loading, addCafe, updateCafe, deleteCafe, saveChangesToCloud, hasUnsavedChanges } = useContext(CafeContext)!;
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingCafe, setEditingCafe] = useState<Cafe | null>(null);
     const [cafeToDelete, setCafeToDelete] = useState<Cafe | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-    const handleSave = async (data: any) => {
-        setIsSaving(true);
-        setNotification(null);
-        try {
-            if (editingCafe) {
-                // Remove reviews and spots from data before sending, as they are managed in separate tables
-                const { reviews, spots, ...cafeData } = data;
-                await updateCafe(editingCafe.id, cafeData);
-            } else {
-                await addCafe(data);
-            }
-            setNotification({ message: 'Cafe berhasil disimpan!', type: 'success' });
-            setIsFormOpen(false);
-            setEditingCafe(null);
-        } catch (error) {
-            const errorMessage = `Gagal menyimpan: ${error instanceof Error ? error.message : 'Unknown error'}`;
-            setNotification({ message: errorMessage, type: 'error' });
-        } finally {
-            setIsSaving(false);
+    const handleSave = (data: any) => {
+        if (editingCafe) {
+            updateCafe(editingCafe.id, data);
+        } else {
+            addCafe(data);
         }
+        setIsFormOpen(false);
+        setEditingCafe(null);
     };
 
-    const handleConfirmDeleteCafe = async () => {
+    const handleConfirmDeleteCafe = () => {
         if (cafeToDelete) {
-            setNotification(null);
-            try {
-                await deleteCafe(cafeToDelete.id);
-                setNotification({ message: `"${cafeToDelete.name}" berhasil dihapus.`, type: 'success'});
-            } catch (error) {
-                 const errorMessage = `Gagal menghapus: ${error instanceof Error ? error.message : 'Unknown error'}`;
-                 setNotification({ message: errorMessage, type: 'error' });
-            } finally {
-                setCafeToDelete(null);
-            }
+            deleteCafe(cafeToDelete.id);
+            setCafeToDelete(null);
         }
+    };
+    
+    const handleSaveChangesToCloud = async () => {
+        setIsSaving(true);
+        setNotification(null);
+        
+        const result = await saveChangesToCloud();
+
+        if (result.success) {
+            setNotification({ message: 'Perubahan berhasil disimpan!', type: 'success' });
+        } else {
+            const detailedMessage = `Gagal menyimpan: ${result.error || 'Silakan cek konsol untuk detail.'}`;
+            setNotification({ message: detailedMessage, type: 'error' });
+        }
+        
+        setIsSaving(false);
     };
     
     const totalCafes = cafes.length;
@@ -64,6 +60,13 @@ const AdminDashboard: React.FC = () => {
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
                 <h1 className="text-4xl font-bold font-jakarta">Dashboard Overview</h1>
                  <div className="flex items-center gap-4">
+                    <button
+                        onClick={handleSaveChangesToCloud}
+                        className={`font-bold py-2 px-6 rounded-2xl transition-all duration-300 ${hasUnsavedChanges ? 'bg-green-500 text-white hover:bg-green-600 animate-pulse' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
+                        disabled={isSaving || loading || !hasUnsavedChanges}
+                    >
+                        {isSaving ? 'Menyimpan...' : (hasUnsavedChanges ? 'Simpan Perubahan' : '✓ Tersimpan')}
+                    </button>
                     <button onClick={() => { setEditingCafe(null); setIsFormOpen(true); }} className="bg-primary text-white font-bold py-2 px-6 rounded-2xl">
                         + Tambah Cafe
                     </button>
@@ -121,14 +124,13 @@ const AdminDashboard: React.FC = () => {
             )}
             
             <PendingReviews />
-            {/* UserManagementPanel is disabled as it requires admin privileges on Supabase, which is a more advanced setup. */}
-            {/* <UserManagementPanel /> */}
+            <UserManagementPanel />
 
             {isFormOpen && <AdminCafeForm cafe={editingCafe} onSave={handleSave} onCancel={() => { setIsFormOpen(false); setEditingCafe(null); }} />}
             {cafeToDelete && (
                 <ConfirmationModal
                     title="Hapus Cafe"
-                    message={`Apakah Anda yakin ingin menghapus "${cafeToDelete.name}"? Tindakan ini tidak dapat diurungkan.`}
+                    message={`Apakah Anda yakin ingin menghapus "${cafeToDelete.name}"? Perubahan ini akan disimpan secara lokal.`}
                     onConfirm={handleConfirmDeleteCafe}
                     onCancel={() => setCafeToDelete(null)}
                 />

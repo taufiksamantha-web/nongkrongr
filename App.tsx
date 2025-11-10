@@ -1,6 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
-import '@supabase/supabase-js'; // Import Supabase library
 import HomePage from './pages/HomePage';
 import ExplorePage from './pages/ExplorePage';
 import DetailPage from './pages/DetailPage';

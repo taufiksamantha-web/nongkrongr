@@ -69,9 +69,7 @@ export interface Cafe {
 
 export interface User {
   id: string;
-  email: string | undefined;
   username: string;
-  role: string;
-  // Fix: Add optional password property to align with its usage in userService.ts
-  password?: string;
+  password: string; // In a real app, this would be a hash
+  role: 'admin' | 'user';
 }
