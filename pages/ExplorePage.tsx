@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier } from '../types';
@@ -26,6 +27,20 @@ const ExplorePage: React.FC = () => {
   const handleFilterChange = <K extends keyof typeof filters,>(key: K, value: (typeof filters)[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
+
+  // Sync filters state to URL search params
+  useEffect(() => {
+    const newParams = new URLSearchParams();
+
+    if (filters.search) newParams.set('search', filters.search);
+    if (filters.district !== 'all') newParams.set('district', filters.district);
+    filters.vibes.forEach(vibe => newParams.append('vibe', vibe));
+    filters.amenities.forEach(amenity => newParams.append('amenity', amenity));
+    if (filters.priceTier < 4) newParams.set('price_tier', String(filters.priceTier));
+    if (filters.crowd < 5) newParams.set('crowd', String(filters.crowd));
+    
+    setSearchParams(newParams, { replace: true });
+  }, [filters, setSearchParams]);
 
   const filteredCafes = useMemo(() => {
     return cafes.filter(cafe => {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
 import HomePage from './pages/HomePage';
@@ -41,6 +42,7 @@ const Header: React.FC = () => {
         <div className="hidden md:flex items-center space-x-4 absolute left-1/2 -translate-x-1/2">
           <NavLink to="/" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
           <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
+          <NavLink to="/about" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Tentang Kami</NavLink>
         </div>
 
         {/* Right: Mobile Explore + Theme Toggle */}
