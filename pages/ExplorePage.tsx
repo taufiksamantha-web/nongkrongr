@@ -108,7 +108,7 @@ const ExplorePage: React.FC = () => {
         {/* District */}
         <div>
           <label className="font-semibold">Kecamatan</label>
-          <select value={filters.district} onChange={e => handleFilterChange('district', e.target.value)} className="mt-2 w-full p-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600">
+          <select value={filters.district} onChange={e => handleFilterChange('district', e.target.value)} className="mt-2 w-full p-2 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
             <option value="all">Semua Kecamatan</option>
             {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
@@ -169,11 +169,11 @@ const ExplorePage: React.FC = () => {
                 placeholder="Cari berdasarkan nama cafe..."
                 value={filters.search}
                 onChange={e => handleFilterChange('search', e.target.value)}
-                className="w-full p-4 pl-12 text-lg rounded-2xl border-2 border-gray-200 focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all duration-300 shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-400"
+                className="w-full p-4 pl-12 text-lg rounded-2xl border-2 border-gray-200 focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all duration-300 shadow-sm text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
             />
         </div>
-        <div className="bg-gray-200 dark:bg-gray-800 h-64 rounded-3xl mb-8 text-center flex items-center justify-center">
-            <p className="text-gray-500 dark:text-gray-400">Interactive Map Placeholder</p>
+        <div className="rounded-3xl mb-8 overflow-hidden shadow-md">
+            <img src="https://res.cloudinary.com/dovouihq8/image/upload/v1722158935/map_placeholder.webp" alt="Map of Palembang cafes" className="w-full h-64 object-cover" />
         </div>
         <h2 className="text-3xl font-bold font-jakarta mb-6">{filteredCafes.length} Cafe Ditemukan</h2>
         {loading ? (

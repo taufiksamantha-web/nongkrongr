@@ -89,8 +89,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm space-y-4">
             <h3 className="text-xl font-bold font-jakarta">Beri Review Kamu!</h3>
             
-            <input type="text" placeholder="Nama Kamu" value={author} onChange={e => setAuthor(e.target.value)} required className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" />
-            <textarea placeholder="Ceritain pengalamanmu..." value={text} onChange={e => setText(e.target.value)} required className="w-full p-3 border rounded-xl h-24 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"></textarea>
+            <input type="text" placeholder="Nama Kamu" value={author} onChange={e => setAuthor(e.target.value)} required className="w-full p-3 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" />
+            <textarea placeholder="Ceritain pengalamanmu..." value={text} onChange={e => setText(e.target.value)} required className="w-full p-3 border rounded-xl h-24 text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"></textarea>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
@@ -127,7 +127,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
                         placeholder="Contoh: 50000" 
                         value={priceSpent}
                         onChange={e => setPriceSpent(e.target.value)}
-                        className="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-full p-3 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                  </div>
                  <div>

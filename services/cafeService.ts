@@ -1,4 +1,3 @@
-import { MOCK_CAFES } from '../constants';
 import { Cafe, Review } from '../types';
 
 // This service now contains pure functions for data manipulation.

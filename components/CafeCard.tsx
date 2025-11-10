@@ -52,4 +52,4 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe }) => {
   );
 };
 
-export default CafeCard;
+export default React.memo(CafeCard);

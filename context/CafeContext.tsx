@@ -57,7 +57,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fetchCafes();
     }, [fetchCafes]);
 
-    const saveChangesToCloud = async (): Promise<{ success: boolean; error?: string }> => {
+    const saveChangesToCloud = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
         try {
             await cloudinaryService.uploadDatabase(cafes);
             setHasUnsavedChanges(false);
@@ -67,37 +67,47 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error("Failed to upload database update:", uploadError);
             return { success: false, error: errorMessage };
         }
-    };
+    }, [cafes]);
 
-    const addCafe = (cafeData: Omit<Cafe, 'id' | 'slug' | 'reviews' | 'avgAestheticScore' | 'avgWorkScore' | 'avgCrowdEvening' | 'avgCrowdMorning' | 'avgCrowdAfternoon'>) => {
-        const updatedCafes = cafeService.addCafe(cafes, cafeData);
-        setCafes(updatedCafes);
-        setHasUnsavedChanges(true);
-    };
+    const addCafe = useCallback((cafeData: Omit<Cafe, 'id' | 'slug' | 'reviews' | 'avgAestheticScore' | 'avgWorkScore' | 'avgCrowdEvening' | 'avgCrowdMorning' | 'avgCrowdAfternoon'>) => {
+        setCafes(currentCafes => {
+            const updatedCafes = cafeService.addCafe(currentCafes, cafeData);
+            setHasUnsavedChanges(true);
+            return updatedCafes;
+        });
+    }, []);
 
-    const updateCafe = (id: string, updatedData: Partial<Cafe>) => {
-        const updatedCafes = cafeService.updateCafe(cafes, id, updatedData);
-        setCafes(updatedCafes);
-        setHasUnsavedChanges(true);
-    };
+    const updateCafe = useCallback((id: string, updatedData: Partial<Cafe>) => {
+        setCafes(currentCafes => {
+            const updatedCafes = cafeService.updateCafe(currentCafes, id, updatedData);
+            setHasUnsavedChanges(true);
+            return updatedCafes;
+        });
+    }, []);
 
-    const deleteCafe = (id: string) => {
-        const updatedCafes = cafeService.deleteCafe(cafes, id);
-        setCafes(updatedCafes);
-        setHasUnsavedChanges(true);
-    };
+    const deleteCafe = useCallback((id: string) => {
+        setCafes(currentCafes => {
+            const updatedCafes = cafeService.deleteCafe(currentCafes, id);
+            setHasUnsavedChanges(true);
+            return updatedCafes;
+        });
+    }, []);
     
-    const addReview = (slug: string, review: Omit<Review, 'id' | 'createdAt' | 'status'>) => {
-        const updatedCafes = cafeService.addReview(cafes, slug, review);
-        setCafes(updatedCafes);
-        setHasUnsavedChanges(true);
-    };
+    const addReview = useCallback((slug: string, review: Omit<Review, 'id' | 'createdAt' | 'status'>) => {
+        setCafes(currentCafes => {
+            const updatedCafes = cafeService.addReview(currentCafes, slug, review);
+            setHasUnsavedChanges(true);
+            return updatedCafes;
+        });
+    }, []);
     
-    const updateReviewStatus = (reviewId: string, status: Review['status']) => {
-        const updatedCafes = cafeService.updateReviewStatus(cafes, reviewId, status);
-        setCafes(updatedCafes);
-        setHasUnsavedChanges(true);
-    };
+    const updateReviewStatus = useCallback((reviewId: string, status: Review['status']) => {
+        setCafes(currentCafes => {
+            const updatedCafes = cafeService.updateReviewStatus(currentCafes, reviewId, status);
+            setHasUnsavedChanges(true);
+            return updatedCafes;
+        });
+    }, []);
 
 
     return (

@@ -122,8 +122,10 @@ const DetailPage: React.FC = () => {
 
                 {/* Sidebar */}
                 <div className="space-y-8">
-                    <div className="bg-gray-200 dark:bg-gray-800 h-64 rounded-3xl text-center flex items-center justify-center">
-                        <p className="text-gray-500 dark:text-gray-400">Map with single marker</p>
+                    <div className="rounded-3xl shadow-md overflow-hidden">
+                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" title="Buka di Google Maps">
+                            <img src={`https://res.cloudinary.com/dovouihq8/image/upload/v1722158935/map_placeholder.webp`} alt={`Map location for ${cafe.name}`} className="w-full h-64 object-cover" />
+                        </a>
                     </div>
                     <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
                         Buka di Google Maps

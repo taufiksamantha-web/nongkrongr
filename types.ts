@@ -70,7 +70,6 @@ export interface Cafe {
 export interface User {
   id: string;
   username: string;
-  // FIX: Changed semicolon to colon for correct type annotation.
   password: string; // In a real app, this would be a hash
   role: 'admin' | 'user';
 }

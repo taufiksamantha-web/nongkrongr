@@ -1,9 +1,15 @@
-import { MOCK_USERS } from '../constants';
 import { User } from '../types';
 
 // NOTE: This is an in-memory user store for demonstration purposes.
 // Changes will not persist across page reloads.
 // In a real application, this would interact with a backend API.
+
+const MOCK_USERS: User[] = [
+    { id: 'u1', username: 'admin', password: '12345', role: 'admin' },
+    { id: 'u2', username: 'user1', password: 'password', role: 'user' },
+    { id: 'u3', username: 'user2', password: 'password', role: 'user' },
+];
+
 let users: User[] = [...MOCK_USERS]; 
 
 export const userService = {

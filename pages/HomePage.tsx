@@ -131,7 +131,7 @@ const HomePage: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)}
-              className="w-full py-4 px-6 text-lg rounded-2xl border-2 border-gray-200 focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all duration-300 shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-400"
+              className="w-full py-4 px-6 text-lg rounded-2xl border-2 border-gray-200 focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all duration-300 shadow-sm text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
             />
             <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-primary text-white px-6 py-2 rounded-2xl font-bold hover:bg-primary/90 transition-all duration-300">
               Cari

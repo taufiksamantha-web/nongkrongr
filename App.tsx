@@ -65,11 +65,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme') as Theme | null;
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (storedTheme) {
         setTheme(storedTheme);
     } else {
-        setTheme(prefersDark ? 'dark' : 'light');
+        // Default to 'light' mode instead of checking device preference.
+        setTheme('light');
     }
   }, []);
 
