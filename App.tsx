@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage';
 import ExplorePage from './pages/ExplorePage';
 import DetailPage from './pages/DetailPage';
 import AdminPage from './pages/AdminPage';
+import AboutPage from './pages/AboutPage'; // Import halaman baru
 import WelcomeModal from './components/WelcomeModal';
 import Footer from './components/Footer';
 import { CafeProvider } from './context/CafeContext';
@@ -101,6 +102,7 @@ const App: React.FC = () => {
                   <Route path="/explore" element={<ExplorePage />} />
                   <Route path="/cafe/:slug" element={<DetailPage />} />
                   <Route path="/admin" element={<AdminPage />} />
+                  <Route path="/about" element={<AboutPage />} />
               </Routes>
               </main>
               <Footer />

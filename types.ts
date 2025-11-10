@@ -9,22 +9,27 @@ export interface Amenity {
   id: string;
   name: string;
   icon: string; // Emoji or SVG string
+  created_at?: string;
 }
 
 export interface Vibe {
   id:string;
   name: string;
+  created_at?: string;
 }
 
 export interface Spot {
   id: string;
+  cafe_id?: string;
   title: string;
   tip: string;
   photoUrl: string;
+  created_at?: string;
 }
 
 export interface Review {
   id: string;
+  cafe_id?: string;
   author: string;
   ratingAesthetic: number; // 1-10
   ratingWork: number; // 1-10
@@ -34,7 +39,7 @@ export interface Review {
   priceSpent: number;
   text: string;
   photos: string[];
-  createdAt: Date;
+  createdAt: string | Date;
   status: 'pending' | 'approved' | 'rejected';
 }
 
@@ -42,6 +47,7 @@ export interface Cafe {
   id: string;
   slug: string;
   name: string;
+  description: string;
   address: string;
   district: string;
   openingHours: string;
@@ -51,7 +57,7 @@ export interface Cafe {
     lng: number;
   };
   isSponsored: boolean;
-  sponsoredUntil: Date | null;
+  sponsoredUntil: Date | string | null;
   sponsoredRank: number; // for ordering sponsored results
   logoUrl?: string; // Optional: URL for the cafe's logo
   coverUrl: string;
@@ -59,6 +65,7 @@ export interface Cafe {
   amenities: Amenity[];
   spots: Spot[];
   reviews: Review[];
+  created_at?: string;
   // Aggregated scores
   avgAestheticScore: number;
   avgWorkScore: number;
@@ -67,9 +74,13 @@ export interface Cafe {
   avgCrowdEvening: number;
 }
 
-export interface User {
+// For Supabase 'profiles' table
+export interface Profile {
   id: string;
   username: string;
-  password: string; // In a real app, this would be a hash
   role: 'admin' | 'user';
+  updated_at?: string;
 }
+
+// Combined user object for the app
+export interface User extends Profile {}

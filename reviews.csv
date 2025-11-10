@@ -1,0 +1,26 @@
+id,cafe_id,author,ratingAesthetic,ratingWork,crowdMorning,crowdAfternoon,crowdEvening,priceSpent,text,photos,createdAt,status
+r001,c001,Andi,9,8,2,3,4,55000,"Kopinya mantap, tempatnya cozy banget buat nongkrong sore-sore.","{https://res.cloudinary.com/dovouihq8/image/upload/v1722244304/review-placeholder-1_gqejqf.jpg}",2023-10-26T10:00:00Z,approved
+r002,c001,Bunga,8,7,3,4,5,45000,"Tempatnya bagus buat foto-foto, tapi wifinya agak lambat pas rame.","{}",2023-10-27T14:00:00Z,approved
+r003,c002,Citra,10,9,1,2,3,75000,"Estetik parah! Setiap sudutnya instagramable. Cocok buat nugas juga, sepi kalau pagi.","{}",2023-11-01T11:00:00Z,pending
+r004,c002,Doni,9,9,2,3,4,80000,"Kopi dan makanannya sepadan dengan harganya. Suasananya bikin betah.","{https://res.cloudinary.com/dovouihq8/image/upload/v1722244305/review-placeholder-2_iysnpr.jpg}",2023-11-02T15:00:00Z,approved
+r005,c003,Eka,8,7,2,3,3,40000,"Vibes tropisnya dapet banget, adem. Cocok buat santai.","{}",2023-11-05T16:00:00Z,approved
+r006,c004,Fajar,9,10,3,4,5,60000,"Best place for working! Wifi kenceng, colokan banyak. Gak heran selalu rame.","{}",2023-11-10T09:00:00Z,approved
+r007,c005,Gita,9,6,1,2,3,50000,"Pemandangan sunsetnya juara! Minumannya standar, tapi view-nya yang bikin balik lagi.","{}",2023-11-12T18:00:00Z,approved
+r008,c006,Hadi,8,9,1,1,2,35000,"Surga buat yang suka baca. Tenang banget, bisa fokus. Kopinya juga enak.","{}",2023-11-15T13:00:00Z,approved
+r009,c007,Indah,7,8,3,4,4,25000,"Kopinya strong, harganya murah. Tempatnya biasa aja tapi fungsional buat nugas.","{}",2023-11-18T10:00:00Z,approved
+r010,c008,Joko,10,8,2,3,4,70000,"Minimalis dan bersih. Cahayanya bagus banget buat foto produk.","{}",2023-11-20T14:00:00Z,approved
+r011,c009,Kartika,9,7,2,4,5,55000,"Beneran cozy kayak di rumah. Kue-kuenya enak banget!","{}",2023-11-22T19:00:00Z,approved
+r012,c010,Lia,9,8,2,3,3,65000,"Brunch di sini experience-nya 10/10. Makanannya cantik, tempatnya juga.","{}",2023-11-25T11:00:00Z,approved
+r013,c011,Mira,8,6,3,4,4,20000,"Nostalgia banget. Kopi tubruknya mantap.","{}",2023-11-28T16:00:00Z,approved
+r014,c012,Nino,8,8,2,3,5,45000,"Musiknya enak, kopinya enak, suasananya juga pas buat kerja.","{}",2023-12-01T20:00:00Z,rejected
+r015,c013,Olivia,9,5,2,3,4,30000,"Unik banget konsepnya. Adem dan sejuk, tapi banyak nyamuk kalau sore.","{}",2023-12-03T17:00:00Z,approved
+r016,c014,Putra,9,8,1,2,2,60000,"Suka banget bisa lihat-lihat karya seni sambil ngopi. Inspiring!","{}",2023-12-05T15:00:00Z,approved
+r017,c015,Rina,8,10,3,4,5,30000," penyelamat di kala deadline. Semua yang dibutuhin buat nugas ada di sini.","{}",2023-12-08T21:00:00Z,pending
+r018,c016,Sari,8,5,2,3,4,15000,"Murah meriah dan otentik. Cocok buat ngobrol santai.","{}",2023-12-10T20:00:00Z,approved
+r019,c017,Tono,8,7,2,3,4,40000,"Tempatnya keren, sering ada acara kreatif juga.","{}",2023-12-12T16:00:00Z,approved
+r020,c018,Vina,10,7,2,3,3,65000,"Seger banget liat ijo-ijoan di mana-mana. Bikin mood jadi bagus.","{}",2023-12-15T12:00:00Z,approved
+r021,c019,Wawan,10,8,1,2,3,70000,"Spot foto wajib di Palembang. Setiap sudutnya aesthetic.","{}",2023-12-18T14:00:00Z,approved
+r022,c020,Yuni,9,8,2,4,5,50000,"Pelayanannya ramah banget, bikin betah.","{}",2023-12-20T19:00:00Z,approved
+r023,c001,Zaki,7,8,3,4,5,50000,"Good coffee, good place. A bit crowded on weekends.","{}",2023-12-21T19:00:00Z,approved
+r024,c002,Amel,9,9,2,3,3,90000,"Perfect for your Instagram feed. The flat white was amazing.","{}",2023-12-22T13:00:00Z,approved
+r025,c003,Budi,8,7,2,3,4,45000,"A nice tropical escape. Will come back for sure.","{}",2023-12-23T15:00:00Z,pending

@@ -1,32 +1,37 @@
 import React, { useState } from 'react';
 import { Cafe, Amenity, Vibe, Spot } from '../../types';
 import { cloudinaryService } from '../../services/cloudinaryService';
+import { geminiService } from '../../services/geminiService';
 import { AMENITIES, VIBES, DISTRICTS } from '../../constants';
 import { PriceTier } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
+import ImageWithFallback from '../common/ImageWithFallback';
 
 interface AdminCafeFormProps {
     cafe?: Cafe | null, 
-    onSave: (cafe: any) => void, 
-    onCancel: () => void 
+    onSave: (cafe: any) => Promise<void>, 
+    onCancel: () => void,
+    isSaving: boolean,
+    userRole: 'admin' | 'user';
 }
 
-const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel }) => {
+const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, isSaving, userRole }) => {
     const [formData, setFormData] = useState({
         name: cafe?.name || '',
+        description: cafe?.description || '',
         address: cafe?.address || '',
         district: cafe?.district || DISTRICTS[0],
         priceTier: cafe?.priceTier || PriceTier.STANDARD,
         logoUrl: cafe?.logoUrl || '',
         coverUrl: cafe?.coverUrl || '',
         openingHours: cafe?.openingHours || '09:00 - 22:00',
-        lat: cafe?.coords.lat || -2.97,
-        lng: cafe?.coords.lng || 104.77,
+        lat: cafe?.coords?.lat || -2.97,
+        lng: cafe?.coords?.lng || 104.77,
         isSponsored: cafe?.isSponsored || false,
         sponsoredUntil: cafe?.sponsoredUntil ? new Date(cafe.sponsoredUntil).toISOString().split('T')[0] : '',
         sponsoredRank: cafe?.sponsoredRank || 0,
-        vibes: cafe?.vibes.map(v => v.id) || [],
-        amenities: cafe?.amenities.map(a => a.id) || [],
+        vibes: cafe?.vibes || [],
+        amenities: cafe?.amenities || [],
         spots: cafe?.spots || [],
     });
 
@@ -34,6 +39,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
     const [coverFile, setCoverFile] = useState<File | null>(null);
     const [spotFiles, setSpotFiles] = useState<(File | null)[]>(cafe?.spots.map(() => null) || []);
     const [isUploading, setIsUploading] = useState(false);
+    const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -57,10 +63,11 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
         }
     };
     
-    const handleMultiSelectChange = (field: 'vibes' | 'amenities', id: string) => {
+    const handleMultiSelectChange = (field: 'vibes' | 'amenities', item: Vibe | Amenity) => {
         setFormData(prev => {
-            const current = prev[field];
-            const newSelection = current.includes(id) ? current.filter(itemId => itemId !== id) : [...current, id];
+            const current = prev[field] as any[];
+            const isSelected = current.some(i => i.id === item.id);
+            const newSelection = isSelected ? current.filter(i => i.id !== item.id) : [...current, item];
             return {...prev, [field]: newSelection};
         });
     };
@@ -108,6 +115,23 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
         return await cloudinaryService.uploadImage(base64);
     };
 
+    const handleGenerateDescription = async () => {
+        if (!formData.name) {
+            alert("Please enter a cafe name first to generate a description.");
+            return;
+        }
+        setIsGeneratingDesc(true);
+        try {
+            const description = await geminiService.generateCafeDescription(formData.name, formData.vibes);
+            setFormData(prev => ({ ...prev, description }));
+        } catch (error) {
+            console.error(error);
+            alert(error instanceof Error ? error.message : "An unknown error occurred during AI generation.");
+        } finally {
+            setIsGeneratingDesc(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsUploading(true);
@@ -124,7 +148,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
                 })
             );
             
-            const dataToSave = {
+            let dataToSave = {
                 ...formData,
                 logoUrl: finalLogoUrl,
                 coverUrl: finalCoverUrl,
@@ -133,10 +157,19 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
                 coords: { lat: Number(formData.lat), lng: Number(formData.lng) },
                 sponsoredUntil: formData.sponsoredUntil ? new Date(formData.sponsoredUntil) : null,
                 sponsoredRank: Number(formData.sponsoredRank),
-                vibes: formData.vibes.map(id => VIBES.find(v => v.id === id)).filter(Boolean) as Vibe[],
-                amenities: formData.amenities.map(id => AMENITIES.find(a => a.id === id)).filter(Boolean) as Amenity[],
             };
-            onSave(dataToSave);
+
+            // Security: Non-admins cannot set sponsorship details
+            if (userRole !== 'admin') {
+                dataToSave = {
+                    ...dataToSave,
+                    isSponsored: false,
+                    sponsoredUntil: null,
+                    sponsoredRank: 0,
+                };
+            }
+
+            await onSave(dataToSave);
         } catch (error) {
             console.error("Failed to save cafe:", error);
             alert(`Gagal menyimpan data. Mungkin ada masalah saat mengupload gambar. Pastikan preset 'nongkrongr_uploads' sudah dikonfigurasi sebagai 'unsigned' di dashboard Cloudinary Anda.\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -146,12 +179,21 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
     };
     
     const inputClass = "w-full p-3 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white";
+    const totalSaving = isSaving || isUploading;
     
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl w-full max-w-2xl space-y-4 max-h-[90vh] overflow-y-auto">
                 <h2 className="text-2xl font-bold font-jakarta">{cafe ? 'Edit Cafe' : 'Tambah Cafe Baru'}</h2>
                 <input name="name" value={formData.name} onChange={handleChange} placeholder="Nama Cafe" className={inputClass} required />
+                
+                <div>
+                    <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Deskripsi Cafe (bisa di-generate AI)" className={`${inputClass} h-24`} />
+                    <button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc || !formData.name} className="mt-2 w-full bg-secondary/20 text-cyan-800 dark:text-secondary font-semibold py-2 rounded-lg hover:bg-secondary/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isGeneratingDesc ? 'Generating...' : '✨ Generate Deskripsi dengan AI'}
+                    </button>
+                </div>
+
                 <input name="address" value={formData.address} onChange={handleChange} placeholder="Alamat" className={inputClass} required />
                 <input name="openingHours" value={formData.openingHours} onChange={handleChange} placeholder="Jam Buka (e.g., 08:00 - 22:00)" className={inputClass} required />
                 
@@ -159,14 +201,14 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
                   <div>
                     <label className="font-semibold block mb-2">Logo (Opsional)</label>
                     {(logoFile || formData.logoUrl) && (
-                        <img src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} alt="Logo preview" className="w-24 h-24 object-contain rounded-xl mb-2 bg-gray-100 dark:bg-gray-700 p-1" />
+                        <ImageWithFallback src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} alt="Logo preview" className="w-24 h-24 object-contain rounded-xl mb-2 bg-gray-100 dark:bg-gray-700 p-1" />
                     )}
                     <input type="file" accept="image/*" onChange={handleLogoFileChange} className={`${inputClass} p-2`} />
                   </div>
                   <div>
                     <label className="font-semibold block mb-2">Cover Image</label>
                     {(coverFile || formData.coverUrl) && (
-                        <img src={coverFile ? URL.createObjectURL(coverFile) : formData.coverUrl} alt="Cover preview" className="w-full h-24 object-cover rounded-xl mb-2" />
+                         <ImageWithFallback src={coverFile ? URL.createObjectURL(coverFile) : formData.coverUrl} alt="Cover preview" className="w-full h-24 object-cover rounded-xl mb-2" />
                     )}
                     <input type="file" accept="image/*" onChange={handleCoverFileChange} className={`${inputClass} p-2`} />
                   </div>
@@ -186,19 +228,21 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
                     <option value={PriceTier.LUXURY}>Luxury ($$$$)</option>
                 </select>
                 
-                <fieldset className="border dark:border-gray-600 p-4 rounded-xl">
-                    <legend className="font-semibold px-2">Sponsorship</legend>
-                    <div className="flex items-center gap-4 mb-4">
-                        <label htmlFor="isSponsored" className="font-medium">Aktifkan Sponsorship</label>
-                        <input type="checkbox" id="isSponsored" name="isSponsored" checked={formData.isSponsored} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
-                    </div>
-                    {formData.isSponsored && (
-                        <div className="grid grid-cols-2 gap-4">
-                             <input name="sponsoredRank" type="number" value={formData.sponsoredRank} onChange={handleChange} placeholder="Ranking (e.g., 1)" className={inputClass} />
-                             <input name="sponsoredUntil" type="date" value={formData.sponsoredUntil} onChange={handleChange} placeholder="Berlaku Sampai" className={inputClass} />
+                {userRole === 'admin' && (
+                    <fieldset className="border dark:border-gray-600 p-4 rounded-xl">
+                        <legend className="font-semibold px-2">Sponsorship</legend>
+                        <div className="flex items-center gap-4 mb-4">
+                            <label htmlFor="isSponsored" className="font-medium">Aktifkan Sponsorship</label>
+                            <input type="checkbox" id="isSponsored" name="isSponsored" checked={formData.isSponsored} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
                         </div>
-                    )}
-                </fieldset>
+                        {formData.isSponsored && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <input name="sponsoredRank" type="number" value={formData.sponsoredRank} onChange={handleChange} placeholder="Ranking (e.g., 1)" className={inputClass} />
+                                <input name="sponsoredUntil" type="date" value={formData.sponsoredUntil} onChange={handleChange} placeholder="Berlaku Sampai" className={inputClass} />
+                            </div>
+                        )}
+                    </fieldset>
+                )}
 
                 <fieldset className="border dark:border-gray-600 p-4 rounded-xl">
                     <legend className="font-semibold px-2">Spot Foto</legend>
@@ -208,7 +252,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
                                 <button type="button" onClick={() => handleRemoveSpot(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 rounded-full h-6 w-6 flex items-center justify-center font-bold text-lg leading-none hover:bg-red-500 hover:text-white transition-all">&times;</button>
                                 <div className="grid grid-cols-1 gap-2">
                                     {(spotFiles[index] || spot.photoUrl) && (
-                                        <img src={spotFiles[index] ? URL.createObjectURL(spotFiles[index]!) : spot.photoUrl} alt="Spot preview" className="w-full h-32 object-cover rounded-md mb-2" />
+                                        <ImageWithFallback src={spotFiles[index] ? URL.createObjectURL(spotFiles[index]!) : spot.photoUrl} alt="Spot preview" className="w-full h-32 object-cover rounded-md mb-2" />
                                     )}
                                     <input type="file" accept="image/*" onChange={(e) => handleSpotFileChange(index, e)} className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                                     <input name="title" value={spot.title} onChange={(e) => handleSpotChange(index, e)} placeholder="Judul Spot" className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
@@ -222,18 +266,18 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel })
                 
                 <h3 className="font-semibold pt-2">Vibes</h3>
                 <div className="flex flex-wrap gap-2">
-                    {VIBES.map(v => <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v.id)} className={`px-3 py-1 rounded-full border-2 dark:border-gray-500 ${formData.vibes.includes(v.id) ? 'bg-primary text-white border-primary' : 'dark:text-gray-300'}`}>{v.name}</button>)}
+                    {VIBES.map(v => <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v)} className={`px-3 py-1 rounded-full border-2 dark:border-gray-500 ${formData.vibes.some(fv => fv.id === v.id) ? 'bg-primary text-white border-primary' : 'dark:text-gray-300'}`}>{v.name}</button>)}
                 </div>
 
                 <h3 className="font-semibold pt-2">Fasilitas</h3>
                 <div className="flex flex-wrap gap-2">
-                    {AMENITIES.map(a => <button type="button" key={a.id} onClick={() => handleMultiSelectChange('amenities', a.id)} className={`px-3 py-1 rounded-full border-2 dark:border-gray-500 ${formData.amenities.includes(a.id) ? 'bg-primary text-white border-primary' : 'dark:text-gray-300'}`}>{a.icon} {a.name}</button>)}
+                    {AMENITIES.map(a => <button type="button" key={a.id} onClick={() => handleMultiSelectChange('amenities', a)} className={`px-3 py-1 rounded-full border-2 dark:border-gray-500 ${formData.amenities.some(fa => fa.id === a.id) ? 'bg-primary text-white border-primary' : 'dark:text-gray-300'}`}>{a.icon} {a.name}</button>)}
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">
                     <button type="button" onClick={onCancel} className="px-6 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold">Batal</button>
-                    <button type="submit" className="px-6 py-2 bg-primary text-white rounded-xl font-semibold" disabled={isUploading}>
-                        {isUploading ? 'Uploading...' : 'Simpan'}
+                    <button type="submit" className="px-6 py-2 bg-primary text-white rounded-xl font-semibold disabled:bg-primary/50" disabled={totalSaving}>
+                        {isUploading ? 'Uploading...' : (isSaving ? 'Menyimpan...' : 'Simpan')}
                     </button>
                 </div>
             </form>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Review } from '../types';
 import { StarIcon, BriefcaseIcon } from '@heroicons/react/24/solid';
+import ImageWithFallback from './common/ImageWithFallback';
 
 type TopReview = Review & { cafeName: string; cafeSlug: string };
 
@@ -39,7 +40,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review }) => {
             </div>
         </div>
         {review.photos && review.photos.length > 0 && (
-             <img src={review.photos[0]} alt={`Review by ${review.author}`} className="mt-4 w-full h-24 object-cover rounded-xl"/>
+             <ImageWithFallback src={review.photos[0]} alt={`Review by ${review.author}`} className="mt-4 w-full h-24 object-cover rounded-xl"/>
         )}
       </div>
     </div>

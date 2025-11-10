@@ -4,6 +4,8 @@ import { Cafe, Review } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/solid';
 import ReviewForm from '../components/ReviewForm';
+import FloatingNotification from '../components/common/FloatingNotification';
+import ImageWithFallback from '../components/common/ImageWithFallback';
 
 const ScoreDisplay: React.FC<{ icon: React.ReactNode, label: string, score: number, max: number, color: string }> = ({ icon, label, score, max, color }) => (
     <div className="text-center">
@@ -22,6 +24,7 @@ const DetailPage: React.FC = () => {
     
     const [cafe, setCafe] = useState<Cafe | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [notification, setNotification] = useState<string | null>(null);
 
     useEffect(() => {
         if (slug) {
@@ -30,31 +33,35 @@ const DetailPage: React.FC = () => {
         }
     }, [slug, cafes]);
 
-    const handleAddReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status'>) => {
-        if (!slug) return;
+    const handleAddReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status'> & { cafe_id: string }) => {
         setIsSubmitting(true);
-        await addReview(slug, review);
-        setIsSubmitting(false);
-        alert("Review kamu telah dikirim dan sedang menunggu moderasi. Terima kasih!");
+        try {
+            await addReview(review);
+            setNotification("Review kamu telah dikirim dan sedang menunggu moderasi. Terima kasih!");
+        } catch (error: any) {
+            console.error("Failed to add review:", error);
+            alert(`Gagal mengirim review: ${error.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    if (loading) return <div className="text-center py-20">Loading...</div>;
+    if (loading && !cafe) return <div className="text-center py-20">Loading...</div>;
     if (!cafe) return <div className="text-center py-20">Cafe tidak ditemukan.</div>;
 
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${cafe.coords.lat},${cafe.coords.lng}`;
-    const approvedReviews = cafe.reviews.filter(r => r.status === 'approved');
+    const approvedReviews = cafe.reviews?.filter(r => r.status === 'approved') || [];
 
     return (
         <div className="container mx-auto px-6 py-8">
-            <img src={cafe.coverUrl} alt={cafe.name} className="w-full h-96 object-cover rounded-4xl mb-8" />
+            {notification && <FloatingNotification message={notification} type="success" onClose={() => setNotification(null)} />}
+            <ImageWithFallback src={cafe.coverUrl} alt={cafe.name} className="w-full h-96 object-cover rounded-4xl mb-8" />
             <div className="grid lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
                     {/* Header */}
                     <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm mb-8">
                         <div className="flex items-center mb-2">
-                            {cafe.logoUrl && (
-                                <img src={cafe.logoUrl} alt={`${cafe.name} logo`} className="w-16 h-16 rounded-2xl object-contain mr-4 shadow-md bg-gray-50 dark:bg-gray-700 p-1" />
-                            )}
+                            <ImageWithFallback src={cafe.logoUrl} alt={`${cafe.name} logo`} className="w-16 h-16 rounded-2xl object-contain mr-4 shadow-md bg-gray-50 dark:bg-gray-700 p-1" />
                             <h1 className="text-5xl font-extrabold font-jakarta">{cafe.name}</h1>
                         </div>
                         <div className="flex items-center text-gray-600 dark:text-gray-400 mb-2">
@@ -65,6 +72,11 @@ const DetailPage: React.FC = () => {
                              <ClockIcon className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
                             <span>Buka: {cafe.openingHours}</span>
                         </div>
+                        {cafe.description && (
+                            <p className="my-4 text-gray-700 dark:text-gray-300 italic text-lg border-l-4 border-primary/50 pl-4">
+                                {cafe.description}
+                            </p>
+                        )}
                         <div className="flex flex-wrap gap-2">
                             {cafe.vibes.map(v => <span key={v.id} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-semibold dark:bg-primary/20">{v.name}</span>)}
                             {cafe.amenities.map(a => <span key={a.id} className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full text-sm">{a.icon} {a.name}</span>)}
@@ -87,7 +99,7 @@ const DetailPage: React.FC = () => {
                          <div className="grid md:grid-cols-2 gap-6">
                             {cafe.spots.map(spot => (
                                 <div key={spot.id} className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm overflow-hidden">
-                                    <img src={spot.photoUrl} alt={spot.title} className="w-full h-48 object-cover" />
+                                    <ImageWithFallback src={spot.photoUrl} alt={spot.title} className="w-full h-48 object-cover" />
                                     <div className="p-4">
                                         <h4 className="font-bold">{spot.title}</h4>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 italic">"{spot.tip}"</p>
@@ -109,7 +121,7 @@ const DetailPage: React.FC = () => {
                                         <div className="flex flex-wrap gap-2 mt-2">
                                             {review.photos.map((photo, index) => (
                                                 <a href={photo} target="_blank" rel="noopener noreferrer" key={index}>
-                                                    <img src={photo} alt={`Review photo by ${review.author}`} className="h-24 w-24 object-cover rounded-lg hover:scale-105 transition-transform"/>
+                                                    <ImageWithFallback src={photo} alt={`Review photo by ${review.author}`} className="h-24 w-24 object-cover rounded-lg hover:scale-105 transition-transform"/>
                                                 </a>
                                             ))}
                                         </div>
@@ -130,7 +142,7 @@ const DetailPage: React.FC = () => {
                     <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
                         Buka di Google Maps
                     </a>
-                    <ReviewForm onSubmit={handleAddReview} isSubmitting={isSubmitting} />
+                    <ReviewForm onSubmit={(review) => handleAddReview({ ...review, cafe_id: cafe.id })} isSubmitting={isSubmitting} cafeId={cafe.id} />
                 </div>
             </div>
         </div>

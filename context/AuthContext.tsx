@@ -1,39 +1,86 @@
-import React, { createContext, useState, ReactNode, useContext } from 'react';
-import { User } from '../types';
-import { userService } from '../services/userService';
+import React, { createContext, useState, ReactNode, useContext, useEffect } from 'react';
+import { User, Profile } from '../types';
+import { supabase } from '../lib/supabaseClient';
+import { AuthError, Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
     currentUser: User | null;
-    login: (username: string, password: string) => boolean;
-    logout: () => void;
+    loading: boolean;
+    login: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+    logout: () => Promise<{ error: AuthError | null }>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [currentUser, setCurrentUser] = useState<User | null>(() => {
-        const storedUser = sessionStorage.getItem('currentUser');
-        return storedUser ? JSON.parse(storedUser) : null;
-    });
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    const login = (username: string, password: string): boolean => {
-        const user = userService.authenticate(username, password);
-        if (user) {
-            setCurrentUser(user);
-            sessionStorage.setItem('currentUser', JSON.stringify(user));
-            return true;
+    useEffect(() => {
+        const getSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            await setUserProfile(session);
+            setLoading(false);
+        };
+        
+        getSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (_event, session) => {
+                await setUserProfile(session);
+                setLoading(false);
+            }
+        );
+
+        return () => {
+            subscription?.unsubscribe();
+        };
+    }, []);
+    
+    const setUserProfile = async (session: Session | null) => {
+        if (session?.user) {
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+            
+            if (error) {
+                console.error("Error fetching profile:", error);
+                setCurrentUser(null);
+            } else if (profile) {
+                 setCurrentUser(profile as User);
+            }
+        } else {
+            setCurrentUser(null);
         }
-        return false;
     };
 
-    const logout = () => {
-        setCurrentUser(null);
-        sessionStorage.removeItem('currentUser');
+
+    const login = async (email: string, password: string) => {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        return { error };
+    };
+
+    const logout = async () => {
+        const { error } = await supabase.auth.signOut();
+        // Manually set user to null on successful logout for immediate UI update
+        if (!error) {
+            setCurrentUser(null);
+        }
+        return { error };
+    };
+
+    const value = {
+        currentUser,
+        loading,
+        login,
+        logout,
     };
 
     return (
-        <AuthContext.Provider value={{ currentUser, login, logout }}>
-            {children}
+        <AuthContext.Provider value={value}>
+            {!loading && children}
         </AuthContext.Provider>
     );
 };

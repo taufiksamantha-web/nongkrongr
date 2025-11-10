@@ -4,11 +4,12 @@ import { cloudinaryService } from '../services/cloudinaryService';
 import { fileToBase64 } from '../utils/fileUtils';
 
 interface ReviewFormProps {
-    onSubmit: (review: Omit<Review, 'id' | 'createdAt' | 'status'>) => void;
+    onSubmit: (review: Omit<Review, 'id' | 'createdAt' | 'status'> & { cafe_id: string }) => Promise<void>;
     isSubmitting: boolean;
+    cafeId: string;
 }
 
-const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
+const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId }) => {
     const [author, setAuthor] = useState('');
     const [text, setText] = useState('');
     const [ratingAesthetic, setRatingAesthetic] = useState(8);
@@ -69,7 +70,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting }) => {
             setIsUploading(false);
         }
 
-        onSubmit({
+        await onSubmit({
+            cafe_id: cafeId,
             author,
             text,
             ratingAesthetic,

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Cafe } from '../types';
 import { StarIcon, UsersIcon } from '@heroicons/react/24/solid';
+import ImageWithFallback from './common/ImageWithFallback';
 
 interface CafeCardProps {
   cafe: Cafe;
@@ -18,7 +19,7 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe }) => {
   return (
     <Link to={`/cafe/${cafe.slug}`} className="block bg-white dark:bg-gray-800 rounded-3xl shadow-lg hover:shadow-2xl dark:hover:shadow-primary/20 transition-all duration-500 overflow-hidden group transform hover:-translate-y-1 dark:border dark:border-transparent hover:dark:border-primary/50">
       <div className="relative">
-        <img src={cafe.coverUrl} alt={cafe.name} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
+        <ImageWithFallback src={cafe.coverUrl} alt={cafe.name} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
         {cafe.isSponsored && (
           <div className="absolute top-3 right-3 bg-accent-amber text-yellow-900 px-3 py-1 rounded-full text-xs font-bold shadow-md">
             SPONSORED

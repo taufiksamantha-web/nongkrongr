@@ -15,13 +15,6 @@ const CLOUDINARY_CLOUD_NAME = 'dovouihq8';
 // assign it to a specific folder.
 const CLOUDINARY_UPLOAD_PRESET = 'nongkrongr_uploads'; 
 
-// Constants for the JSON database file
-// This ID ensures that uploads from the admin panel overwrite the correct file.
-const DATABASE_PUBLIC_ID = 'database';
-// This is the direct URL to fetch the raw database file.
-export const DATABASE_URL = 'https://res.cloudinary.com/dovouihq8/raw/upload/database.json';
-
-
 const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/upload`;
 
 export const cloudinaryService = {
@@ -56,39 +49,4 @@ export const cloudinaryService = {
       throw error;
     }
   },
-
-  /**
-   * Uploads the entire cafe database as a JSON file to Cloudinary.
-   * Overwrites the existing file by using a fixed public_id.
-   * @param data The array of Cafe objects to be saved.
-   * @throws An error if the upload fails.
-   */
-  uploadDatabase: async (data: any): Promise<void> => {
-    const jsonData = JSON.stringify(data, null, 2); // Pretty print JSON
-    const blob = new Blob([jsonData], { type: 'application/json' });
-
-    const formData = new FormData();
-    formData.append('file', blob, 'database.json');
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-    formData.append('public_id', DATABASE_PUBLIC_ID);
-    formData.append('resource_type', 'raw');
-    
-    try {
-      const response = await fetch(UPLOAD_URL, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok || responseData.error) {
-        throw new Error(responseData.error?.message || 'Cloudinary database upload failed with status: ' + response.status);
-      }
-      
-      console.log('Database successfully uploaded to Cloudinary.');
-    } catch (error) {
-      console.error('Error uploading database to Cloudinary:', error);
-      throw error;
-    }
-  }
 };
