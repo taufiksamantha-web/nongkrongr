@@ -107,14 +107,6 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
         setSpotFiles(prev => prev.filter((_, index) => index !== indexToRemove));
     };
     
-    const uploadImageIfPresent = async (file: File | null, existingUrl: string): Promise<string> => {
-        if (!file) {
-            return existingUrl;
-        }
-        const base64 = await fileToBase64(file);
-        return await cloudinaryService.uploadImage(base64);
-    };
-
     const handleGenerateDescription = async () => {
         if (!formData.name) {
             alert("Please enter a cafe name first to generate a description.");
@@ -136,18 +128,26 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
         e.preventDefault();
         setIsUploading(true);
         try {
-            const [finalLogoUrl, finalCoverUrl] = await Promise.all([
-                uploadImageIfPresent(logoFile, formData.logoUrl),
-                uploadImageIfPresent(coverFile, formData.coverUrl)
-            ]);
+            // Jika file baru dipilih, unggah. Jika tidak, gunakan URL dari form.
+            const finalLogoUrl = logoFile
+                ? await cloudinaryService.uploadImage(await fileToBase64(logoFile))
+                : formData.logoUrl;
+
+            const finalCoverUrl = coverFile
+                ? await cloudinaryService.uploadImage(await fileToBase64(coverFile))
+                : formData.coverUrl;
 
             const finalSpots = await Promise.all(
                 formData.spots.map(async (spot, index) => {
-                    const finalPhotoUrl = await uploadImageIfPresent(spotFiles[index], spot.photoUrl);
+                    const spotFile = spotFiles[index];
+                    // Logika yang sama untuk setiap spot foto
+                    const finalPhotoUrl = spotFile
+                        ? await cloudinaryService.uploadImage(await fileToBase64(spotFile))
+                        : spot.photoUrl;
                     return { ...spot, photoUrl: finalPhotoUrl };
                 })
             );
-            
+
             let dataToSave = {
                 ...formData,
                 logoUrl: finalLogoUrl,
