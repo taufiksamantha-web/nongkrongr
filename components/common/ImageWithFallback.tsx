@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { optimizeCloudinaryImage } from '../../utils/imageOptimizer';
 
 interface ImageWithFallbackProps {
   src?: string | null;
   alt: string;
   className: string;
   fallbackText?: string;
+  width?: number;
+  height?: number;
 }
 
-const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, alt, className, fallbackText = "Foto tidak tersedia" }) => {
+const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, alt, className, fallbackText = "Foto tidak tersedia", width, height }) => {
   const [error, setError] = useState(!src);
+  
+  const optimizedSrc = src && width && height ? optimizeCloudinaryImage(src, width, height) : src;
 
   // Reset error state if src changes
   useEffect(() => {
@@ -27,7 +32,7 @@ const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, alt, classNa
     );
   }
 
-  return <img src={src!} alt={alt} className={className} onError={handleError} loading="lazy" />;
+  return <img src={optimizedSrc!} alt={alt} className={className} onError={handleError} loading="lazy" />;
 };
 
 export default ImageWithFallback;

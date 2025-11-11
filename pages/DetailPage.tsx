@@ -7,6 +7,7 @@ import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
 import ImageWithFallback from '../components/common/ImageWithFallback';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
+import InteractiveMap from '../components/InteractiveMap';
 
 const ScoreDisplay: React.FC<{ icon: React.ReactNode, label: string, score: number, max: number, color: string }> = ({ icon, label, score, max, color }) => (
     <div className="text-center">
@@ -22,14 +23,19 @@ const DetailPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const cafeContext = useContext(CafeContext);
-    const { cafes, loading, addReview, error } = cafeContext!;
+    const { cafes, loading, addReview, error, fetchCafes } = cafeContext!;
     
     const [cafe, setCafe] = useState<Cafe | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [notification, setNotification] = useState<string | null>(null);
 
     useEffect(() => {
-        if (slug) {
+        // Memuat data kafe setiap kali halaman ini dibuka untuk memastikan data (terutama review) segar
+        fetchCafes();
+    }, [fetchCafes]);
+
+    useEffect(() => {
+        if (slug && cafes.length > 0) {
             const currentCafe = cafes.find(c => c.slug === slug);
             setCafe(currentCafe || null);
         }
@@ -68,13 +74,25 @@ const DetailPage: React.FC = () => {
                 Kembali
             </button>
             {notification && <FloatingNotification message={notification} type="success" onClose={() => setNotification(null)} />}
-            <ImageWithFallback src={cafe.coverUrl} alt={cafe.name} className="w-full h-96 object-cover rounded-4xl mb-8" />
+            <ImageWithFallback 
+                src={cafe.coverUrl} 
+                alt={cafe.name} 
+                className="w-full h-96 object-cover rounded-4xl mb-8"
+                width={1280}
+                height={768}
+            />
             <div className="grid lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
                     {/* Header */}
                     <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm mb-8">
                         <div className="flex items-center mb-2">
-                            <ImageWithFallback src={cafe.logoUrl} alt={`${cafe.name} logo`} className="w-16 h-16 rounded-2xl object-contain mr-4 shadow-md bg-gray-50 dark:bg-gray-700 p-1" />
+                            <ImageWithFallback 
+                                src={cafe.logoUrl} 
+                                alt={`${cafe.name} logo`} 
+                                className="w-16 h-16 rounded-2xl object-contain mr-4 shadow-md bg-gray-50 dark:bg-gray-700 p-1"
+                                width={100}
+                                height={100}
+                            />
                             <h1 className="text-5xl font-extrabold font-jakarta">{cafe.name}</h1>
                         </div>
                         <div className="flex items-center text-gray-600 dark:text-gray-400 mb-2">
@@ -112,7 +130,13 @@ const DetailPage: React.FC = () => {
                          <div className="grid md:grid-cols-2 gap-6">
                             {cafe.spots.map(spot => (
                                 <div key={spot.id} className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm overflow-hidden">
-                                    <ImageWithFallback src={spot.photoUrl} alt={spot.title} className="w-full h-48 object-cover" />
+                                    <ImageWithFallback 
+                                        src={spot.photoUrl} 
+                                        alt={spot.title} 
+                                        className="w-full h-48 object-cover"
+                                        width={500}
+                                        height={300}
+                                    />
                                     <div className="p-4">
                                         <h4 className="font-bold">{spot.title}</h4>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 italic">"{spot.tip}"</p>
@@ -134,7 +158,13 @@ const DetailPage: React.FC = () => {
                                         <div className="flex flex-wrap gap-2 mt-2">
                                             {review.photos.map((photo, index) => (
                                                 <a href={photo} target="_blank" rel="noopener noreferrer" key={index}>
-                                                    <ImageWithFallback src={photo} alt={`Review photo by ${review.author}`} className="h-24 w-24 object-cover rounded-lg hover:scale-105 transition-transform"/>
+                                                    <ImageWithFallback 
+                                                        src={photo} 
+                                                        alt={`Review photo by ${review.author}`} 
+                                                        className="h-24 w-24 object-cover rounded-lg hover:scale-105 transition-transform"
+                                                        width={150}
+                                                        height={150}
+                                                    />
                                                 </a>
                                             ))}
                                         </div>
@@ -147,10 +177,8 @@ const DetailPage: React.FC = () => {
 
                 {/* Sidebar */}
                 <div className="space-y-8">
-                    <div className="rounded-3xl shadow-md overflow-hidden">
-                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" title="Buka di Google Maps">
-                            <img src={`https://res.cloudinary.com/dovouihq8/image/upload/v1722158935/map_placeholder.webp`} alt={`Map location for ${cafe.name}`} className="w-full h-64 object-cover" />
-                        </a>
+                    <div className="rounded-3xl shadow-md overflow-hidden h-64">
+                        <InteractiveMap cafe={cafe} />
                     </div>
                     <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
                         Buka di Google Maps

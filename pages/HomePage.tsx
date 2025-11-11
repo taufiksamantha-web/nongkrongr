@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -9,13 +10,14 @@ import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import { settingsService } from '../services/settingsService';
 import { HandThumbUpIcon, ArrowLeftIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
+import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 
 
 type TopReview = Review & { cafeName: string; cafeSlug: string };
 
 const HomePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
-  const { cafes, loading, error } = cafeContext!;
+  const { cafes, loading, error, fetchCafes } = cafeContext!;
   
   const [trendingCafes, setTrendingCafes] = useState<Cafe[]>([]);
   const [recommendedCafes, setRecommendedCafes] = useState<Cafe[]>([]);
@@ -29,14 +31,18 @@ const HomePage: React.FC = () => {
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchHeroBg = async () => {
-        const url = await settingsService.getSetting('hero_background_url');
-        if (url) {
-            setHeroBgUrl(url);
-        }
+    const loadPageData = async () => {
+      // Memastikan data kafe segar setiap kali halaman utama dikunjungi
+      await fetchCafes();
+      
+      // Memuat ulang URL background hero
+      const url = await settingsService.getSetting('hero_background_url');
+      if (url) {
+          setHeroBgUrl(url);
+      }
     };
-    fetchHeroBg();
-  }, []);
+    loadPageData();
+  }, [fetchCafes]);
 
   useEffect(() => {
     if (cafes.length > 0) {
@@ -145,7 +151,7 @@ const HomePage: React.FC = () => {
       <div className="relative bg-gray-900">
         <div className="absolute inset-0 z-0">
            <img 
-              src={heroBgUrl} 
+              src={optimizeCloudinaryImage(heroBgUrl, 1280, 720)}
               alt="Suasana cafe yang nyaman"
               className="w-full h-full object-cover blur-sm"
             />
@@ -216,7 +222,7 @@ const HomePage: React.FC = () => {
           <>
             <img 
               key={currentRecommendedCafe.id}
-              src={currentRecommendedCafe.coverUrl} 
+              src={optimizeCloudinaryImage(currentRecommendedCafe.coverUrl, 1280, 720)} 
               alt={`Latar belakang ${currentRecommendedCafe.name}`}
               className="absolute inset-0 w-full h-full object-cover blur-md scale-110 animate-fade-in"
             />
@@ -289,7 +295,7 @@ const HomePage: React.FC = () => {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {trendingCafes.map((cafe, i) => (
-                <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 100}ms`} />
+                <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />
               ))}
             </div>
           )}
@@ -308,7 +314,7 @@ const HomePage: React.FC = () => {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {topReviews.map((review, i) => (
-                <ReviewCard key={review.id} review={review} animationDelay={`${i * 100}ms`} />
+                <ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />
               ))}
             </div>
           )}

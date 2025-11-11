@@ -24,7 +24,13 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay }) => {
       style={{ animationDelay }}
     >
       <div className="relative">
-        <ImageWithFallback src={cafe.coverUrl} alt={cafe.name} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
+        <ImageWithFallback 
+            src={cafe.coverUrl} 
+            alt={cafe.name} 
+            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+            width={400}
+            height={300}
+        />
         {cafe.isSponsored && (
           <div className="absolute top-3 right-3 bg-accent-amber text-yellow-900 px-3 py-1 rounded-full text-xs font-bold shadow-md">
             SPONSORED

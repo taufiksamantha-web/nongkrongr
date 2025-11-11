@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier } from '../types';
@@ -7,10 +6,11 @@ import { DISTRICTS, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
+import InteractiveMap from '../components/InteractiveMap';
 
 const ExplorePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
-  const { cafes, loading, error } = cafeContext!;
+  const { cafes, loading, error, fetchCafes } = cafeContext!;
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
@@ -24,6 +24,11 @@ const ExplorePage: React.FC = () => {
     priceTier: parseInt(searchParams.get('price_tier') || '4', 10) as PriceTier,
     crowd: parseInt(searchParams.get('crowd') || '5', 10),
   });
+  
+  // Memuat data kafe setiap kali halaman ini dibuka
+  useEffect(() => {
+    fetchCafes();
+  }, [fetchCafes]);
   
   const handleFilterChange = <K extends keyof typeof filters,>(key: K, value: (typeof filters)[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -192,8 +197,8 @@ const ExplorePage: React.FC = () => {
                 className="w-full p-4 pl-12 text-lg rounded-2xl border-2 border-gray-200 focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all duration-300 shadow-sm text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
             />
         </div>
-        <div className="rounded-3xl mb-8 overflow-hidden shadow-md">
-            <img src="https://res.cloudinary.com/dovouihq8/image/upload/v1722158935/map_placeholder.webp" alt="Map of Palembang cafes" className="w-full h-64 object-cover" />
+        <div className="rounded-3xl mb-8 overflow-hidden shadow-md h-96">
+            <InteractiveMap cafes={filteredCafes} />
         </div>
         <h2 className="text-3xl font-bold font-jakarta mb-6">{filteredCafes.length} Cafe Ditemukan</h2>
         {loading ? (
@@ -203,7 +208,7 @@ const ExplorePage: React.FC = () => {
         ) : (
           <>
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-              {paginatedCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 100}ms`} />)}
+              {paginatedCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />)}
             </div>
             {renderPagination()}
           </>

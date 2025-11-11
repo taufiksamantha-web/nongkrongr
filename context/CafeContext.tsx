@@ -106,10 +106,6 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
-    useEffect(() => {
-        fetchCafes();
-    }, [fetchCafes]);
-
     const addCafe = async (cafeData: Partial<Cafe>) => {
         const { vibes = [], amenities = [], spots = [], coords, ...mainCafeData } = cafeData;
 
