@@ -203,14 +203,18 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
                     {(logoFile || formData.logoUrl) && (
                         <ImageWithFallback src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} alt="Logo preview" className="w-24 h-24 object-contain rounded-xl mb-2 bg-gray-100 dark:bg-gray-700 p-1" />
                     )}
-                    <input type="file" accept="image/*" onChange={handleLogoFileChange} className={`${inputClass} p-2`} />
+                    <input name="logoUrl" value={formData.logoUrl} onChange={handleChange} placeholder="URL Logo" className={inputClass} />
+                    <div className="text-center text-sm text-muted my-2">atau ganti dengan file baru:</div>
+                    <input type="file" accept="image/*" onChange={handleLogoFileChange} className="w-full p-2 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand" />
                   </div>
                   <div>
                     <label className="font-semibold block mb-2">Cover Image</label>
                     {(coverFile || formData.coverUrl) && (
                          <ImageWithFallback src={coverFile ? URL.createObjectURL(coverFile) : formData.coverUrl} alt="Cover preview" className="w-full h-24 object-cover rounded-xl mb-2" />
                     )}
-                    <input type="file" accept="image/*" onChange={handleCoverFileChange} className={`${inputClass} p-2`} />
+                    <input name="coverUrl" value={formData.coverUrl} onChange={handleChange} placeholder="URL Cover Image" className={inputClass} required />
+                    <div className="text-center text-sm text-muted my-2">atau ganti dengan file baru:</div>
+                    <input type="file" accept="image/*" onChange={handleCoverFileChange} className="w-full p-2 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand" />
                   </div>
                 </div>
 
@@ -248,14 +252,27 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
                     <legend className="font-semibold px-2">Spot Foto</legend>
                     <div className="space-y-4">
                         {formData.spots.map((spot, index) => (
-                            <div key={index} className="border dark:border-gray-700 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 relative pt-6">
+                            <div key={spot.id} className="border dark:border-gray-700 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 relative pt-6">
                                 <button type="button" onClick={() => handleRemoveSpot(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 rounded-full h-6 w-6 flex items-center justify-center font-bold text-lg leading-none hover:bg-red-500 hover:text-white transition-all">&times;</button>
                                 <div className="grid grid-cols-1 gap-2">
                                     {(spotFiles[index] || spot.photoUrl) && (
                                         <ImageWithFallback src={spotFiles[index] ? URL.createObjectURL(spotFiles[index]!) : spot.photoUrl} alt="Spot preview" className="w-full h-32 object-cover rounded-md mb-2" />
                                     )}
-                                    <input type="file" accept="image/*" onChange={(e) => handleSpotFileChange(index, e)} className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-                                    <input name="title" value={spot.title} onChange={(e) => handleSpotChange(index, e)} placeholder="Judul Spot" className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                                    <input 
+                                        name="photoUrl" 
+                                        value={spot.photoUrl} 
+                                        onChange={(e) => handleSpotChange(index, e)} 
+                                        placeholder="URL Foto Spot" 
+                                        className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    />
+                                    <div className="text-center text-sm text-muted">atau ganti dengan file baru:</div>
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        onChange={(e) => handleSpotFileChange(index, e)} 
+                                        className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand"
+                                    />
+                                    <input name="title" value={spot.title} onChange={(e) => handleSpotChange(index, e)} placeholder="Judul Spot" className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white mt-2" />
                                     <input name="tip" value={spot.tip} onChange={(e) => handleSpotChange(index, e)} placeholder="Tips Foto" className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
                                 </div>
                             </div>
