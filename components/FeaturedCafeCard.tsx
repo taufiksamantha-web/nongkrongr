@@ -12,7 +12,7 @@ const FeaturedCafeCard: React.FC<FeaturedCafeCardProps> = ({ cafe }) => {
   const displayQuote = cafe.description || cafe.reviews.find(r => r.status === 'approved')?.text || `Jelajahi suasana unik dan kopi terbaik di ${cafe.name}.`;
 
   return (
-    <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-4xl shadow-xl hover:shadow-2xl dark:hover:shadow-primary/20 transition-all duration-500 overflow-hidden group transform hover:-translate-y-2">
+    <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-4xl shadow-xl hover:shadow-2xl dark:hover:shadow-primary/20 transition-all duration-500 overflow-hidden group transform hover:scale-[1.02] hover:-translate-y-2 animate-fade-in-up">
       <Link to={`/cafe/${cafe.slug}`} className="block">
         <div className="grid md:grid-cols-5">
           <div className="md:col-span-2">

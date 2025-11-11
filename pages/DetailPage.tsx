@@ -6,6 +6,7 @@ import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon } from '@hero
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
 import ImageWithFallback from '../components/common/ImageWithFallback';
+import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 
 const ScoreDisplay: React.FC<{ icon: React.ReactNode, label: string, score: number, max: number, color: string }> = ({ icon, label, score, max, color }) => (
     <div className="text-center">
@@ -20,7 +21,7 @@ const ScoreDisplay: React.FC<{ icon: React.ReactNode, label: string, score: numb
 const DetailPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const cafeContext = useContext(CafeContext);
-    const { cafes, loading, addReview } = cafeContext!;
+    const { cafes, loading, addReview, error } = cafeContext!;
     
     const [cafe, setCafe] = useState<Cafe | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,6 +47,9 @@ const DetailPage: React.FC = () => {
         }
     };
 
+    if (error) {
+        return <DatabaseConnectionError />;
+    }
     if (loading && !cafe) return <div className="text-center py-20">Loading...</div>;
     if (!cafe) return <div className="text-center py-20">Cafe tidak ditemukan.</div>;
 

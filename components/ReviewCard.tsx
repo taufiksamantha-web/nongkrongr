@@ -8,6 +8,7 @@ type TopReview = Review & { cafeName: string; cafeSlug: string };
 
 interface ReviewCardProps {
   review: TopReview;
+  animationDelay?: string;
 }
 
 const RatingBadge: React.FC<{ icon: React.ReactNode, score: number, color: string }> = ({ icon, score, color }) => (
@@ -17,9 +18,12 @@ const RatingBadge: React.FC<{ icon: React.ReactNode, score: number, color: strin
     </div>
 );
 
-const ReviewCard: React.FC<ReviewCardProps> = ({ review }) => {
+const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 flex flex-col justify-between h-full transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border dark:border-gray-700">
+    <div 
+      className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 flex flex-col justify-between h-full transform transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl dark:border dark:border-gray-700 animate-fade-in-up"
+      style={{ animationDelay }}
+    >
       <div>
         <p className="text-5xl text-primary font-bold opacity-20">“</p>
         <p className="text-gray-700 dark:text-gray-300 italic -mt-6 line-clamp-4">

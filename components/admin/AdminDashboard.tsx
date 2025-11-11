@@ -4,6 +4,7 @@ import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon } from '@heroicons/
 import CafeManagementPanel from './CafeManagementPanel';
 import PendingReviews from './PendingReviews';
 import UserManagementPanel from './UserManagementPanel';
+import WebsiteSettingsPanel from './WebsiteSettingsPanel';
 import StatCard from './StatCard';
 
 const AdminDashboard: React.FC = () => {
@@ -40,7 +41,8 @@ const AdminDashboard: React.FC = () => {
                     color="red" 
                 />
             </div>
-
+            
+            <WebsiteSettingsPanel />
             <CafeManagementPanel />
             <PendingReviews />
             <UserManagementPanel />

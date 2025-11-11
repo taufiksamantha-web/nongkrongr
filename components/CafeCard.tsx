@@ -6,6 +6,7 @@ import ImageWithFallback from './common/ImageWithFallback';
 
 interface CafeCardProps {
   cafe: Cafe;
+  animationDelay?: string;
 }
 
 const ScoreBadge: React.FC<{ icon: React.ReactNode, score: number, color: string }> = ({ icon, score, color }) => (
@@ -15,9 +16,13 @@ const ScoreBadge: React.FC<{ icon: React.ReactNode, score: number, color: string
     </div>
 );
 
-const CafeCard: React.FC<CafeCardProps> = ({ cafe }) => {
+const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay }) => {
   return (
-    <Link to={`/cafe/${cafe.slug}`} className="block bg-white dark:bg-gray-800 rounded-3xl shadow-lg hover:shadow-2xl dark:hover:shadow-primary/20 transition-all duration-500 overflow-hidden group transform hover:-translate-y-1 dark:border dark:border-transparent hover:dark:border-primary/50">
+    <Link 
+      to={`/cafe/${cafe.slug}`} 
+      className="block bg-white dark:bg-gray-800 rounded-3xl shadow-lg hover:shadow-2xl dark:hover:shadow-primary/20 transition-all duration-500 overflow-hidden group transform hover:scale-[1.02] hover:-translate-y-1 dark:border dark:border-transparent hover:dark:border-primary/50 animate-fade-in-up"
+      style={{ animationDelay }}
+    >
       <div className="relative">
         <ImageWithFallback src={cafe.coverUrl} alt={cafe.name} className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500" />
         {cafe.isSponsored && (

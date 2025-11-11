@@ -6,10 +6,11 @@ import { CafeContext } from '../context/CafeContext';
 import { DISTRICTS, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
+import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 
 const ExplorePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
-  const { cafes, loading } = cafeContext!;
+  const { cafes, loading, error } = cafeContext!;
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
@@ -114,6 +115,10 @@ const ExplorePage: React.FC = () => {
     );
   };
   
+  if (error) {
+    return <DatabaseConnectionError />;
+  }
+
   return (
     <div className="container mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
       {/* Filters Sidebar */}
@@ -198,7 +203,7 @@ const ExplorePage: React.FC = () => {
         ) : (
           <>
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-              {paginatedCafes.map(cafe => <CafeCard key={cafe.id} cafe={cafe} />)}
+              {paginatedCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 100}ms`} />)}
             </div>
             {renderPagination()}
           </>

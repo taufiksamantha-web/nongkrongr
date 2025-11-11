@@ -1,18 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 
-// --- Kredensial Supabase sekarang diambil dari Environment Variables ---
-// Di lingkungan client-side (browser) seperti ini, kita menggunakan import.meta.env
-// untuk mengakses variabel yang diekspos oleh build tool (seperti Vite/Vercel).
+// --- PERHATIAN PENTING ---
+// Kredensial di bawah ini disematkan langsung agar aplikasi bisa berjalan di Google AI Studio.
+// Lingkungan AI Studio tidak mendukung environment variables seperti Vercel.
+//
+// GANTI NILAI DI BAWAH INI DENGAN KREDENSIAL SUPABASE ANDA.
+const FALLBACK_SUPABASE_URL = 'https://dbtgyptcwxghlevpfstq.supabase.co'; // <-- GANTI DENGAN URL SUPABASE ANDA
+const FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRidGd5cHRjd3hnaGxldnBmc3RxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3NDkwMTksImV4cCI6MjA3ODMyNTAxOX0.dGYgAYSKBMf2DqjM8iVkoX3IqZnjDmBdASVUhpkSQvk'; // <-- GANTI DENGAN KUNCI ANON SUPABASE ANDA
+// --------------------------------------------------------------------
 
-// FIX: Cast `import.meta` to `any` to bypass TypeScript error about missing `env` property for VITE environment variables.
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
+// Prioritaskan environment variables dari Vercel/Vite.
+// Jika tidak ada, gunakan nilai fallback di atas untuk AI Studio.
+const supabaseUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_URL) || FALLBACK_SUPABASE_URL;
+const supabaseAnonKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_ANON_KEY) || FALLBACK_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+// Beri peringatan di konsol jika placeholder belum diganti.
+if (supabaseUrl.includes('YOUR_SUPABASE_URL')) {
   console.error(
-    "🛑 Kredensial Supabase tidak ditemukan! Aplikasi mungkin tidak berfungsi dengan benar. " +
-    "Pastikan Anda telah menambahkan VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY " +
-    "ke Environment Variables di Vercel."
+    "🛑 KESALAHAN KONFIGURASI: Anda belum mengatur kredensial Supabase di `lib/supabaseClient.ts`. " +
+    "Silakan buka file tersebut dan ganti nilai placeholder `FALLBACK_SUPABASE_URL` dan `FALLBACK_SUPABASE_ANON_KEY`."
   );
 }
 

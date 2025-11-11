@@ -1,0 +1,111 @@
+{
+  "name": "NongkrongrDB",
+  "tables": [
+    {
+      "name": "vibes",
+      "columns": [
+        { "name": "id", "type": "text", "is_primary_key": true },
+        { "name": "name", "type": "text" },
+        { "name": "created_at", "type": "timestamptz", "default": "now()" }
+      ],
+      "csv_file": "vibes.csv"
+    },
+    {
+      "name": "amenities",
+      "columns": [
+        { "name": "id", "type": "text", "is_primary_key": true },
+        { "name": "name", "type": "text" },
+        { "name": "icon", "type": "text" },
+        { "name": "created_at", "type": "timestamptz", "default": "now()" }
+      ],
+      "csv_file": "amenities.csv"
+    },
+    {
+      "name": "profiles",
+      "columns": [
+        { "name": "id", "type": "uuid", "is_primary_key": true, "references": "auth.users(id)" },
+        { "name": "username", "type": "text" },
+        { "name": "role", "type": "text", "default": "user" }
+      ],
+      "csv_file": "profiles.csv"
+    },
+    {
+      "name": "cafes",
+      "columns": [
+        { "name": "id", "type": "text", "is_primary_key": true },
+        { "name": "slug", "type": "text", "is_unique": true },
+        { "name": "name", "type": "text" },
+        { "name": "description", "type": "text" },
+        { "name": "address", "type": "text" },
+        { "name": "district", "type": "text" },
+        { "name": "openingHours", "type": "text" },
+        { "name": "priceTier", "type": "smallint" },
+        { "name": "lat", "type": "float8" },
+        { "name": "lng", "type": "float8" },
+        { "name": "isSponsored", "type": "boolean", "default": false },
+        { "name": "sponsoredUntil", "type": "timestamptz" },
+        { "name": "sponsoredRank", "type": "integer" },
+        { "name": "logoUrl", "type": "text" },
+        { "name": "coverUrl", "type": "text" },
+        { "name": "created_at", "type": "timestamptz", "default": "now()" }
+      ],
+      "csv_file": "cafes.csv"
+    },
+    {
+      "name": "reviews",
+      "columns": [
+        { "name": "id", "type": "text", "is_primary_key": true },
+        { "name": "cafe_id", "type": "text", "references": "cafes(id)" },
+        { "name": "author", "type": "text" },
+        { "name": "ratingAesthetic", "type": "smallint" },
+        { "name": "ratingWork", "type": "smallint" },
+        { "name": "crowdMorning", "type": "smallint" },
+        { "name": "crowdAfternoon", "type": "smallint" },
+        { "name": "crowdEvening", "type": "smallint" },
+        { "name": "priceSpent", "type": "integer" },
+        { "name": "text", "type": "text" },
+        { "name": "photos", "type": "text[]" },
+        { "name": "createdAt", "type": "timestamptz", "default": "now()" },
+        { "name": "status", "type": "text", "default": "pending" }
+      ],
+      "csv_file": "reviews.csv"
+    },
+    {
+      "name": "spots",
+      "columns": [
+        { "name": "id", "type": "text", "is_primary_key": true },
+        { "name": "cafe_id", "type": "text", "references": "cafes(id)" },
+        { "name": "title", "type": "text" },
+        { "name": "tip", "type": "text" },
+        { "name": "photoUrl", "type": "text" },
+        { "name": "created_at", "type": "timestamptz", "default": "now()" }
+      ],
+      "csv_file": "spots.csv"
+    },
+    {
+      "name": "cafe_vibes",
+      "columns": [
+        { "name": "cafe_id", "type": "text", "is_primary_key": true, "references": "cafes(id)" },
+        { "name": "vibe_id", "type": "text", "is_primary_key": true, "references": "vibes(id)" }
+      ],
+      "csv_file": "cafe_vibes.csv"
+    },
+    {
+      "name": "cafe_amenities",
+      "columns": [
+        { "name": "cafe_id", "type": "text", "is_primary_key": true, "references": "cafes(id)" },
+        { "name": "amenity_id", "type": "text", "is_primary_key": true, "references": "amenities(id)" }
+      ],
+      "csv_file": "cafe_amenities.csv"
+    },
+    {
+      "name": "settings",
+      "columns": [
+        { "name": "key", "type": "text", "is_primary_key": true },
+        { "name": "value", "type": "text" },
+        { "name": "created_at", "type": "timestamptz", "default": "now()" }
+      ],
+      "csv_file": "settings.csv"
+    }
+  ]
+}
