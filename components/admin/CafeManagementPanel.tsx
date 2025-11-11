@@ -56,31 +56,31 @@ const CafeManagementPanel: React.FC = () => {
          <>
             {notification && <FloatingNotification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-                <h2 className="text-3xl font-bold font-jakarta">Daftar Cafe</h2>
-                <button onClick={() => { setEditingCafe(null); setIsFormOpen(true); }} className="bg-primary text-white font-bold py-2 px-6 rounded-2xl hover:bg-primary/90 transition-colors">
+                <h2 className="text-2xl font-bold font-jakarta">Daftar Cafe</h2>
+                <button onClick={() => { setEditingCafe(null); setIsFormOpen(true); }} className="bg-brand text-white font-bold py-2 px-6 rounded-2xl hover:bg-brand/90 transition-colors">
                     + Tambah Cafe
                 </button>
             </div>
 
             {loading ? <p>Loading cafes...</p> : (
-                <div className="bg-white dark:bg-gray-800 p-2 rounded-3xl shadow-sm overflow-x-auto">
+                <div className="bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="border-b-2 border-gray-100 dark:border-gray-700">
-                                <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nama</th>
-                                <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Kecamatan</th>
-                                <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sponsored</th>
-                                <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                            <tr className="border-b-2 border-border">
+                                <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Nama</th>
+                                <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Kecamatan</th>
+                                <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Sponsored</th>
+                                <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {cafes.map(cafe => (
-                                <tr key={cafe.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-primary/5 dark:hover:bg-primary/10">
-                                    <td className="p-4 font-semibold text-gray-800 dark:text-gray-200">{cafe.name}</td>
-                                    <td className="p-4 text-gray-600 dark:text-gray-400">{cafe.district}</td>
-                                    <td className="p-4 text-gray-600 dark:text-gray-400">{cafe.isSponsored ? '✅' : '❌'}</td>
+                                <tr key={cafe.id} className="border-b border-border last:border-0 hover:bg-brand/5 dark:hover:bg-brand/10">
+                                    <td className="p-4 font-semibold text-primary dark:text-gray-200">{cafe.name}</td>
+                                    <td className="p-4 text-muted">{cafe.district}</td>
+                                    <td className="p-4 text-muted">{cafe.isSponsored ? '✅' : '❌'}</td>
                                     <td className="p-4 space-x-4">
-                                        <button onClick={() => { setEditingCafe(cafe); setIsFormOpen(true); }} className="text-primary font-bold hover:underline">Edit</button>
+                                        <button onClick={() => { setEditingCafe(cafe); setIsFormOpen(true); }} className="text-brand font-bold hover:underline">Edit</button>
                                         {currentUser?.role === 'admin' && (
                                             <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Delete</button>
                                         )}

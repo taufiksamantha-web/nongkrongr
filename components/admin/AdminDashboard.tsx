@@ -22,41 +22,38 @@ const AdminDashboard: React.FC = () => {
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8 items-start">
               
-              {/* Kolom Utama (Kiri) */}
               <div className="lg:col-span-2 space-y-8">
-                <CafeManagementPanel />
-                <PendingReviews />
+                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><CafeManagementPanel /></div>
+                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><PendingReviews /></div>
               </div>
 
-              {/* Kolom Samping (Kanan) */}
               <div className="lg:col-span-1 space-y-8">
-                {/* Stats Panel */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm">
+                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
                     <h3 className="text-xl font-bold font-jakarta mb-4">Ringkasan</h3>
                     <div className="space-y-4">
                        <StatCard 
                             title="Total Cafe" 
                             value={totalCafes} 
-                            icon={<BuildingStorefrontIcon className="h-8 w-8 text-primary" />} 
-                            color="primary" 
+                            icon={<BuildingStorefrontIcon className="h-8 w-8 text-brand" />} 
+                            color="brand" 
                         />
                         <StatCard 
                             title="Sponsored" 
                             value={sponsoredCafes} 
-                            icon={<CheckBadgeIcon className="h-8 w-8 text-green-600 dark:text-green-400" />} 
+                            icon={<CheckBadgeIcon className="h-8 w-8 text-green-500" />} 
                             color="green" 
                         />
                         <StatCard 
                             title="Regular" 
                             value={nonSponsoredCafes} 
-                            icon={<XCircleIcon className="h-8 w-8 text-red-600 dark:text-red-400" />} 
+                            icon={<XCircleIcon className="h-8 w-8 text-red-500" />} 
                             color="red" 
                         />
                     </div>
                 </div>
                 
-                <WebsiteSettingsPanel />
-                <UserManagementPanel />
+                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><WebsiteSettingsPanel /></div>
+                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><UserManagementPanel /></div>
               </div>
             </div>
         </div>

@@ -23,18 +23,18 @@ const PendingReviews: React.FC = () => {
     };
     
     return (
-         <div className="mt-12">
-            <h2 className="text-3xl font-bold font-jakarta mb-6">Moderasi Review ({reviews.length})</h2>
-            {reviews.length === 0 ? <p className="text-gray-500 dark:text-gray-400">Tidak ada review yang menunggu moderasi.</p> : (
+         <div>
+            <h2 className="text-2xl font-bold font-jakarta mb-4">Moderasi Review ({reviews.length})</h2>
+            {reviews.length === 0 ? <p className="text-muted">Tidak ada review yang menunggu moderasi.</p> : (
             <div className="space-y-4">
                 {reviews.map(review => (
-                    <div key={review.id} className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm">
+                    <div key={review.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-2xl border border-border">
                         <div className="flex justify-between items-start flex-wrap">
                            <div className="flex-grow">
-                                <p className="font-bold text-lg">{review.author} <span className="font-normal text-gray-500 dark:text-gray-400">mereview</span> {review.cafeName}</p>
-                                <p className="text-gray-700 dark:text-gray-300 my-2 italic">"{review.text}"</p>
+                                <p className="font-bold text-lg">{review.author} <span className="font-normal text-muted">mereview</span> {review.cafeName}</p>
+                                <p className="text-primary dark:text-gray-300 my-2 italic">"{review.text}"</p>
                                 {review.photos && review.photos[0] && (
-                                    <a href={review.photos[0]} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm font-semibold">
+                                    <a href={review.photos[0]} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline text-sm font-semibold">
                                         Lihat Foto
                                     </a>
                                 )}
@@ -56,10 +56,10 @@ const PendingReviews: React.FC = () => {
                                 </button>
                            </div>
                         </div>
-                         <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                         <div className="mt-2 pt-2 border-t border-border flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
                             <span><span className="font-semibold text-accent-pink">Aesthetic:</span> {review.ratingAesthetic}/10</span>
-                            <span><span className="font-semibold text-secondary">Nugas:</span> {review.ratingWork}/10</span>
-                            <span><span className="font-semibold text-primary">Crowd Malam:</span> {review.crowdEvening}/5</span>
+                            <span><span className="font-semibold text-accent-cyan">Nugas:</span> {review.ratingWork}/10</span>
+                            <span><span className="font-semibold text-brand">Crowd Malam:</span> {review.crowdEvening}/5</span>
                             <span><span className="font-semibold">Jajan:</span> Rp{review.priceSpent.toLocaleString('id-ID')}</span>
                         </div>
                     </div>

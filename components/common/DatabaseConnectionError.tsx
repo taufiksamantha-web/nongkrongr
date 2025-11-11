@@ -12,7 +12,7 @@ const DatabaseConnectionError: React.FC = () => {
         <p className="mt-2 text-yellow-700 dark:text-yellow-300">
           Aplikasi ini tidak dapat mengambil data (seperti daftar kafe) karena koneksi ke database Supabase tidak tersedia di lingkungan pratinjau ini.
         </p>
-        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-4 text-sm text-muted">
           Ini adalah perilaku yang diharapkan saat berjalan di Google AI Studio. Fungsionalitas penuh, termasuk data kafe live, tersedia di versi aplikasi yang telah di-deploy.
         </p>
       </div>

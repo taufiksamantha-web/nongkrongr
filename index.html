@@ -18,14 +18,19 @@
               jakarta: ['Plus Jakarta Sans', 'sans-serif'],
             },
             colors: {
-              primary: {
-                DEFAULT: '#7C4DFF',
-                light: '#A589FF',
+              soft: 'hsl(var(--soft))',
+              card: 'hsl(var(--card))',
+              border: 'hsl(var(--border))',
+              brand: {
+                DEFAULT: 'hsl(var(--brand))',
+                light: 'hsl(var(--brand-light))',
               },
-              secondary: '#00E5FF',
+              primary: 'hsl(var(--foreground))',
+              muted: 'hsl(var(--muted))',
               accent: {
-                pink: '#FF4081',
-                amber: '#FFD740',
+                pink: 'hsl(var(--accent-pink))',
+                amber: 'hsl(var(--accent-amber))',
+                cyan: 'hsl(var(--accent-cyan))',
               },
             },
             borderRadius: {
@@ -37,7 +42,7 @@
               'fade-in-up': {
                 '0%': {
                   opacity: '0',
-                  transform: 'translateY(20px) scale(0.95)'
+                  transform: 'translateY(15px) scale(0.98)'
                 },
                 '100%': {
                   opacity: '1',
@@ -46,12 +51,35 @@
               },
             },
             animation: {
-              'fade-in-up': 'fade-in-up 0.6s ease-out forwards',
+              'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
             }
           }
         }
       }
     </script>
+    <style>
+      :root {
+        --soft: 0 0% 97%; /* bg-soft */
+        --card: 0 0% 100%; /* bg-card */
+        --border: 240 6% 90%; /* border-subtle */
+        --brand: 262 100% 65%; /* brand */
+        --brand-light: 262 100% 77%; /* brand-light */
+        --foreground: 240 10% 4%; /* text-primary */
+        --muted: 240 4% 46%; /* text-muted */
+        --accent-pink: 340 100% 63%;
+        --accent-amber: 45 100% 62%;
+        --accent-cyan: 187 100% 50%;
+      }
+      .dark {
+        --soft: 240 4% 5%;
+        --card: 240 4% 10%;
+        --border: 240 4% 15%;
+        --brand: 262 100% 65%;
+        --brand-light: 262 100% 77%;
+        --foreground: 0 0% 98%;
+        --muted: 240 4% 65%;
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {

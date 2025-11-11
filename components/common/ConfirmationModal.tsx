@@ -10,7 +10,6 @@ interface ConfirmationModalProps {
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, message, onConfirm, onCancel, confirmText = 'Hapus', cancelText = 'Batal' }) => {
-  // Mencegah scroll di background
   React.useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -21,17 +20,17 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, message, o
   return (
     <div 
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]"
-      onClick={onCancel} // Close on overlay click
+      onClick={onCancel}
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirmation-title"
     >
       <div 
-        className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl w-full max-w-md space-y-4 transform transition-all animate-fade-in-down"
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
+        className="bg-card p-8 rounded-3xl shadow-xl w-full max-w-md space-y-4 transform transition-all animate-fade-in-down"
+        onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="confirmation-title" className="text-2xl font-bold font-jakarta text-gray-800 dark:text-white">{title}</h2>
-        <p className="text-gray-600 dark:text-gray-400">{message}</p>
+        <h2 id="confirmation-title" className="text-2xl font-bold font-jakarta text-primary dark:text-white">{title}</h2>
+        <p className="text-muted">{message}</p>
         <div className="flex justify-end gap-4 pt-4">
           <button onClick={onCancel} className="px-6 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
             {cancelText}

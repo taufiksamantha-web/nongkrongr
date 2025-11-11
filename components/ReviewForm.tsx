@@ -18,10 +18,9 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
     const [crowdAfternoon, setCrowdAfternoon] = useState(3);
     const [crowdEvening, setCrowdEvening] = useState(3);
     const [priceSpent, setPriceSpent] = useState('');
-    const [photo, setPhoto] = useState<string | null>(null); // Store as base64 string
+    const [photo, setPhoto] = useState<string | null>(null);
     const [photoName, setPhotoName] = useState('');
     const [isUploading, setIsUploading] = useState(false);
-
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -86,13 +85,14 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
     };
     
     const totalSubmitting = isSubmitting || isUploading;
+    const inputClass = "w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white placeholder:text-muted";
     
     return (
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm space-y-4">
+        <form onSubmit={handleSubmit} className="bg-card border border-border p-6 rounded-3xl shadow-sm space-y-4">
             <h3 className="text-xl font-bold font-jakarta">Beri Review Kamu!</h3>
             
-            <input type="text" placeholder="Nama Kamu" value={author} onChange={e => setAuthor(e.target.value)} required className="w-full p-3 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" />
-            <textarea placeholder="Ceritain pengalamanmu..." value={text} onChange={e => setText(e.target.value)} required className="w-full p-3 border rounded-xl h-24 text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"></textarea>
+            <input type="text" placeholder="Nama Kamu" value={author} onChange={e => setAuthor(e.target.value)} required className={inputClass} />
+            <textarea placeholder="Ceritain pengalamanmu..." value={text} onChange={e => setText(e.target.value)} required className={`${inputClass} h-24`}></textarea>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
@@ -101,21 +101,21 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                 </div>
                 <div>
                     <label className="font-semibold block mb-1">Skor Nugas ({ratingWork})</label>
-                    <input type="range" min="1" max="10" value={ratingWork} onChange={e => setRatingWork(parseInt(e.target.value))} className="w-full accent-secondary"/>
+                    <input type="range" min="1" max="10" value={ratingWork} onChange={e => setRatingWork(parseInt(e.target.value))} className="w-full accent-accent-cyan"/>
                 </div>
             </div>
 
             <div>
                 <label className="font-semibold block mb-1">Tingkat Keramaian</label>
-                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <div className="space-y-2 text-sm text-muted">
                     <div>
-                        Pagi ({crowdMorning}): <input type="range" min="1" max="5" value={crowdMorning} onChange={e => setCrowdMorning(parseInt(e.target.value))} className="w-full accent-amber-400"/>
+                        Pagi ({crowdMorning}): <input type="range" min="1" max="5" value={crowdMorning} onChange={e => setCrowdMorning(parseInt(e.target.value))} className="w-full accent-accent-amber"/>
                     </div>
                      <div>
-                        Siang ({crowdAfternoon}): <input type="range" min="1" max="5" value={crowdAfternoon} onChange={e => setCrowdAfternoon(parseInt(e.target.value))} className="w-full accent-primary/75"/>
+                        Siang ({crowdAfternoon}): <input type="range" min="1" max="5" value={crowdAfternoon} onChange={e => setCrowdAfternoon(parseInt(e.target.value))} className="w-full accent-brand/75"/>
                     </div>
                      <div>
-                        Malam ({crowdEvening}): <input type="range" min="1" max="5" value={crowdEvening} onChange={e => setCrowdEvening(parseInt(e.target.value))} className="w-full accent-primary"/>
+                        Malam ({crowdEvening}): <input type="range" min="1" max="5" value={crowdEvening} onChange={e => setCrowdEvening(parseInt(e.target.value))} className="w-full accent-brand"/>
                     </div>
                 </div>
             </div>
@@ -129,12 +129,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                         placeholder="Contoh: 50000" 
                         value={priceSpent}
                         onChange={e => setPriceSpent(e.target.value)}
-                        className="w-full p-3 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className={`${inputClass} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                     />
                  </div>
                  <div>
                     <label className="font-semibold block mb-1">Foto (Opsional)</label>
-                    <label htmlFor="photo-upload" className="w-full text-center cursor-pointer bg-gray-100 dark:bg-gray-700 p-3 rounded-xl border-2 border-dashed dark:border-gray-600 block hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    <label htmlFor="photo-upload" className="w-full text-center cursor-pointer bg-soft p-3 rounded-xl border-2 border-dashed border-border block hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                         {photoName ? `✔️ ${photoName}` : '📸 Pilih Foto'}
                     </label>
                     <input id="photo-upload" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
@@ -142,7 +142,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
             </div>
              {photo && <img src={photo} alt="Preview" className="mt-2 rounded-lg max-h-40 mx-auto" />}
             
-            <button type="submit" disabled={totalSubmitting} className="w-full bg-primary text-white font-bold py-3 rounded-2xl hover:bg-primary/90 transition-all disabled:bg-primary/50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={totalSubmitting} className="w-full bg-brand text-white font-bold py-3 rounded-2xl hover:bg-brand/90 transition-all disabled:bg-brand/50 disabled:cursor-not-allowed">
                 {isUploading ? 'Uploading Foto...' : (isSubmitting ? 'Mengirim...' : 'Kirim Review')}
             </button>
         </form>

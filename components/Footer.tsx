@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-// Simple SVG icons for social media
 const InstagramIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
     <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
@@ -24,40 +23,40 @@ const TwitterIcon = () => (
 
 const Footer: React.FC = () => {
     return (
-        <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-16">
+        <footer className="bg-card border-t border-border mt-16">
             <div className="container mx-auto px-6 py-12">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     {/* Branding & About */}
                     <div className="col-span-1 md:col-span-2">
-                        <h3 className="text-2xl font-extrabold font-jakarta text-primary">Nongkrongr</h3>
-                        <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-sm">
+                        <h3 className="text-2xl font-extrabold font-jakarta text-brand">Nongkrongr</h3>
+                        <p className="mt-2 text-muted max-w-sm">
                             Platform rekomendasi cafe aesthetic di Palembang untuk Gen Z yang hobi nongkrong, hunting foto, dan nugas.
                         </p>
                     </div>
                     
                     {/* Quick Links */}
                     <div>
-                        <h4 className="font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">Navigasi</h4>
+                        <h4 className="font-bold text-primary dark:text-gray-200 uppercase tracking-wider">Navigasi</h4>
                         <nav className="mt-4 space-y-2">
-                            <Link to="/" className="block text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-white transition-colors">Home</Link>
-                            <Link to="/explore" className="block text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-white transition-colors">Explore</Link>
-                            <Link to="/admin" className="block text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-white transition-colors">Admin</Link>
-                            <Link to="/about" className="block text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-white transition-colors">Tentang Kami</Link>
+                            <Link to="/" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Home</Link>
+                            <Link to="/explore" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Explore</Link>
+                            <Link to="/admin" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Admin</Link>
+                            <Link to="/about" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Tentang Kami</Link>
                         </nav>
                     </div>
 
                     {/* Social Media */}
                     <div>
-                         <h4 className="font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">Follow Us</h4>
+                         <h4 className="font-bold text-primary dark:text-gray-200 uppercase tracking-wider">Follow Us</h4>
                          <div className="mt-4 flex space-x-4">
-                            <a href="#" aria-label="Instagram" className="text-gray-400 hover:text-[#E1306C] transition-colors"><InstagramIcon /></a>
-                            <a href="#" aria-label="TikTok" className="text-gray-400 hover:text-secondary transition-colors"><TikTokIcon /></a>
-                            <a href="#" aria-label="Twitter" className="text-gray-400 hover:text-[#1DA1F2] transition-colors"><TwitterIcon /></a>
+                            <a href="#" aria-label="Instagram" className="text-muted hover:text-[#E1306C] transition-colors"><InstagramIcon /></a>
+                            <a href="#" aria-label="TikTok" className="text-muted hover:text-accent-cyan transition-colors"><TikTokIcon /></a>
+                            <a href="#" aria-label="Twitter" className="text-muted hover:text-[#1DA1F2] transition-colors"><TwitterIcon /></a>
                          </div>
                     </div>
                 </div>
 
-                <div className="mt-12 border-t border-gray-200 dark:border-gray-700 pt-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+                <div className="mt-12 border-t border-border pt-8 text-center text-muted text-sm">
                     <p>&copy; {new Date().getFullYear()} Nongkrongr. Dibuat dengan 💜 di Palembang.</p>
                 </div>
             </div>

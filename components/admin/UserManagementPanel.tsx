@@ -32,7 +32,6 @@ const UserManagementPanel: React.FC = () => {
     }, []);
     
     const handleSaveUser = async (userData: Partial<User> & { email?: string, password?: string }) => {
-        // If it's an add operation
         if (!editingUser) {
              console.error("SECURITY WARNING: Client-side user creation is insecure and not supported. This is a placeholder action. Implement a Supabase Edge Function for this.");
              setNotification({ message: 'Fitur Tambah User memerlukan setup backend (Edge Function) untuk keamanan.', type: 'error' });
@@ -40,7 +39,6 @@ const UserManagementPanel: React.FC = () => {
              return;
         }
 
-        // It's an edit operation
         const { id, ...updateData } = { ...editingUser, ...userData };
         const { error } = await supabase
             .from('profiles')
@@ -76,35 +74,35 @@ const UserManagementPanel: React.FC = () => {
     };
     
     return (
-        <div className="mt-12">
+        <div>
              {notification && <FloatingNotification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-                 <h2 className="text-3xl font-bold font-jakarta">User Management</h2>
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+                 <h2 className="text-2xl font-bold font-jakarta">User Management</h2>
                  {currentUser?.role === 'admin' && (
-                    <button onClick={handleOpenAddForm} className="bg-primary/90 text-white font-bold py-2 px-4 rounded-xl hover:bg-primary transition-colors text-sm">
+                    <button onClick={handleOpenAddForm} className="bg-brand/90 text-white font-bold py-2 px-4 rounded-xl hover:bg-brand transition-colors text-sm">
                         + Tambah User
                     </button>
                  )}
             </div>
-             <div className="bg-white dark:bg-gray-800 p-2 rounded-3xl shadow-sm overflow-x-auto">
+             <div className="bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border overflow-x-auto">
                 <table className="w-full text-left">
                     <thead>
-                        <tr className="border-b-2 border-gray-100 dark:border-gray-700">
-                            <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Username</th>
-                            <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-                            <th className="p-4 text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                        <tr className="border-b-2 border-border">
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Username</th>
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Role</th>
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan={3} className="text-center p-4">Loading users...</td></tr>
+                            <tr><td colSpan={3} className="text-center p-4 text-muted">Loading users...</td></tr>
                         ) : (
                             users.map(user => (
-                                <tr key={user.id} className="border-b border-gray-100 dark:border-gray-700">
-                                    <td className="p-4 font-semibold text-gray-800 dark:text-gray-200">{user.username}</td>
-                                    <td className="p-4 text-gray-600 dark:text-gray-400">{user.role}</td>
+                                <tr key={user.id} className="border-b border-border last:border-0">
+                                    <td className="p-4 font-semibold text-primary dark:text-gray-200">{user.username}</td>
+                                    <td className="p-4 text-muted">{user.role}</td>
                                     <td className="p-4 space-x-4">
-                                        <button onClick={() => handleOpenEditForm(user)} className="text-primary font-bold hover:underline">Edit</button>
+                                        <button onClick={() => handleOpenEditForm(user)} className="text-brand font-bold hover:underline">Edit</button>
                                         {currentUser?.role === 'admin' && (
                                             <button 
                                                 onClick={() => setDeletingUser(user)}

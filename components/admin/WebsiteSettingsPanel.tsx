@@ -48,18 +48,18 @@ const WebsiteSettingsPanel: React.FC = () => {
   };
 
   return (
-    <div className="mt-12">
+    <div>
       {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
-      <h2 className="text-3xl font-bold font-jakarta mb-6">Pengaturan Website</h2>
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm">
+      <h2 className="text-2xl font-bold font-jakarta mb-4">Pengaturan Website</h2>
+      <div>
         <h3 className="font-semibold text-lg mb-4">Background Hero Section</h3>
         {isLoading ? (
           <div className="w-full h-40 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse"></div>
         ) : (
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Gambar saat ini:</p>
+            <p className="text-sm text-muted mb-2">Gambar saat ini:</p>
             <ImageWithFallback src={heroBgUrl} alt="Hero background preview" className="w-full h-40 object-cover rounded-2xl mb-4" fallbackText="Belum ada background kustom."/>
-            <label htmlFor="hero-bg-upload" className={`w-full text-center cursor-pointer bg-primary/10 text-primary font-semibold p-3 rounded-xl block hover:bg-primary/20 transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <label htmlFor="hero-bg-upload" className={`w-full text-center cursor-pointer bg-brand/10 text-brand font-semibold p-3 rounded-xl block hover:bg-brand/20 transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
               {isUploading ? 'Mengupload...' : 'Unggah Gambar Baru'}
             </label>
             <input id="hero-bg-upload" type="file" accept="image/*" onChange={handleFileChange} className="hidden" disabled={isUploading}/>

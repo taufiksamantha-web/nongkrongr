@@ -1,5 +1,7 @@
 {
   "name": "Nongkrongr: Palembang Cafe Finder",
   "description": "A vibrant web application for Gen Z to discover aesthetic cafes in Palembang, perfect for hanging out, photo hunting, and studying. Features include trending spots, advanced filters, detailed cafe profiles with user reviews, and an admin dashboard.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }
