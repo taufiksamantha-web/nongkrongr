@@ -126,7 +126,13 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const cafeId = newCafe.id;
         const vibeRelations = (vibes as Vibe[]).map(v => ({ cafe_id: cafeId, vibe_id: v.id }));
         const amenityRelations = (amenities as Amenity[]).map(a => ({ cafe_id: cafeId, amenity_id: a.id }));
-        const spotRecords = (spots as Spot[]).map(s => ({ ...s, id: undefined, cafe_id: cafeId }));
+        const spotRecords = (spots as Spot[]).map(s => ({ 
+            id: s.id, 
+            title: s.title, 
+            tip: s.tip, 
+            photoUrl: s.photoUrl, 
+            cafe_id: cafeId 
+        }));
 
         const [vibeError, amenityError, spotError] = await Promise.all([
             supabase.from('cafe_vibes').insert(vibeRelations),
@@ -169,7 +175,13 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         if (spots) {
              await supabase.from('spots').delete().eq('cafe_id', id);
-             const spotRecords = (spots as Spot[]).map(s => ({ ...s, id: undefined, cafe_id: id }));
+             const spotRecords = (spots as Spot[]).map(s => ({ 
+                id: s.id, 
+                title: s.title, 
+                tip: s.tip, 
+                photoUrl: s.photoUrl, 
+                cafe_id: id 
+             }));
              if (spotRecords.length > 0) await supabase.from('spots').insert(spotRecords);
         }
         
