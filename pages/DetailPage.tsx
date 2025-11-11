@@ -81,6 +81,8 @@ const DetailPage: React.FC = () => {
     if (!cafe) return <div className="text-center py-20">Cafe tidak ditemukan.</div>;
     
     const favorited = isFavorite(cafe.id);
+    const nameWordCount = cafe.name.split(' ').length;
+    const faviconUrl = "https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png";
 
     const handleFavoriteClick = () => {
         if (favorited) {
@@ -116,15 +118,17 @@ const DetailPage: React.FC = () => {
                     {/* Header */}
                     <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
-                             <div className="flex items-start">
+                             <div className="flex items-start flex-1 min-w-0">
                                 <ImageWithFallback 
-                                    src={cafe.logoUrl} 
+                                    src={cafe.logoUrl || faviconUrl} 
                                     alt={`${cafe.name} logo`} 
                                     className="w-16 h-16 rounded-2xl object-contain mr-4 shadow-md bg-soft p-1 border border-border"
                                     width={100}
                                     height={100}
                                 />
-                                <h1 className="text-5xl font-extrabold font-jakarta">{cafe.name}</h1>
+                                <h1 className={`text-3xl md:text-4xl font-extrabold font-jakarta ${nameWordCount <= 2 ? 'sm:whitespace-nowrap' : ''}`}>
+                                    {cafe.name}
+                                </h1>
                              </div>
                              <div className="flex-shrink-0 flex items-center gap-2">
                                  <ShareButton cafeName={cafe.name} cafeDescription={cafe.description} />

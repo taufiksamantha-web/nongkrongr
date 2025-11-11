@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier } from '../types';
@@ -7,10 +6,14 @@ import { ThemeContext } from '../App';
 import { DISTRICTS, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
+import { MapPinIcon } from '@heroicons/react/24/outline';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
+import { calculateDistance } from '../utils/geolocation';
 
 const ITEMS_PER_PAGE = 12;
+
+type CafeWithDistance = Cafe & { distance?: number };
 
 const ExplorePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
@@ -30,8 +33,42 @@ const ExplorePage: React.FC = () => {
     crowd: parseInt(searchParams.get('crowd') || '5', 10),
   });
   
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'default' | 'distance'>('default');
+  const [isLocating, setIsLocating] = useState(false);
+
   const handleFilterChange = <K extends keyof typeof filters,>(key: K, value: (typeof filters)[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    // Reset sort when filters change for consistency
+    if (sortBy === 'distance') {
+        setSortBy('default');
+    }
+  };
+
+  const handleSortByDistance = () => {
+    if (sortBy === 'distance') {
+      setSortBy('default');
+      setUserLocation(null);
+      return;
+    }
+
+    setIsLocating(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            setUserLocation({ lat: latitude, lng: longitude });
+            setSortBy('distance');
+            setIsLocating(false);
+        },
+        (error) => {
+            console.error("Geolocation error:", error);
+            setLocationError("Gagal mendapatkan lokasi. Pastikan izin lokasi sudah diaktifkan di browsermu.");
+            setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
   };
 
   useEffect(() => {
@@ -45,8 +82,8 @@ const ExplorePage: React.FC = () => {
     setSearchParams(newParams, { replace: true });
   }, [filters, setSearchParams]);
 
-  const filteredCafes = useMemo(() => {
-    return cafes.filter(cafe => {
+  const sortedCafes: CafeWithDistance[] = useMemo(() => {
+    let processedCafes: Cafe[] = cafes.filter(cafe => {
       if (filters.search && !cafe.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
       if (filters.district !== 'all' && cafe.district !== filters.district) return false;
       if (filters.vibes.length > 0 && !filters.vibes.every(v => cafe.vibes.some(cv => cv.id === v))) return false;
@@ -55,23 +92,47 @@ const ExplorePage: React.FC = () => {
       if (cafe.avgCrowdEvening > filters.crowd) return false;
       return true;
     });
-  }, [cafes, filters]);
+
+    if (sortBy === 'distance' && userLocation) {
+        return processedCafes
+            .map(cafe => ({
+                ...cafe,
+                distance: calculateDistance(userLocation.lat, userLocation.lng, cafe.coords.lat, cafe.coords.lng),
+            }))
+            .sort((a, b) => a.distance - b.distance);
+    }
+    
+    // Default sorting logic
+    return [...processedCafes].sort((a, b) => {
+        // 1. Sponsored cafes always come first
+        if (a.isSponsored && !b.isSponsored) return -1;
+        if (!a.isSponsored && b.isSponsored) return 1;
+
+        // 2. Within the same sponsorship group, sort by aesthetic score (descending)
+        if (b.avgAestheticScore !== a.avgAestheticScore) {
+            return b.avgAestheticScore - a.avgAestheticScore;
+        }
+
+        // 3. As a tie-breaker, sort by number of approved reviews (descending)
+        const aReviewCount = a.reviews?.filter(r => r.status === 'approved').length || 0;
+        const bReviewCount = b.reviews?.filter(r => r.status === 'approved').length || 0;
+        return bReviewCount - aReviewCount;
+    });
+  }, [cafes, filters, sortBy, userLocation]);
 
   const visibleCafes = useMemo(() => {
-    return filteredCafes.slice(0, visibleCount);
-  }, [filteredCafes, visibleCount]);
+    return sortedCafes.slice(0, visibleCount);
+  }, [sortedCafes, visibleCount]);
 
-  // Reset list when filters change
   useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE);
-  }, [filters]);
+  }, [filters, sortBy]);
 
-  // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         const firstEntry = entries[0];
-        if (firstEntry.isIntersecting && visibleCount < filteredCafes.length) {
+        if (firstEntry.isIntersecting && visibleCount < sortedCafes.length) {
           setVisibleCount((prevCount) => prevCount + ITEMS_PER_PAGE);
         }
       },
@@ -88,7 +149,7 @@ const ExplorePage: React.FC = () => {
         observer.unobserve(currentObserverRef);
       }
     };
-  }, [visibleCount, filteredCafes.length]);
+  }, [visibleCount, sortedCafes.length]);
 
 
   const toggleMultiSelect = (key: 'vibes' | 'amenities', value: string) => {
@@ -106,6 +167,33 @@ const ExplorePage: React.FC = () => {
       {/* Filters Sidebar */}
       <aside className="lg:w-1/4 xl:w-1/5 space-y-6 bg-card p-6 rounded-3xl shadow-sm self-start border border-border">
         <h3 className="text-2xl font-bold font-jakarta">Filters</h3>
+
+        {/* Sort by distance */}
+        <div>
+          <label className="font-semibold">Urutkan</label>
+            <button
+                onClick={handleSortByDistance}
+                disabled={isLocating}
+                className={`mt-2 w-full flex items-center justify-center gap-2 p-3 text-sm rounded-xl border-2 font-bold transition-all ${
+                    sortBy === 'distance'
+                        ? 'bg-brand text-white border-brand'
+                        : 'bg-soft border-border text-primary hover:border-brand/50'
+                } disabled:opacity-50 disabled:cursor-wait`}
+            >
+                {isLocating ? (
+                    <>
+                        <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-current"></div>
+                        Mencari Lokasi...
+                    </>
+                ) : (
+                    <>
+                        <MapPinIcon className="h-5 w-5" />
+                        {sortBy === 'distance' ? 'Reset Urutan' : 'Urutkan Terdekat'}
+                    </>
+                )}
+            </button>
+            {locationError && <p className="text-xs text-accent-pink mt-1">{locationError}</p>}
+        </div>
 
         {/* District */}
         <div>
@@ -175,9 +263,9 @@ const ExplorePage: React.FC = () => {
             />
         </div>
         <div className="rounded-3xl mb-8 overflow-hidden shadow-md h-96 border border-border">
-            <InteractiveMap cafes={filteredCafes} theme={theme} showUserLocation={true} />
+            <InteractiveMap cafes={sortedCafes} theme={theme} showUserLocation={true} />
         </div>
-        <h2 className="text-3xl font-bold font-jakarta mb-6">{filteredCafes.length} Cafe Ditemukan</h2>
+        <h2 className="text-3xl font-bold font-jakarta mb-6">{sortedCafes.length} Cafe Ditemukan</h2>
         {loading && visibleCafes.length === 0 ? (
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
             {[...Array(6)].map((_, i) => <div key={i} className="bg-card h-80 rounded-3xl animate-pulse opacity-50"></div>)}
@@ -185,11 +273,11 @@ const ExplorePage: React.FC = () => {
         ) : (
           <>
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-              {visibleCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />)}
+              {visibleCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} distance={cafe.distance} animationDelay={`${i * 75}ms`} />)}
             </div>
             
             {/* Infinite Scroll Trigger & Loading Indicator */}
-            {visibleCount < filteredCafes.length && (
+            {visibleCount < sortedCafes.length && (
               <div ref={observerRef} className="flex justify-center items-center py-8">
                 <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-brand"></div>
                 <span className="sr-only">Loading more cafes...</span>

@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Cafe } from '../types';
-import { StarIcon, UsersIcon, HeartIcon } from '@heroicons/react/24/solid';
+import { StarIcon, UsersIcon, HeartIcon, MapPinIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ImageWithFallback from './common/ImageWithFallback';
 import { useFavorites } from '../context/FavoriteContext';
@@ -9,6 +10,7 @@ import { useFavorites } from '../context/FavoriteContext';
 interface CafeCardProps {
   cafe: Cafe;
   animationDelay?: string;
+  distance?: number;
 }
 
 const ScoreBadge: React.FC<{ icon: React.ReactNode, score: number, color: string }> = ({ icon, score, color }) => (
@@ -18,7 +20,7 @@ const ScoreBadge: React.FC<{ icon: React.ReactNode, score: number, color: string
     </div>
 );
 
-const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay }) => {
+const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) => {
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
   const favorited = isFavorite(cafe.id);
 
@@ -69,10 +71,17 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay }) => {
                 <ScoreBadge icon={<StarIcon className="h-4 w-4" />} score={cafe.avgAestheticScore} color="bg-accent-pink" />
                 <ScoreBadge icon={<UsersIcon className="h-4 w-4" />} score={cafe.avgCrowdEvening} color="bg-brand" />
             </div>
-            <div className="text-right">
-                <span className="text-xl font-bold text-brand">{'$'.repeat(cafe.priceTier)}</span>
-                <span className="text-muted/30">{'$'.repeat(4 - cafe.priceTier)}</span>
-            </div>
+             {distance !== undefined ? (
+                <div className="flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300">
+                    <MapPinIcon className="h-4 w-4" />
+                    <span>{distance.toFixed(1)} km</span>
+                </div>
+            ) : (
+                <div className="text-right">
+                    <span className="text-xl font-bold text-brand">{'$'.repeat(cafe.priceTier)}</span>
+                    <span className="text-muted/30">{'$'.repeat(4 - cafe.priceTier)}</span>
+                </div>
+            )}
         </div>
         <div className="flex flex-wrap gap-2">
           {cafe.vibes.slice(0, 2).map(vibe => (

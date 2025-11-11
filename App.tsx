@@ -52,9 +52,13 @@ const Header: React.FC = () => {
           <NavLink to="/about" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Tentang Kami</NavLink>
         </div>
 
-        {/* Right: Mobile Explore + Theme Toggle */}
-        <div className="flex items-center space-x-2">
-          <NavLink to="/explore" className={({ isActive }) => `md:hidden ${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
+        {/* Center (Mobile): Nav Link */}
+        <div className="md:hidden absolute left-1/2 -translate-x-1/2">
+            <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
+        </div>
+
+        {/* Right: Theme Toggle */}
+        <div className="flex items-center">
           <button 
             onClick={toggleTheme} 
             className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
