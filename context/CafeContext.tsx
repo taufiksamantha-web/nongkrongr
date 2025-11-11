@@ -208,7 +208,27 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateReviewStatus = async (reviewId: string, status: Review['status']) => {
         const { error } = await supabase.from('reviews').update({ status }).eq('id', reviewId);
         if (error) throw error;
-        await fetchCafes();
+        
+        // Alih-alih melakukan fetch ulang, perbarui state secara lokal untuk pembaruan instan
+        setCafes(prevCafes => 
+            prevCafes.map(cafe => {
+                const reviewIndex = cafe.reviews.findIndex(r => r.id === reviewId);
+                if (reviewIndex !== -1) {
+                    // Buat array review baru dengan status yang diperbarui
+                    const updatedReviews = cafe.reviews.map(review => 
+                        review.id === reviewId ? { ...review, status } : review
+                    );
+                    // Buat objek kafe baru dengan review yang diperbarui
+                    const updatedCafe = {
+                        ...cafe,
+                        reviews: updatedReviews,
+                    };
+                    // Hitung ulang rata-rata untuk kafe yang diperbarui
+                    return calculateAverages(updatedCafe);
+                }
+                return cafe; // Kembalikan kafe yang tidak berubah
+            })
+        );
     };
     
     const getPendingReviews = () => {
