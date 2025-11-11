@@ -28,7 +28,10 @@ const Footer: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     {/* Branding & About */}
                     <div className="col-span-1 md:col-span-2">
-                        <h3 className="text-2xl font-extrabold font-jakarta text-brand">Nongkrongr</h3>
+                        <div className="flex items-center">
+                            <img src="https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png" alt="Nongkrongr Icon" className="h-8 w-8 mr-3" />
+                            <h3 className="text-2xl font-extrabold font-jakarta text-brand">Nongkrongr</h3>
+                        </div>
                         <p className="mt-2 text-muted max-w-sm">
                             Platform rekomendasi cafe aesthetic di Palembang untuk Gen Z yang hobi nongkrong, hunting foto, dan nugas.
                         </p>
