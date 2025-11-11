@@ -220,7 +220,7 @@ const DetailPage: React.FC = () => {
                 {/* Sidebar */}
                 <div className="space-y-8">
                     <div className="rounded-3xl shadow-md overflow-hidden h-64 border border-border">
-                        <InteractiveMap cafe={cafe} theme={theme} />
+                        <InteractiveMap cafe={cafe} theme={theme} showUserLocation={true} />
                     </div>
                     <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
                         Buka di Google Maps
