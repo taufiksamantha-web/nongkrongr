@@ -128,33 +128,49 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
         e.preventDefault();
         setIsUploading(true);
         try {
-            // Jika file baru dipilih, unggah. Jika tidak, gunakan URL dari form.
-            const finalLogoUrl = logoFile
-                ? await cloudinaryService.uploadImage(await fileToBase64(logoFile))
-                : formData.logoUrl;
+            // Handle Logo Image
+            let finalLogoUrl = formData.logoUrl;
+            if (logoFile) {
+                finalLogoUrl = await cloudinaryService.uploadImage(await fileToBase64(logoFile));
+            }
 
-            const finalCoverUrl = coverFile
-                ? await cloudinaryService.uploadImage(await fileToBase64(coverFile))
-                : formData.coverUrl;
+            // Handle Cover Image
+            let finalCoverUrl = formData.coverUrl;
+            if (coverFile) {
+                finalCoverUrl = await cloudinaryService.uploadImage(await fileToBase64(coverFile));
+            }
 
+            // Handle Spot Images
             const finalSpots = await Promise.all(
                 formData.spots.map(async (spot, index) => {
                     const spotFile = spotFiles[index];
-                    // Logika yang sama untuk setiap spot foto
-                    const finalPhotoUrl = spotFile
-                        ? await cloudinaryService.uploadImage(await fileToBase64(spotFile))
-                        : spot.photoUrl;
-                    return { ...spot, photoUrl: finalPhotoUrl };
+                    let finalPhotoUrl = spot.photoUrl;
+                    if (spotFile) {
+                        finalPhotoUrl = await cloudinaryService.uploadImage(await fileToBase64(spotFile));
+                    }
+                    return { 
+                        id: spot.id, 
+                        title: spot.title, 
+                        tip: spot.tip, 
+                        photoUrl: finalPhotoUrl 
+                    };
                 })
             );
 
             let dataToSave = {
-                ...formData,
-                logoUrl: finalLogoUrl,
-                coverUrl: finalCoverUrl,
-                spots: finalSpots,
+                name: formData.name,
+                description: formData.description,
+                address: formData.address,
+                district: formData.district,
+                openingHours: formData.openingHours,
                 priceTier: Number(formData.priceTier),
                 coords: { lat: Number(formData.lat), lng: Number(formData.lng) },
+                logoUrl: finalLogoUrl,
+                coverUrl: finalCoverUrl,
+                vibes: formData.vibes,
+                amenities: formData.amenities,
+                spots: finalSpots,
+                isSponsored: formData.isSponsored,
                 sponsoredUntil: formData.sponsoredUntil ? new Date(formData.sponsoredUntil) : null,
                 sponsoredRank: Number(formData.sponsoredRank),
             };
@@ -178,18 +194,20 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
         }
     };
     
-    const inputClass = "w-full p-3 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white";
+    const inputClass = "w-full p-3 border border-border bg-soft rounded-xl text-primary dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white focus:ring-2 focus:ring-brand focus:border-brand transition-colors duration-200";
+    const spotInputClass = "w-full p-2 border border-border bg-soft rounded-md text-primary dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-1 focus:ring-brand focus:border-brand transition-colors";
+    const fileInputClass = "w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand dark:file:bg-brand/20 dark:file:text-brand-light hover:file:bg-brand/20 dark:hover:file:bg-brand/30 transition-colors cursor-pointer";
     const totalSaving = isSaving || isUploading;
     
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl w-full max-w-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                <h2 className="text-2xl font-bold font-jakarta">{cafe ? 'Edit Cafe' : 'Tambah Cafe Baru'}</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <form onSubmit={handleSubmit} className="bg-card p-8 rounded-3xl shadow-xl w-full max-w-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+                <h2 className="text-2xl font-bold font-jakarta text-primary">{cafe ? 'Edit Cafe' : 'Tambah Cafe Baru'}</h2>
                 <input name="name" value={formData.name} onChange={handleChange} placeholder="Nama Cafe" className={inputClass} required />
                 
                 <div>
                     <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Deskripsi Cafe (bisa di-generate AI)" className={`${inputClass} h-24`} />
-                    <button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc || !formData.name} className="mt-2 w-full bg-secondary/20 text-cyan-800 dark:text-secondary font-semibold py-2 rounded-lg hover:bg-secondary/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc || !formData.name} className="mt-2 w-full bg-accent-cyan/10 text-accent-cyan dark:bg-accent-cyan/20 font-semibold py-2 rounded-lg hover:bg-accent-cyan/20 dark:hover:bg-accent-cyan/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                         {isGeneratingDesc ? 'Generating...' : '✨ Generate Deskripsi dengan AI'}
                     </button>
                 </div>
@@ -199,22 +217,18 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="font-semibold block mb-2">Logo (Opsional)</label>
+                    <label className="font-semibold text-primary block mb-2">Logo (Opsional)</label>
                     {(logoFile || formData.logoUrl) && (
-                        <ImageWithFallback src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} alt="Logo preview" className="w-24 h-24 object-contain rounded-xl mb-2 bg-gray-100 dark:bg-gray-700 p-1" />
+                        <ImageWithFallback src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} alt="Logo preview" className="w-24 h-24 object-contain rounded-xl mb-2 bg-soft border border-border p-1" />
                     )}
-                    <input name="logoUrl" value={formData.logoUrl} onChange={handleChange} placeholder="URL Logo" className={inputClass} />
-                    <div className="text-center text-sm text-muted my-2">atau ganti dengan file baru:</div>
-                    <input type="file" accept="image/*" onChange={handleLogoFileChange} className="w-full p-2 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand" />
+                    <input type="file" accept="image/*" onChange={handleLogoFileChange} className={fileInputClass} />
                   </div>
                   <div>
-                    <label className="font-semibold block mb-2">Cover Image</label>
+                    <label className="font-semibold text-primary block mb-2">Cover Image</label>
                     {(coverFile || formData.coverUrl) && (
                          <ImageWithFallback src={coverFile ? URL.createObjectURL(coverFile) : formData.coverUrl} alt="Cover preview" className="w-full h-24 object-cover rounded-xl mb-2" />
                     )}
-                    <input name="coverUrl" value={formData.coverUrl} onChange={handleChange} placeholder="URL Cover Image" className={inputClass} required />
-                    <div className="text-center text-sm text-muted my-2">atau ganti dengan file baru:</div>
-                    <input type="file" accept="image/*" onChange={handleCoverFileChange} className="w-full p-2 border rounded-xl text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand" />
+                    <input type="file" accept="image/*" onChange={handleCoverFileChange} className={fileInputClass} />
                   </div>
                 </div>
 
@@ -233,11 +247,11 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
                 </select>
                 
                 {userRole === 'admin' && (
-                    <fieldset className="border dark:border-gray-600 p-4 rounded-xl">
-                        <legend className="font-semibold px-2">Sponsorship</legend>
+                    <fieldset className="border border-border p-4 rounded-xl">
+                        <legend className="font-semibold px-2 text-primary">Sponsorship</legend>
                         <div className="flex items-center gap-4 mb-4">
-                            <label htmlFor="isSponsored" className="font-medium">Aktifkan Sponsorship</label>
-                            <input type="checkbox" id="isSponsored" name="isSponsored" checked={formData.isSponsored} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
+                            <label htmlFor="isSponsored" className="font-medium text-primary">Aktifkan Sponsorship</label>
+                            <input type="checkbox" id="isSponsored" name="isSponsored" checked={formData.isSponsored} onChange={handleChange} className="h-5 w-5 rounded text-brand focus:ring-brand" />
                         </div>
                         {formData.isSponsored && (
                             <div className="grid grid-cols-2 gap-4">
@@ -248,52 +262,45 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
                     </fieldset>
                 )}
 
-                <fieldset className="border dark:border-gray-600 p-4 rounded-xl">
-                    <legend className="font-semibold px-2">Spot Foto</legend>
+                <fieldset className="border border-border p-4 rounded-xl">
+                    <legend className="font-semibold px-2 text-primary">Spot Foto</legend>
                     <div className="space-y-4">
                         {formData.spots.map((spot, index) => (
-                            <div key={spot.id} className="border dark:border-gray-700 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 relative pt-6">
-                                <button type="button" onClick={() => handleRemoveSpot(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 rounded-full h-6 w-6 flex items-center justify-center font-bold text-lg leading-none hover:bg-red-500 hover:text-white transition-all">&times;</button>
+                            <div key={spot.id} className="border border-border p-3 rounded-lg bg-soft dark:bg-gray-900/50 relative pt-6">
+                                <button type="button" onClick={() => handleRemoveSpot(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300 rounded-full h-6 w-6 flex items-center justify-center font-bold text-lg leading-none hover:bg-red-500 hover:text-white dark:hover:bg-red-400 dark:hover:text-white transition-all">&times;</button>
                                 <div className="grid grid-cols-1 gap-2">
                                     {(spotFiles[index] || spot.photoUrl) && (
                                         <ImageWithFallback src={spotFiles[index] ? URL.createObjectURL(spotFiles[index]!) : spot.photoUrl} alt="Spot preview" className="w-full h-32 object-cover rounded-md mb-2" />
                                     )}
-                                    <input 
-                                        name="photoUrl" 
-                                        value={spot.photoUrl} 
-                                        onChange={(e) => handleSpotChange(index, e)} 
-                                        placeholder="URL Foto Spot" 
-                                        className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                    />
-                                    <div className="text-center text-sm text-muted">atau ganti dengan file baru:</div>
-                                    <input 
-                                        type="file" 
-                                        accept="image/*" 
-                                        onChange={(e) => handleSpotFileChange(index, e)} 
-                                        className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand"
-                                    />
-                                    <input name="title" value={spot.title} onChange={(e) => handleSpotChange(index, e)} placeholder="Judul Spot" className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white mt-2" />
-                                    <input name="tip" value={spot.tip} onChange={(e) => handleSpotChange(index, e)} placeholder="Tips Foto" className="w-full p-2 border rounded-md text-gray-800 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                                    <input type="file" accept="image/*" onChange={(e) => handleSpotFileChange(index, e)} className={fileInputClass} />
+                                    <input name="title" value={spot.title} onChange={(e) => handleSpotChange(index, e)} placeholder="Judul Spot" className={`${spotInputClass} mt-2`} />
+                                    <input name="tip" value={spot.tip} onChange={(e) => handleSpotChange(index, e)} placeholder="Tips Foto" className={spotInputClass} />
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <button type="button" onClick={handleAddSpot} className="mt-4 w-full bg-primary/10 dark:bg-primary/20 text-primary font-semibold py-2 rounded-lg hover:bg-primary/20 dark:hover:bg-primary/30 transition-all">+ Tambah Spot Foto</button>
+                    <button type="button" onClick={handleAddSpot} className="mt-4 w-full bg-gray-100 dark:bg-gray-700 text-primary hover:bg-gray-200 dark:hover:bg-gray-600 font-semibold py-2 rounded-lg transition-all">+ Tambah Spot Foto</button>
                 </fieldset>
                 
-                <h3 className="font-semibold pt-2">Vibes</h3>
+                <h3 className="font-semibold text-primary pt-2">Vibes</h3>
                 <div className="flex flex-wrap gap-2">
-                    {VIBES.map(v => <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v)} className={`px-3 py-1 rounded-full border-2 dark:border-gray-500 ${formData.vibes.some(fv => fv.id === v.id) ? 'bg-primary text-white border-primary' : 'dark:text-gray-300'}`}>{v.name}</button>)}
+                    {VIBES.map(v => {
+                        const isSelected = formData.vibes.some(fv => fv.id === v.id);
+                        return <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v)} className={`px-3 py-1 rounded-full border-2 transition-colors duration-200 font-semibold ${isSelected ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 hover:text-brand'}`}>{v.name}</button>
+                    })}
                 </div>
 
-                <h3 className="font-semibold pt-2">Fasilitas</h3>
+                <h3 className="font-semibold text-primary pt-2">Fasilitas</h3>
                 <div className="flex flex-wrap gap-2">
-                    {AMENITIES.map(a => <button type="button" key={a.id} onClick={() => handleMultiSelectChange('amenities', a)} className={`px-3 py-1 rounded-full border-2 dark:border-gray-500 ${formData.amenities.some(fa => fa.id === a.id) ? 'bg-primary text-white border-primary' : 'dark:text-gray-300'}`}>{a.icon} {a.name}</button>)}
+                    {AMENITIES.map(a => {
+                       const isSelected = formData.amenities.some(fa => fa.id === a.id);
+                       return <button type="button" key={a.id} onClick={() => handleMultiSelectChange('amenities', a)} className={`px-3 py-1 rounded-full border-2 transition-colors duration-200 font-semibold ${isSelected ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 hover:text-brand'}`}>{a.icon} {a.name}</button>
+                    })}
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">
-                    <button type="button" onClick={onCancel} className="px-6 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold">Batal</button>
-                    <button type="submit" className="px-6 py-2 bg-primary text-white rounded-xl font-semibold disabled:bg-primary/50" disabled={totalSaving}>
+                    <button type="button" onClick={onCancel} className="px-6 py-2 bg-gray-100 dark:bg-gray-700 text-primary hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl font-semibold transition-colors">Batal</button>
+                    <button type="submit" className="px-6 py-2 bg-brand text-white rounded-xl font-semibold hover:bg-brand/90 transition-colors disabled:bg-brand/50" disabled={totalSaving}>
                         {isUploading ? 'Uploading...' : (isSaving ? 'Menyimpan...' : 'Simpan')}
                     </button>
                 </div>
