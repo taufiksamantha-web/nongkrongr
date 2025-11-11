@@ -25,6 +25,7 @@ const HomePage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<Cafe[]>([]);
   const [isResultsVisible, setIsResultsVisible] = useState(false);
   const [heroBgUrl, setHeroBgUrl] = useState<string>("https://res.cloudinary.com/dovouihq8/image/upload/v1722244300/cover-placeholder-1_pqz5kl.jpg");
+  const [isHeroImageLoaded, setIsHeroImageLoaded] = useState(false);
   const navigate = useNavigate();
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +38,11 @@ const HomePage: React.FC = () => {
     };
     fetchHeroBg();
   }, []);
+
+  // Reset animation trigger when the image URL changes
+  useEffect(() => {
+    setIsHeroImageLoaded(false);
+  }, [heroBgUrl]);
 
   useEffect(() => {
     if (cafes.length > 0) {
@@ -147,7 +153,8 @@ const HomePage: React.FC = () => {
            <img 
               src={heroBgUrl} 
               alt="Suasana cafe yang nyaman"
-              className="w-full h-full object-cover blur-sm"
+              onLoad={() => setIsHeroImageLoaded(true)}
+              className={`w-full h-full object-cover blur-sm transition-opacity duration-1000 ease-in-out ${isHeroImageLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
             <div className="absolute inset-0 bg-black/60"></div>
         </div>

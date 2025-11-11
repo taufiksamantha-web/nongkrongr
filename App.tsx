@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { HashRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, NavLink, useLocation } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import ExplorePage from './pages/ExplorePage';
 import DetailPage from './pages/DetailPage';
 import AdminPage from './pages/AdminPage';
-import AboutPage from './pages/AboutPage'; // Import halaman baru
+import AboutPage from './pages/AboutPage';
 import WelcomeModal from './components/WelcomeModal';
 import Footer from './components/Footer';
 import { CafeProvider } from './context/CafeContext';
@@ -61,6 +61,54 @@ const Header: React.FC = () => {
   );
 };
 
+const AdminHeader: React.FC = () => {
+  const { theme, toggleTheme } = useContext(ThemeContext);
+
+  return (
+    <header className="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-md dark:bg-gray-800/80 dark:shadow-none dark:border-b dark:border-gray-700">
+      <nav className="container mx-auto px-4 py-2 flex items-center justify-between">
+        {/* Left: Logo */}
+        <Link to="/" className="flex items-center py-2">
+          <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
+        </Link>
+        
+        {/* Right: Theme Toggle */}
+        <button 
+          onClick={toggleTheme} 
+          className="p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
+          aria-label="Toggle theme"
+        >
+          {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6 text-yellow-400" />}
+        </button>
+      </nav>
+    </header>
+  );
+};
+
+const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }> = ({ showWelcome, onCloseWelcome }) => {
+    const location = useLocation();
+    const isAdminPage = location.pathname.startsWith('/admin');
+
+    return (
+        <div className="bg-gray-50 min-h-screen font-sans text-gray-800 dark:bg-gray-900 dark:text-gray-200 flex flex-col">
+          {showWelcome && <WelcomeModal onClose={onCloseWelcome} />}
+          
+          {isAdminPage ? <AdminHeader /> : <Header />}
+          
+          <main className="flex-grow">
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/explore" element={<ExplorePage />} />
+                <Route path="/cafe/:slug" element={<DetailPage />} />
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/about" element={<AboutPage />} />
+            </Routes>
+          </main>
+
+          {!isAdminPage && <Footer />}
+        </div>
+    );
+};
 
 const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(true);
@@ -94,22 +142,9 @@ const App: React.FC = () => {
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       <AuthProvider>
         <CafeProvider>
-          <div className="bg-gray-50 min-h-screen font-sans text-gray-800 dark:bg-gray-900 dark:text-gray-200 flex flex-col">
-          {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
           <HashRouter>
-              <Header />
-              <main className="flex-grow">
-              <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/explore" element={<ExplorePage />} />
-                  <Route path="/cafe/:slug" element={<DetailPage />} />
-                  <Route path="/admin" element={<AdminPage />} />
-                  <Route path="/about" element={<AboutPage />} />
-              </Routes>
-              </main>
-              <Footer />
+              <AppContent showWelcome={showWelcome} onCloseWelcome={() => setShowWelcome(false)} />
           </HashRouter>
-          </div>
         </CafeProvider>
       </AuthProvider>
     </ThemeContext.Provider>
