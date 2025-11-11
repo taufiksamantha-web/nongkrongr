@@ -195,7 +195,11 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const addReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status'> & { cafe_id: string }) => {
-        const reviewData = { ...review, status: 'pending' as const };
+        const reviewData = { 
+            ...review, 
+            id: `rev-${crypto.randomUUID()}`,
+            status: 'pending' as const 
+        };
         const { error } = await supabase.from('reviews').insert(reviewData);
         if (error) throw error;
         await fetchCafes();
