@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -223,15 +222,17 @@ const DetailPage: React.FC = () => {
                 </div>
 
                 {/* Sidebar */}
-                <div className="space-y-8">
-                    <div className="rounded-3xl shadow-md overflow-hidden h-64 border border-border">
-                        <InteractiveMap cafe={cafe} theme={theme} showUserLocation={true} />
+                <aside className="lg:sticky lg:top-24 self-start">
+                    <div className="space-y-8">
+                        <div className="rounded-3xl shadow-md overflow-hidden h-64 border border-border">
+                            <InteractiveMap cafe={cafe} theme={theme} showUserLocation={true} />
+                        </div>
+                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
+                            Buka di Google Maps
+                        </a>
+                        <ReviewForm onSubmit={(review) => handleAddReview({ ...review, cafe_id: cafe.id })} isSubmitting={isSubmitting} cafeId={cafe.id} />
                     </div>
-                    <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
-                        Buka di Google Maps
-                    </a>
-                    <ReviewForm onSubmit={(review) => handleAddReview({ ...review, cafe_id: cafe.id })} isSubmitting={isSubmitting} cafeId={cafe.id} />
-                </div>
+                </aside>
             </div>
         </div>
     );
