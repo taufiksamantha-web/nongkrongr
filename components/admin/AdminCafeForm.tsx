@@ -148,11 +148,9 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
                     if (spotFile) {
                         finalPhotoUrl = await cloudinaryService.uploadImage(await fileToBase64(spotFile));
                     }
-                    return { 
-                        id: spot.id, 
-                        title: spot.title, 
-                        tip: spot.tip, 
-                        photoUrl: finalPhotoUrl 
+                    return {
+                        ...spot, // Preserve all existing properties of the spot
+                        photoUrl: finalPhotoUrl, // Only overwrite the photoUrl
                     };
                 })
             );
