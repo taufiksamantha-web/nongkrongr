@@ -11,6 +11,7 @@ import FloatingNotification from '../components/common/FloatingNotification';
 import ImageWithFallback from '../components/common/ImageWithFallback';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
+import ShareButton from '../components/ShareButton';
 
 const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color: string }> = ({ label, score, max, color }) => {
     const percentage = max > 0 ? (score / max) * 100 : 0;
@@ -128,14 +129,17 @@ const DetailPage: React.FC = () => {
                                 />
                                 <h1 className="text-5xl font-extrabold font-jakarta">{cafe.name}</h1>
                              </div>
-                             <button
-                                onClick={handleFavoriteClick}
-                                className={`flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold border-2 transition-all duration-300 ${favorited ? 'bg-accent-pink/10 text-accent-pink border-accent-pink/20' : 'bg-soft border-border hover:border-accent-pink/50'}`}
-                                aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
-                             >
-                                {favorited ? <HeartIcon className="h-6 w-6"/> : <HeartIconOutline className="h-6 w-6" />}
-                                {favorited ? 'Favorit' : 'Favoritkan'}
-                             </button>
+                             <div className="flex-shrink-0 flex items-center gap-2">
+                                 <ShareButton cafeName={cafe.name} cafeDescription={cafe.description} />
+                                 <button
+                                    onClick={handleFavoriteClick}
+                                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold border-2 transition-all duration-300 ${favorited ? 'bg-accent-pink/10 text-accent-pink border-accent-pink/20' : 'bg-soft border-border hover:border-accent-pink/50'}`}
+                                    aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+                                 >
+                                    {favorited ? <HeartIcon className="h-6 w-6"/> : <HeartIconOutline className="h-6 w-6" />}
+                                    {favorited ? 'Favorit' : 'Favoritkan'}
+                                 </button>
+                            </div>
                         </div>
                         <div className="flex items-center text-muted mb-2">
                             <MapPinIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
