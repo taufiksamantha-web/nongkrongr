@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const LoginForm: React.FC = () => {
@@ -50,6 +51,11 @@ const LoginForm: React.FC = () => {
                 <button type="submit" className="w-full bg-brand text-white font-bold py-3 rounded-2xl text-lg hover:bg-brand/90 transition-all disabled:bg-brand/50" disabled={loading}>
                     {loading ? 'Logging in...' : 'Login'}
                 </button>
+                <div className="text-center pt-2">
+                    <Link to="/" className="text-sm text-muted hover:text-brand transition-colors duration-300">
+                        &larr; Kembali ke Home
+                    </Link>
+                </div>
             </form>
         </div>
     );
