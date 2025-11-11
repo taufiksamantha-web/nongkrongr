@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier } from '../types';
@@ -5,7 +6,7 @@ import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { DISTRICTS, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
-import { MagnifyingGlassIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
+import { MagnifyingGlassIcon, ChevronDownIcon, AdjustmentsHorizontalIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { MapPinIcon } from '@heroicons/react/24/outline';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
@@ -15,6 +16,128 @@ const ITEMS_PER_PAGE = 12;
 
 type CafeWithDistance = Cafe & { distance?: number };
 
+const FilterPanelContent: React.FC<{
+    filters: any;
+    handleFilterChange: (key: string, value: any) => void;
+    toggleMultiSelect: (key: 'vibes' | 'amenities', value: string) => void;
+    sortBy: 'default' | 'distance';
+    isLocating: boolean;
+    locationError: string | null;
+    handleSortByDistance: () => void;
+}> = ({ filters, handleFilterChange, toggleMultiSelect, sortBy, isLocating, locationError, handleSortByDistance }) => {
+    return (
+        <>
+            {/* Sort by distance */}
+            <div className="py-2">
+                <label className="font-semibold">Urutkan</label>
+                <button
+                    onClick={handleSortByDistance}
+                    disabled={isLocating}
+                    className={`mt-2 w-full flex items-center justify-center gap-2 p-3 text-sm rounded-xl border-2 font-bold transition-all ${
+                        sortBy === 'distance'
+                            ? 'bg-brand text-white border-brand'
+                            : 'bg-soft border-border text-primary hover:border-brand/50'
+                    } disabled:opacity-50 disabled:cursor-wait`}
+                >
+                    {isLocating ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-current"></div>
+                            Mencari Lokasi...
+                        </>
+                    ) : (
+                        <>
+                            <MapPinIcon className="h-5 w-5" />
+                            {sortBy === 'distance' ? 'Reset Urutan' : 'Urutkan Terdekat'}
+                        </>
+                    )}
+                </button>
+                {locationError && <p className="text-xs text-accent-pink mt-1">{locationError}</p>}
+            </div>
+
+            {/* District */}
+            <details className="py-2 border-t border-border group" open>
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                    Kecamatan
+                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                </summary>
+                <div className="mt-4">
+                    <select value={filters.district} onChange={e => handleFilterChange('district', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white">
+                        <option value="all">Semua Kecamatan</option>
+                        {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                </div>
+            </details>
+
+            {/* Vibes */}
+            <details className="py-2 border-t border-border group" open>
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                    Vibes
+                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                </summary>
+                <div className="mt-4 flex flex-wrap gap-2">
+                    {VIBES.map(vibe => (
+                    <button key={vibe.id} onClick={() => toggleMultiSelect('vibes', vibe.id)} className={`px-3 py-1 text-sm rounded-full border-2 transition-all ${filters.vibes.includes(vibe.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>
+                        {vibe.name}
+                    </button>
+                    ))}
+                </div>
+            </details>
+
+            {/* Amenities */}
+            <details className="py-2 border-t border-border group" open>
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                    Fasilitas
+                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                </summary>
+                <div className="mt-4 flex flex-wrap gap-2">
+                    {AMENITIES.map(amenity => (
+                    <button key={amenity.id} onClick={() => toggleMultiSelect('amenities', amenity.id)} className={`px-3 py-1 text-sm rounded-full border-2 transition-all ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>
+                        {amenity.icon} {amenity.name}
+                    </button>
+                    ))}
+                </div>
+            </details>
+            
+            {/* Price Tier */}
+            <details className="py-2 border-t border-border group" open>
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                    Harga (Maks.)
+                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                </summary>
+                <div className="mt-4">
+                    <div className="flex justify-between text-muted text-sm">
+                        <span>Murah</span>
+                        <span>Sultan</span>
+                    </div>
+                    <input type="range" min="1" max="4" value={filters.priceTier} onChange={e => handleFilterChange('priceTier', parseInt(e.target.value))} className="w-full mt-1 accent-brand"/>
+                </div>
+            </details>
+
+            {/* Crowd Level */}
+            <details className="py-2 border-t border-border group" open>
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                    Tingkat Keramaian (Maks.)
+                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                </summary>
+                <div className="mt-4 space-y-4">
+                    <div>
+                        <label className="text-sm font-medium text-muted">Pagi ({filters.crowdMorning})</label>
+                        <input type="range" min="1" max="5" value={filters.crowdMorning} onChange={e => handleFilterChange('crowdMorning', parseInt(e.target.value))} className="w-full mt-1 accent-accent-amber"/>
+                    </div>
+                     <div>
+                        <label className="text-sm font-medium text-muted">Siang ({filters.crowdAfternoon})</label>
+                        <input type="range" min="1" max="5" value={filters.crowdAfternoon} onChange={e => handleFilterChange('crowdAfternoon', parseInt(e.target.value))} className="w-full mt-1 accent-brand/75"/>
+                    </div>
+                     <div>
+                        <label className="text-sm font-medium text-muted">Malam ({filters.crowdEvening})</label>
+                        <input type="range" min="1" max="5" value={filters.crowdEvening} onChange={e => handleFilterChange('crowdEvening', parseInt(e.target.value))} className="w-full mt-1 accent-brand"/>
+                    </div>
+                </div>
+            </details>
+        </>
+    );
+};
+
 const ExplorePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
   const { cafes, loading, error } = cafeContext!;
@@ -23,6 +146,7 @@ const ExplorePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const observerRef = useRef<HTMLDivElement>(null);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const [filters, setFilters] = useState({
     search: searchParams.get('search') || '',
@@ -30,7 +154,9 @@ const ExplorePage: React.FC = () => {
     vibes: searchParams.getAll('vibe') || [],
     amenities: searchParams.getAll('amenity') || [],
     priceTier: parseInt(searchParams.get('price_tier') || '4', 10) as PriceTier,
-    crowd: parseInt(searchParams.get('crowd') || '5', 10),
+    crowdMorning: parseInt(searchParams.get('crowd_morning') || '5', 10),
+    crowdAfternoon: parseInt(searchParams.get('crowd_afternoon') || '5', 10),
+    crowdEvening: parseInt(searchParams.get('crowd_evening') || '5', 10),
   });
   
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -38,9 +164,19 @@ const ExplorePage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'default' | 'distance'>('default');
   const [isLocating, setIsLocating] = useState(false);
 
+  useEffect(() => {
+    if (isFiltersOpen) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = 'unset';
+    }
+    return () => {
+        document.body.style.overflow = 'unset';
+    };
+  }, [isFiltersOpen]);
+
   const handleFilterChange = <K extends keyof typeof filters,>(key: K, value: (typeof filters)[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    // Reset sort when filters change for consistency
     if (sortBy === 'distance') {
         setSortBy('default');
     }
@@ -78,7 +214,9 @@ const ExplorePage: React.FC = () => {
     filters.vibes.forEach(vibe => newParams.append('vibe', vibe));
     filters.amenities.forEach(amenity => newParams.append('amenity', amenity));
     if (filters.priceTier < 4) newParams.set('price_tier', String(filters.priceTier));
-    if (filters.crowd < 5) newParams.set('crowd', String(filters.crowd));
+    if (filters.crowdMorning < 5) newParams.set('crowd_morning', String(filters.crowdMorning));
+    if (filters.crowdAfternoon < 5) newParams.set('crowd_afternoon', String(filters.crowdAfternoon));
+    if (filters.crowdEvening < 5) newParams.set('crowd_evening', String(filters.crowdEvening));
     setSearchParams(newParams, { replace: true });
   }, [filters, setSearchParams]);
 
@@ -89,7 +227,9 @@ const ExplorePage: React.FC = () => {
       if (filters.vibes.length > 0 && !filters.vibes.every(v => cafe.vibes.some(cv => cv.id === v))) return false;
       if (filters.amenities.length > 0 && !filters.amenities.every(a => cafe.amenities.some(ca => ca.id === a))) return false;
       if (cafe.priceTier > filters.priceTier) return false;
-      if (cafe.avgCrowdEvening > filters.crowd) return false;
+      if (cafe.avgCrowdMorning > filters.crowdMorning) return false;
+      if (cafe.avgCrowdAfternoon > filters.crowdAfternoon) return false;
+      if (cafe.avgCrowdEvening > filters.crowdEvening) return false;
       return true;
     });
 
@@ -102,18 +242,12 @@ const ExplorePage: React.FC = () => {
             .sort((a, b) => a.distance - b.distance);
     }
     
-    // Default sorting logic
     return [...processedCafes].sort((a, b) => {
-        // 1. Sponsored cafes always come first
         if (a.isSponsored && !b.isSponsored) return -1;
         if (!a.isSponsored && b.isSponsored) return 1;
-
-        // 2. Within the same sponsorship group, sort by aesthetic score (descending)
         if (b.avgAestheticScore !== a.avgAestheticScore) {
             return b.avgAestheticScore - a.avgAestheticScore;
         }
-
-        // 3. As a tie-breaker, sort by number of approved reviews (descending)
         const aReviewCount = a.reviews?.filter(r => r.status === 'approved').length || 0;
         const bReviewCount = b.reviews?.filter(r => r.status === 'approved').length || 0;
         return bReviewCount - aReviewCount;
@@ -162,116 +296,45 @@ const ExplorePage: React.FC = () => {
 
   if (error) return <DatabaseConnectionError />;
 
+  const filterPanelProps = {
+    filters, handleFilterChange, toggleMultiSelect, sortBy, isLocating, locationError, handleSortByDistance
+  };
+
   return (
     <div className="container mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
-      {/* Filters Sidebar */}
-      <aside className="lg:w-1/4 xl:w-1/5 bg-card p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-24">
-        <h3 className="text-2xl font-bold font-jakarta mb-4">Filters</h3>
+      {/* Filter Modal for Mobile */}
+      <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[1200] lg:hidden transition-opacity duration-300 ${isFiltersOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsFiltersOpen(false)}>
+          <div 
+              className={`bg-card p-6 h-full w-4/5 max-w-sm overflow-y-auto shadow-2xl transform transition-transform duration-300 ${isFiltersOpen ? 'translate-x-0' : '-translate-x-full'}`}
+              onClick={e => e.stopPropagation()}
+          >
+              <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-2xl font-bold font-jakarta">Filters</h3>
+                  <button onClick={() => setIsFiltersOpen(false)} className="p-2 rounded-full hover:bg-soft dark:hover:bg-gray-700">
+                      <XMarkIcon className="h-6 w-6" />
+                  </button>
+              </div>
+              <FilterPanelContent {...filterPanelProps} />
+          </div>
+      </div>
 
-        {/* Sort by distance */}
-        <div className="pb-2">
-          <label className="font-semibold">Urutkan</label>
-            <button
-                onClick={handleSortByDistance}
-                disabled={isLocating}
-                className={`mt-2 w-full flex items-center justify-center gap-2 p-3 text-sm rounded-xl border-2 font-bold transition-all ${
-                    sortBy === 'distance'
-                        ? 'bg-brand text-white border-brand'
-                        : 'bg-soft border-border text-primary hover:border-brand/50'
-                } disabled:opacity-50 disabled:cursor-wait`}
-            >
-                {isLocating ? (
-                    <>
-                        <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-current"></div>
-                        Mencari Lokasi...
-                    </>
-                ) : (
-                    <>
-                        <MapPinIcon className="h-5 w-5" />
-                        {sortBy === 'distance' ? 'Reset Urutan' : 'Urutkan Terdekat'}
-                    </>
-                )}
-            </button>
-            {locationError && <p className="text-xs text-accent-pink mt-1">{locationError}</p>}
-        </div>
-
-        {/* District */}
-        <details className="py-2 border-t border-border group" open>
-            <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
-                Kecamatan
-                <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
-            </summary>
-            <div className="mt-4">
-                <select value={filters.district} onChange={e => handleFilterChange('district', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white">
-                    <option value="all">Semua Kecamatan</option>
-                    {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-            </div>
-        </details>
-
-        {/* Vibes */}
-        <details className="py-2 border-t border-border group">
-            <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
-                Vibes
-                <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
-            </summary>
-            <div className="mt-4 flex flex-wrap gap-2">
-                {VIBES.map(vibe => (
-                <button key={vibe.id} onClick={() => toggleMultiSelect('vibes', vibe.id)} className={`px-3 py-1 text-sm rounded-full border-2 transition-all ${filters.vibes.includes(vibe.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>
-                    {vibe.name}
-                </button>
-                ))}
-            </div>
-        </details>
-
-        {/* Amenities */}
-        <details className="py-2 border-t border-border group">
-            <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
-                Fasilitas
-                <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
-            </summary>
-            <div className="mt-4 flex flex-wrap gap-2">
-                {AMENITIES.map(amenity => (
-                <button key={amenity.id} onClick={() => toggleMultiSelect('amenities', amenity.id)} className={`px-3 py-1 text-sm rounded-full border-2 transition-all ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>
-                    {amenity.icon} {amenity.name}
-                </button>
-                ))}
-            </div>
-        </details>
-        
-        {/* Price Tier */}
-        <details className="py-2 border-t border-border group">
-            <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
-                Harga (Maks.)
-                <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
-            </summary>
-            <div className="mt-4">
-                <div className="flex justify-between text-muted text-sm">
-                    <span>Murah</span>
-                    <span>Sultan</span>
-                </div>
-                <input type="range" min="1" max="4" value={filters.priceTier} onChange={e => handleFilterChange('priceTier', parseInt(e.target.value))} className="w-full mt-1 accent-brand"/>
-            </div>
-        </details>
-
-        {/* Crowd Level */}
-        <details className="py-2 border-t border-border group">
-            <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
-                Keramaian Malam (Maks.)
-                <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
-            </summary>
-            <div className="mt-4">
-                <div className="flex justify-between text-muted text-sm">
-                    <span>Sepi</span>
-                    <span>Penuh</span>
-                </div>
-                <input type="range" min="1" max="5" value={filters.crowd} onChange={e => handleFilterChange('crowd', parseInt(e.target.value))} className="w-full mt-1 accent-accent-pink"/>
-            </div>
-        </details>
+      {/* Filters Sidebar for Desktop */}
+      <aside className="hidden lg:block lg:w-1/4 xl:w-1/5 bg-card p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-24">
+        <FilterPanelContent {...filterPanelProps} />
       </aside>
 
       {/* Main Content */}
       <div className="flex-1">
+        {/* Mobile Filter Button */}
+        <div className="lg:hidden mb-6">
+            <button 
+                onClick={() => setIsFiltersOpen(true)}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-card border border-border rounded-2xl font-bold shadow-sm active:scale-95 transition-transform"
+            >
+                <AdjustmentsHorizontalIcon className="h-6 w-6 text-brand" />
+                <span>Filter & Urutkan</span>
+            </button>
+        </div>
         <div className="relative mb-8">
             <MagnifyingGlassIcon className="h-6 w-6 text-muted absolute left-4 top-1/2 -translate-y-1/2" />
             <input

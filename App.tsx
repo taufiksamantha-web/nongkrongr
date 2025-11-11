@@ -12,7 +12,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { CafeProvider } from './context/CafeContext';
 import { AuthProvider } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
-import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
+import { SunIcon, MoonIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 import ScrollToTopOnNavigate from './components/ScrollToTopOnNavigate';
 import ScrollToTopButton from './components/ScrollToTopButton';
 
@@ -39,22 +39,14 @@ const Header: React.FC = () => {
       <nav className="container mx-auto px-4 py-2 flex items-center justify-between relative">
         {/* Left: Logo */}
         <Link to="/" className="flex items-center py-2">
-          {/* Full logo for medium screens and up */}
-          <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto hidden md:block" />
-          {/* Icon logo for small screens */}
-          <img src="https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png" alt="Nongkrongr Icon" className="h-10 w-10 block md:hidden" />
+          <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
         </Link>
         
         {/* Center (Desktop): Nav Links */}
-        <div className="hidden md:flex items-center space-x-4 absolute left-1/2 -translate-x-1/2">
+        <div className="hidden lg:flex items-center space-x-4 absolute left-1/2 -translate-x-1/2">
           <NavLink to="/" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
           <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
           <NavLink to="/about" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Tentang Kami</NavLink>
-        </div>
-
-        {/* Center (Mobile): Nav Link */}
-        <div className="md:hidden absolute left-1/2 -translate-x-1/2">
-            <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
         </div>
 
         {/* Right: Theme Toggle */}
@@ -80,10 +72,7 @@ const AdminHeader: React.FC = () => {
       <nav className="container mx-auto px-4 py-2 flex items-center justify-between">
         {/* Left: Logo */}
         <Link to="/" className="flex items-center py-2">
-          {/* Full logo for medium screens and up */}
-          <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto hidden md:block" />
-          {/* Icon logo for small screens */}
-          <img src="https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png" alt="Nongkrongr Icon" className="h-10 w-10 block md:hidden" />
+          <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
         </Link>
         
         {/* Right: Theme Toggle */}
@@ -119,6 +108,18 @@ const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
                 <Route path="/about" element={<AboutPage />} />
             </Routes>
           </main>
+
+          {!isAdminPage && (
+            <div className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
+                <Link 
+                    to="/explore"
+                    className="flex items-center gap-2 bg-card/80 dark:bg-card/70 backdrop-blur-lg text-primary dark:text-white font-bold py-3 px-6 rounded-2xl shadow-lg border border-border transition-transform transform hover:scale-105 active:scale-95"
+                >
+                    <BuildingStorefrontIcon className="h-6 w-6 text-brand" />
+                    <span>Explore</span>
+                </Link>
+            </div>
+          )}
 
           {!isAdminPage && <Footer />}
           {!isAdminPage && <ScrollToTopButton />}

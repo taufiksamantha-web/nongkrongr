@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -16,7 +15,7 @@ import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 type TopReview = Review & { cafeName: string; cafeSlug: string };
 
 const SectionHeader: React.FC<{ icon?: React.ReactNode; title: string; subtitle: string; }> = ({ icon, title, subtitle }) => (
-  <div className="text-center mb-12">
+  <div className="text-center mb-10">
     {icon && <div className="inline-block p-4 bg-brand/10 rounded-3xl mb-4 text-brand">{icon}</div>}
     <h2 className="text-4xl font-bold font-jakarta text-primary dark:text-white mb-2">{title}</h2>
     <p className="text-muted max-w-2xl mx-auto">{subtitle}</p>
@@ -40,13 +39,6 @@ const HomePage: React.FC = () => {
   const [heroBgUrl, setHeroBgUrl] = useState<string>("https://res.cloudinary.com/dovouihq8/image/upload/v1722244300/cover-placeholder-1_pqz5kl.jpg");
   const navigate = useNavigate();
   const searchContainerRef = useRef<HTMLDivElement>(null);
-
-  // States for swipe gesture
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const [isSwiping, setIsSwiping] = useState(false);
-  const [swipeStartX, setSwipeStartX] = useState(0);
-  const [swipeTranslateX, setSwipeTranslateX] = useState(0);
-
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -138,31 +130,6 @@ const HomePage: React.FC = () => {
   const handlePrevRecommendation = () => setCurrentRecommendedIndex(prev => (prev === 0 ? recommendedCafes.length - 1 : prev - 1));
   const handleNextRecommendation = () => setCurrentRecommendedIndex(prev => (prev === recommendedCafes.length - 1 ? 0 : prev + 1));
   
-  // Swipe Handlers
-  const handleSwipeStart = (e: React.TouchEvent) => {
-    setIsSwiping(true);
-    setSwipeStartX(e.touches[0].clientX);
-  };
-
-  const handleSwipeMove = (e: React.TouchEvent) => {
-    if (!isSwiping) return;
-    const currentX = e.touches[0].clientX;
-    setSwipeTranslateX(currentX - swipeStartX);
-  };
-
-  const handleSwipeEnd = () => {
-    setIsSwiping(false);
-    const swipeThreshold = 50; // min swipe distance in pixels
-    
-    if (swipeTranslateX < -swipeThreshold) {
-        handleNextRecommendation();
-    } else if (swipeTranslateX > swipeThreshold) {
-        handlePrevRecommendation();
-    }
-    
-    setSwipeTranslateX(0); // Reset translation
-  };
-
   if (error) return <DatabaseConnectionError />;
 
   return (
@@ -237,7 +204,7 @@ const HomePage: React.FC = () => {
 
 
       {/* Recommended Section */}
-      <div className="relative py-16 overflow-hidden transition-all duration-500 bg-gradient-to-br from-brand/10 to-transparent dark:from-brand/20 dark:to-transparent">
+      <div className="relative py-12 overflow-hidden transition-all duration-500 bg-gradient-to-br from-brand/10 to-transparent dark:from-brand/20 dark:to-transparent">
         <div className="relative z-10 container mx-auto px-6">
           <SectionHeader 
             icon={<HandThumbUpIcon className="h-8 w-8"/>}
@@ -249,18 +216,12 @@ const HomePage: React.FC = () => {
             <div className="bg-gray-200/20 dark:bg-gray-800/50 h-72 rounded-4xl animate-pulse max-w-4xl mx-auto"></div>
           ) : recommendedCafes.length > 0 ? (
             <div className="max-w-4xl mx-auto">
-              <div 
-                className="overflow-hidden"
-                onTouchStart={handleSwipeStart}
-                onTouchMove={handleSwipeMove}
-                onTouchEnd={handleSwipeEnd}
-              >
+              <div className="overflow-hidden">
                 <div 
-                  ref={sliderRef}
                   className="flex"
                   style={{
-                    transform: `translateX(calc(-${currentRecommendedIndex * 100}% + ${swipeTranslateX}px))`,
-                    transition: isSwiping ? 'none' : 'transform 0.5s ease-in-out',
+                    transform: `translateX(-${currentRecommendedIndex * 100}%)`,
+                    transition: 'transform 0.5s ease-in-out',
                   }}
                 >
                   {recommendedCafes.map(cafe => (
@@ -303,7 +264,7 @@ const HomePage: React.FC = () => {
 
       {/* Favorite Cafes Section */}
       {favoriteCafes.length > 0 && (
-        <div className="py-16">
+        <div className="py-12">
           <div className="container mx-auto px-6">
             <SectionHeader 
               icon={<HeartIcon className="h-8 w-8"/>}
@@ -320,7 +281,7 @@ const HomePage: React.FC = () => {
       )}
 
       {/* Trending Section */}
-      <div className="py-16">
+      <div className="py-12">
         <div className="container mx-auto px-6">
           <SectionHeader 
             icon={<FireIcon className="h-8 w-8"/>}
@@ -342,7 +303,7 @@ const HomePage: React.FC = () => {
       </div>
       
       {/* Top Reviews Section */}
-      <div className="py-16 bg-brand/5 dark:bg-brand/10">
+      <div className="py-12 bg-brand/5 dark:bg-brand/10">
         <div className="container mx-auto px-6">
             <SectionHeader 
               icon={<ChatBubbleBottomCenterTextIcon className="h-8 w-8"/>}

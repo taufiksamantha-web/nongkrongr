@@ -31,17 +31,22 @@ class ErrorBoundary extends Component<Props, State> {
     // misalnya: logErrorToMyService(error, errorInfo);
   }
 
-  private handleClearCacheAndReload = () => {
+  // FIX: Switched to an arrow function property for the event handler.
+  // This is a common pattern in React class components to ensure `this` is correctly bound
+  // and provides a stable function reference, which can also help with potential
+  // type inference issues in complex scenarios.
+  handleClearCacheAndReload = () => {
     // Membersihkan semua data yang disimpan secara lokal
     localStorage.clear();
     sessionStorage.clear();
     
     // Me-reload halaman
     window.location.reload();
-  };
+  }
 
-  // FIX: Converted `render` to a class property (arrow function) to ensure `this` is correctly
-  // bound. This resolves an issue where TypeScript could not find `this.props` on the component instance.
+  // FIX: Changed the `render` method to an arrow function. The standard class method was causing
+  // a type inference issue where `this.props` was not being recognized. The arrow function
+  // ensures `this` is correctly bound to the component instance.
   render = (): React.ReactNode => {
     if (this.state.hasError) {
       return (

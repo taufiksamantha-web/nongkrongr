@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Review } from '../types';
@@ -44,13 +45,15 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
             </div>
         </div>
         {review.photos && review.photos.length > 0 && (
-             <ImageWithFallback 
-                src={review.photos[0]} 
-                alt={`Review by ${review.author}`} 
-                className="mt-4 w-full h-24 object-cover rounded-xl"
-                width={250}
-                height={150}
-             />
+            <div className="mt-4">
+                <ImageWithFallback 
+                  src={review.photos[0]} 
+                  alt={`Review by ${review.author}`} 
+                  className="w-full h-24 object-cover rounded-xl"
+                  width={250}
+                  height={150}
+                />
+            </div>
         )}
       </div>
     </div>
