@@ -54,6 +54,7 @@ const DetailPage: React.FC = () => {
     const [cafe, setCafe] = useState<Cafe | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [notification, setNotification] = useState<string | null>(null);
+    const [reviewsExpanded, setReviewsExpanded] = useState(false);
 
     useEffect(() => {
         if (slug && cafes.length > 0) {
@@ -93,6 +94,8 @@ const DetailPage: React.FC = () => {
 
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${cafe.coords.lat},${cafe.coords.lng}`;
     const approvedReviews = cafe.reviews?.filter(r => r.status === 'approved') || [];
+    const visibleReviews = reviewsExpanded ? approvedReviews : approvedReviews.slice(0, 10);
+
 
     return (
         <div className="container mx-auto px-6 py-8">
@@ -117,11 +120,11 @@ const DetailPage: React.FC = () => {
                     {/* Header */}
                     <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
-                             <div className="flex items-start flex-1 min-w-0">
+                             <div className="flex flex-col items-center sm:flex-row sm:items-start text-center sm:text-left flex-1 min-w-0">
                                 <ImageWithFallback 
                                     src={cafe.logoUrl || faviconUrl} 
                                     alt={`${cafe.name} logo`} 
-                                    className="w-16 h-16 rounded-2xl object-contain mr-4 shadow-md bg-soft p-1 border border-border"
+                                    className="w-16 h-16 rounded-2xl object-contain mb-4 sm:mb-0 sm:mr-4 shadow-md bg-soft p-1 border border-border"
                                     width={100}
                                     height={100}
                                 />
@@ -129,7 +132,7 @@ const DetailPage: React.FC = () => {
                                     {cafe.name}
                                 </h1>
                              </div>
-                             <div className="flex-shrink-0 flex items-center gap-2">
+                             <div className="flex-shrink-0 flex items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
                                  <ShareButton cafeName={cafe.name} cafeDescription={cafe.description} />
                                  <button
                                     onClick={handleFavoriteClick}
@@ -196,7 +199,7 @@ const DetailPage: React.FC = () => {
                      <div>
                          <h2 className="text-3xl font-bold font-jakarta mb-4">Reviews ({approvedReviews.length})</h2>
                          <div className="space-y-4">
-                            {approvedReviews.length > 0 ? approvedReviews.map(review => (
+                            {approvedReviews.length > 0 ? visibleReviews.map(review => (
                                 <div key={review.id} className="bg-card border border-border p-4 rounded-2xl shadow-sm">
                                     <p className="font-bold">{review.author}</p>
                                     <p className="text-muted my-2">"{review.text}"</p>
@@ -218,6 +221,16 @@ const DetailPage: React.FC = () => {
                                 </div>
                             )) : <p className="text-muted">Belum ada review untuk cafe ini.</p>}
                          </div>
+                         {approvedReviews.length > 10 && !reviewsExpanded && (
+                            <div className="mt-6 text-center">
+                                <button
+                                    onClick={() => setReviewsExpanded(true)}
+                                    className="bg-brand/10 text-brand font-bold py-3 px-8 rounded-2xl hover:bg-brand/20 transition-all duration-300"
+                                >
+                                    Lebih Banyak ({approvedReviews.length - 10} lagi)
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
