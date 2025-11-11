@@ -1,20 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { Vibe } from '../types';
 
-// FIX: Gunakan import.meta.env untuk lingkungan Vite agar dapat mengakses kunci API dengan benar.
-// Ini akan memperbaiki error "An API Key must be set" di browser.
-// Cast ke 'any' untuk menghindari error TypeScript di lingkungan tanpa tipe Vite.
-const geminiApiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
-
-// Inisialisasi 'ai' instance secara "lazy" (hanya jika ada key) untuk mencegah crash.
+// Sesuai pedoman, kunci API harus diambil secara eksklusif dari process.env.API_KEY.
+// Lingkungan eksekusi diharapkan menyediakan variabel ini secara otomatis.
 let ai: GoogleGenAI | null = null;
-if (geminiApiKey) {
-  ai = new GoogleGenAI({ apiKey: geminiApiKey });
+
+// Inisialisasi "lazy" untuk mencegah aplikasi crash jika kunci API tidak ada.
+// Inisialisasi dengan parameter bernama { apiKey: ... } seperti yang disyaratkan.
+if (process.env.API_KEY) {
+  ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 } else {
   console.error(
     "🛑 Kunci API Gemini tidak ditemukan! Fitur AI tidak akan berfungsi. " +
-    "Pastikan Anda telah menambahkan VITE_GEMINI_API_KEY " +
-    "ke Environment Variables di Vercel."
+    "Pastikan variabel environment API_KEY sudah diatur di Vercel."
   );
 }
 
@@ -28,7 +26,7 @@ export const geminiService = {
   generateCafeDescription: async (cafeName: string, vibes: Vibe[]): Promise<string> => {
     // Periksa apakah client AI berhasil diinisialisasi.
     if (!ai) {
-      throw new Error("Klien Gemini AI tidak diinisialisasi. Pastikan VITE_GEMINI_API_KEY sudah diatur.");
+      throw new Error("Klien Gemini AI tidak diinisialisasi. Pastikan API_KEY sudah dikonfigurasi dengan benar.");
     }
 
     const vibeNames = vibes.map(v => v.name).join(', ') || 'unique';
