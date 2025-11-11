@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
 import { CafeContext } from '../context/CafeContext';
-import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/solid';
+import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
 import ImageWithFallback from '../components/common/ImageWithFallback';
@@ -20,6 +20,7 @@ const ScoreDisplay: React.FC<{ icon: React.ReactNode, label: string, score: numb
 
 const DetailPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
+    const navigate = useNavigate();
     const cafeContext = useContext(CafeContext);
     const { cafes, loading, addReview, error } = cafeContext!;
     
@@ -58,6 +59,14 @@ const DetailPage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-6 py-8">
+            <button
+                onClick={() => navigate(-1)}
+                className="mb-6 inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-light font-semibold transition-colors duration-300 group"
+                aria-label="Kembali ke halaman sebelumnya"
+            >
+                <ArrowLeftIcon className="h-5 w-5 transform group-hover:-translate-x-1 transition-transform" />
+                Kembali
+            </button>
             {notification && <FloatingNotification message={notification} type="success" onClose={() => setNotification(null)} />}
             <ImageWithFallback src={cafe.coverUrl} alt={cafe.name} className="w-full h-96 object-cover rounded-4xl mb-8" />
             <div className="grid lg:grid-cols-3 gap-8">
