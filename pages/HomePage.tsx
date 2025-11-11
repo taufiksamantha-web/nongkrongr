@@ -41,6 +41,13 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
+  // States for swipe gesture
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [swipeStartX, setSwipeStartX] = useState(0);
+  const [swipeTranslateX, setSwipeTranslateX] = useState(0);
+
+
   useEffect(() => {
     const loadSettings = async () => {
       const url = await settingsService.getSetting('hero_background_url');
@@ -131,9 +138,32 @@ const HomePage: React.FC = () => {
   const handlePrevRecommendation = () => setCurrentRecommendedIndex(prev => (prev === 0 ? recommendedCafes.length - 1 : prev - 1));
   const handleNextRecommendation = () => setCurrentRecommendedIndex(prev => (prev === recommendedCafes.length - 1 ? 0 : prev + 1));
   
+  // Swipe Handlers
+  const handleSwipeStart = (e: React.TouchEvent) => {
+    setIsSwiping(true);
+    setSwipeStartX(e.touches[0].clientX);
+  };
+
+  const handleSwipeMove = (e: React.TouchEvent) => {
+    if (!isSwiping) return;
+    const currentX = e.touches[0].clientX;
+    setSwipeTranslateX(currentX - swipeStartX);
+  };
+
+  const handleSwipeEnd = () => {
+    setIsSwiping(false);
+    const swipeThreshold = 50; // min swipe distance in pixels
+    
+    if (swipeTranslateX < -swipeThreshold) {
+        handleNextRecommendation();
+    } else if (swipeTranslateX > swipeThreshold) {
+        handlePrevRecommendation();
+    }
+    
+    setSwipeTranslateX(0); // Reset translation
+  };
+
   if (error) return <DatabaseConnectionError />;
-  
-  const currentRecommendedCafe = recommendedCafes[currentRecommendedIndex];
 
   return (
     <div>
@@ -217,9 +247,29 @@ const HomePage: React.FC = () => {
           
           {loading ? (
             <div className="bg-gray-200/20 dark:bg-gray-800/50 h-72 rounded-4xl animate-pulse max-w-4xl mx-auto"></div>
-          ) : currentRecommendedCafe ? (
+          ) : recommendedCafes.length > 0 ? (
             <div className="max-w-4xl mx-auto">
-              <FeaturedCafeCard cafe={currentRecommendedCafe} />
+              <div 
+                className="overflow-hidden"
+                onTouchStart={handleSwipeStart}
+                onTouchMove={handleSwipeMove}
+                onTouchEnd={handleSwipeEnd}
+              >
+                <div 
+                  ref={sliderRef}
+                  className="flex"
+                  style={{
+                    transform: `translateX(calc(-${currentRecommendedIndex * 100}% + ${swipeTranslateX}px))`,
+                    transition: isSwiping ? 'none' : 'transform 0.5s ease-in-out',
+                  }}
+                >
+                  {recommendedCafes.map(cafe => (
+                    <div key={cafe.id} className="flex-shrink-0 w-full">
+                      <FeaturedCafeCard cafe={cafe} />
+                    </div>
+                  ))}
+                </div>
+              </div>
               {recommendedCafes.length > 1 && (
                 <div className="flex justify-center items-center mt-8 space-x-6">
                   <button onClick={handlePrevRecommendation} className="p-3 rounded-full bg-card/80 hover:bg-card border border-subtle transition-colors text-primary backdrop-blur-sm" aria-label="Previous recommendation">

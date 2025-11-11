@@ -1,30 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 import { Vibe } from '../types';
 
-// Pendekatan yang lebih aman dan universal untuk mengambil kunci API.
-// Ini memeriksa keberadaan setiap objek lingkungan sebelum mengaksesnya untuk menghindari crash.
-let apiKey: string | undefined;
-
-// Coba dapatkan kunci dari lingkungan Vite/Vercel (import.meta.env)
-if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
-  apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
-}
-
-// Jika tidak ditemukan di lingkungan Vite, coba dapatkan dari lingkungan AI Studio (process.env)
-if (!apiKey && typeof process !== 'undefined' && process.env) {
-  apiKey = process.env.API_KEY;
-}
+// Kunci API diambil secara eksklusif dari process.env.API_KEY sesuai pedoman.
+const apiKey = process.env.API_KEY;
 
 let ai: GoogleGenAI | null = null;
 
-// Inisialisasi "lazy" untuk mencegah aplikasi crash jika kunci API tidak ada di kedua lingkungan.
-// Inisialisasi dengan parameter bernama { apiKey: ... } seperti yang disyaratkan.
 if (apiKey) {
-  ai = new GoogleGenAI({ apiKey: apiKey });
+  ai = new GoogleGenAI({ apiKey });
 } else {
   console.error(
     "🛑 Kunci API Gemini tidak ditemukan! Fitur AI tidak akan berfungsi. " +
-    "Pastikan variabel environment VITE_GEMINI_API_KEY (Vercel) atau API_KEY (AI Studio) sudah diatur."
+    "Pastikan variabel environment API_KEY sudah diatur."
   );
 }
 

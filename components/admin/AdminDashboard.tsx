@@ -1,8 +1,9 @@
+
 import React, { useContext } from 'react';
 import { CafeContext } from '../../context/CafeContext';
 import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import CafeManagementPanel from './CafeManagementPanel';
-import PendingReviews from './PendingReviews';
+import ReviewManagement from './PendingReviews';
 import UserManagementPanel from './UserManagementPanel';
 import WebsiteSettingsPanel from './WebsiteSettingsPanel';
 import StatCard from './StatCard';
@@ -24,7 +25,7 @@ const AdminDashboard: React.FC = () => {
               
               <div className="lg:col-span-2 space-y-8">
                 <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><CafeManagementPanel /></div>
-                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><PendingReviews /></div>
+                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><ReviewManagement /></div>
               </div>
 
               <div className="lg:col-span-1 space-y-8">

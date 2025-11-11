@@ -5,7 +5,7 @@ import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { DISTRICTS, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
+import { MagnifyingGlassIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 import { MapPinIcon } from '@heroicons/react/24/outline';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
@@ -165,11 +165,11 @@ const ExplorePage: React.FC = () => {
   return (
     <div className="container mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
       {/* Filters Sidebar */}
-      <aside className="lg:w-1/4 xl:w-1/5 space-y-6 bg-card p-6 rounded-3xl shadow-sm self-start border border-border">
-        <h3 className="text-2xl font-bold font-jakarta">Filters</h3>
+      <aside className="lg:w-1/4 xl:w-1/5 bg-card p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-24">
+        <h3 className="text-2xl font-bold font-jakarta mb-4">Filters</h3>
 
         {/* Sort by distance */}
-        <div>
+        <div className="pb-2">
           <label className="font-semibold">Urutkan</label>
             <button
                 onClick={handleSortByDistance}
@@ -196,58 +196,78 @@ const ExplorePage: React.FC = () => {
         </div>
 
         {/* District */}
-        <div>
-          <label className="font-semibold">Kecamatan</label>
-          <select value={filters.district} onChange={e => handleFilterChange('district', e.target.value)} className="mt-2 w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white">
-            <option value="all">Semua Kecamatan</option>
-            {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
+        <details className="py-2 border-t border-border group" open>
+            <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                Kecamatan
+                <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+            </summary>
+            <div className="mt-4">
+                <select value={filters.district} onChange={e => handleFilterChange('district', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white">
+                    <option value="all">Semua Kecamatan</option>
+                    {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+            </div>
+        </details>
 
         {/* Vibes */}
-        <div>
-          <label className="font-semibold">Vibes</label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {VIBES.map(vibe => (
-              <button key={vibe.id} onClick={() => toggleMultiSelect('vibes', vibe.id)} className={`px-3 py-1 text-sm rounded-full border-2 transition-all ${filters.vibes.includes(vibe.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>
-                {vibe.name}
-              </button>
-            ))}
-          </div>
-        </div>
+        <details className="py-2 border-t border-border group">
+            <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                Vibes
+                <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+            </summary>
+            <div className="mt-4 flex flex-wrap gap-2">
+                {VIBES.map(vibe => (
+                <button key={vibe.id} onClick={() => toggleMultiSelect('vibes', vibe.id)} className={`px-3 py-1 text-sm rounded-full border-2 transition-all ${filters.vibes.includes(vibe.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>
+                    {vibe.name}
+                </button>
+                ))}
+            </div>
+        </details>
 
         {/* Amenities */}
-        <div>
-          <label className="font-semibold">Fasilitas</label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {AMENITIES.map(amenity => (
-              <button key={amenity.id} onClick={() => toggleMultiSelect('amenities', amenity.id)} className={`px-3 py-1 text-sm rounded-full border-2 transition-all ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>
-                {amenity.icon} {amenity.name}
-              </button>
-            ))}
-          </div>
-        </div>
+        <details className="py-2 border-t border-border group">
+            <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                Fasilitas
+                <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+            </summary>
+            <div className="mt-4 flex flex-wrap gap-2">
+                {AMENITIES.map(amenity => (
+                <button key={amenity.id} onClick={() => toggleMultiSelect('amenities', amenity.id)} className={`px-3 py-1 text-sm rounded-full border-2 transition-all ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>
+                    {amenity.icon} {amenity.name}
+                </button>
+                ))}
+            </div>
+        </details>
         
         {/* Price Tier */}
-        <div>
-            <label className="font-semibold block mb-2">Harga (Maks.)</label>
-            <div className="flex justify-between text-muted text-sm">
-                <span>Murah</span>
-                <span>Sultan</span>
+        <details className="py-2 border-t border-border group">
+            <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                Harga (Maks.)
+                <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+            </summary>
+            <div className="mt-4">
+                <div className="flex justify-between text-muted text-sm">
+                    <span>Murah</span>
+                    <span>Sultan</span>
+                </div>
+                <input type="range" min="1" max="4" value={filters.priceTier} onChange={e => handleFilterChange('priceTier', parseInt(e.target.value))} className="w-full mt-1 accent-brand"/>
             </div>
-            <input type="range" min="1" max="4" value={filters.priceTier} onChange={e => handleFilterChange('priceTier', parseInt(e.target.value))} className="w-full mt-1 accent-brand"/>
-        </div>
+        </details>
 
         {/* Crowd Level */}
-        <div>
-            <label className="font-semibold block mb-2">Keramaian Malam (Maks.)</label>
-            <div className="flex justify-between text-muted text-sm">
-                <span>Sepi</span>
-                <span>Penuh</span>
+        <details className="py-2 border-t border-border group">
+            <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                Keramaian Malam (Maks.)
+                <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+            </summary>
+            <div className="mt-4">
+                <div className="flex justify-between text-muted text-sm">
+                    <span>Sepi</span>
+                    <span>Penuh</span>
+                </div>
+                <input type="range" min="1" max="5" value={filters.crowd} onChange={e => handleFilterChange('crowd', parseInt(e.target.value))} className="w-full mt-1 accent-accent-pink"/>
             </div>
-            <input type="range" min="1" max="5" value={filters.crowd} onChange={e => handleFilterChange('crowd', parseInt(e.target.value))} className="w-full mt-1 accent-accent-pink"/>
-        </div>
-
+        </details>
       </aside>
 
       {/* Main Content */}

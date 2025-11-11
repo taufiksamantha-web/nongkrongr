@@ -42,7 +42,9 @@ interface CafeContextType {
     deleteCafe: (id: string) => Promise<any>;
     addReview: (review: Omit<Review, 'id' | 'createdAt' | 'status'> & { cafe_id: string }) => Promise<any>;
     updateReviewStatus: (reviewId: string, status: Review['status']) => Promise<any>;
+    deleteReview: (reviewId: string) => Promise<void>;
     getPendingReviews: () => (Review & { cafeName: string; cafeId: string })[];
+    getAllReviews: () => (Review & { cafeName: string; cafeId: string })[];
 }
 
 export const CafeContext = createContext<CafeContextType | undefined>(undefined);
@@ -245,6 +247,33 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             })
         );
     };
+
+    const deleteReview = async (reviewId: string) => {
+        const { error } = await supabase
+            .from('reviews')
+            .delete()
+            .eq('id', reviewId);
+
+        if (error) {
+            console.error("Supabase delete error:", error);
+            throw error;
+        }
+        
+        // Optimistically update UI
+        setCafes(prevCafes =>
+            prevCafes.map(cafe => {
+                const hasReview = cafe.reviews.some(r => r.id === reviewId);
+                if (hasReview) {
+                    const updatedCafe = {
+                        ...cafe,
+                        reviews: cafe.reviews.filter(r => r.id !== reviewId),
+                    };
+                    return calculateAverages(updatedCafe); // Recalculate scores
+                }
+                return cafe;
+            })
+        );
+    };
     
     const getPendingReviews = () => {
         const pending: (Review & { cafeName: string; cafeId: string })[] = [];
@@ -262,6 +291,22 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return pending;
     };
 
+    const getAllReviews = () => {
+        const all: (Review & { cafeName: string; cafeId: string })[] = [];
+        cafes.forEach(cafe => {
+            cafe.reviews.forEach(review => {
+                all.push({
+                    ...review,
+                    cafeName: cafe.name,
+                    cafeId: cafe.id,
+                });
+            });
+        });
+        // Sort by most recent first
+        all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        return all;
+    };
+
 
     return (
         <CafeContext.Provider value={{
@@ -274,7 +319,9 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             deleteCafe,
             addReview,
             updateReviewStatus,
+            deleteReview,
             getPendingReviews,
+            getAllReviews,
         }}>
             {children}
         </CafeContext.Provider>

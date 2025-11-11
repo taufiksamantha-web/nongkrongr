@@ -32,7 +32,19 @@ const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, alt, classNa
     );
   }
 
-  return <img src={optimizedSrc!} alt={alt} className={className} onError={handleError} loading="lazy" />;
+  // The container div now provides a placeholder background, using the same dimensions
+  // as the image to prevent layout shift. This improves the visual experience of lazy loading.
+  return (
+    <div className={`bg-gray-200 dark:bg-gray-700 ${className}`}>
+        <img 
+            src={optimizedSrc!} 
+            alt={alt} 
+            className={className} 
+            onError={handleError} 
+            loading="lazy" 
+        />
+    </div>
+    );
 };
 
 export default ImageWithFallback;

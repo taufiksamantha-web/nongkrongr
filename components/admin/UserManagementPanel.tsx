@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import UserFormModal from './UserFormModal';
 import FloatingNotification from '../common/FloatingNotification';
-import ConfirmationModal from '../common/ConfirmationModal';
 
 const UserManagementPanel: React.FC = () => {
     const { currentUser } = useAuth();
@@ -12,7 +11,6 @@ const UserManagementPanel: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [isUserFormOpen, setIsUserFormOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [deletingUser, setDeletingUser] = useState<User | null>(null);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     
     const fetchUsers = async () => {
@@ -31,19 +29,17 @@ const UserManagementPanel: React.FC = () => {
         fetchUsers();
     }, []);
     
-    const handleSaveUser = async (userData: Partial<User> & { email?: string, password?: string }) => {
+    const handleSaveUser = async (userData: Partial<User>) => {
         if (!editingUser) {
-             console.error("SECURITY WARNING: Client-side user creation is insecure and not supported. This is a placeholder action. Implement a Supabase Edge Function for this.");
-             setNotification({ message: 'Fitur Tambah User memerlukan setup backend (Edge Function) untuk keamanan.', type: 'error' });
+             setNotification({ message: 'Error: No user selected for editing.', type: 'error' });
              setIsUserFormOpen(false);
              return;
         }
 
-        const { id, ...updateData } = { ...editingUser, ...userData };
         const { error } = await supabase
             .from('profiles')
-            .update({ username: updateData.username, role: updateData.role })
-            .eq('id', id);
+            .update({ username: userData.username, role: userData.role })
+            .eq('id', editingUser.id);
 
         if (error) {
             setNotification({ message: `Error: ${error.message}`, type: 'error' });
@@ -55,19 +51,6 @@ const UserManagementPanel: React.FC = () => {
         setEditingUser(null);
     };
     
-    const handleConfirmDelete = () => {
-        if (deletingUser) {
-            console.error("SECURITY WARNING: Client-side user deletion is insecure and not supported. This is a placeholder action. Implement a Supabase Edge Function for this.");
-            setNotification({ message: 'Fitur Hapus User memerlukan setup backend (Edge Function) untuk keamanan.', type: 'error' });
-            setDeletingUser(null);
-        }
-    };
-
-    const handleOpenAddForm = () => {
-        setEditingUser(null);
-        setIsUserFormOpen(true);
-    };
-
     const handleOpenEditForm = (user: User) => {
         setEditingUser(user);
         setIsUserFormOpen(true);
@@ -78,11 +61,6 @@ const UserManagementPanel: React.FC = () => {
              {notification && <FloatingNotification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
             <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
                  <h2 className="text-2xl font-bold font-jakarta">User Management</h2>
-                 {currentUser?.role === 'admin' && (
-                    <button onClick={handleOpenAddForm} className="bg-brand/90 text-white font-bold py-2 px-4 rounded-xl hover:bg-brand transition-colors text-sm">
-                        + Tambah User
-                    </button>
-                 )}
             </div>
              <div className="bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border overflow-x-auto">
                 <table className="w-full text-left">
@@ -103,16 +81,6 @@ const UserManagementPanel: React.FC = () => {
                                     <td className="p-4 text-muted">{user.role}</td>
                                     <td className="p-4 space-x-4">
                                         <button onClick={() => handleOpenEditForm(user)} className="text-brand font-bold hover:underline">Edit</button>
-                                        {currentUser?.role === 'admin' && (
-                                            <button 
-                                                onClick={() => setDeletingUser(user)}
-                                                className="text-accent-pink font-bold hover:underline disabled:text-gray-400 disabled:no-underline disabled:cursor-not-allowed"
-                                                disabled={user.id === currentUser?.id}
-                                                title={user.id === currentUser?.id ? "Tidak dapat menghapus diri sendiri" : "Hapus user"}
-                                            >
-                                                Hapus
-                                            </button>
-                                        )}
                                     </td>
                                 </tr>
                             ))
@@ -121,15 +89,6 @@ const UserManagementPanel: React.FC = () => {
                 </table>
              </div>
              {isUserFormOpen && <UserFormModal userToEdit={editingUser} onSave={handleSaveUser} onCancel={() => setIsUserFormOpen(false)} />}
-             {deletingUser && (
-                <ConfirmationModal
-                    title="Hapus User"
-                    message={`Apakah Anda yakin ingin menghapus user "${deletingUser.username}"? Tindakan ini memerlukan setup backend yang aman.`}
-                    confirmText="Lanjutkan"
-                    onConfirm={handleConfirmDelete}
-                    onCancel={() => setDeletingUser(null)}
-                />
-             )}
         </div>
     );
 }

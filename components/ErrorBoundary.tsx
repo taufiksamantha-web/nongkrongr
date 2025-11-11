@@ -1,4 +1,3 @@
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
@@ -11,16 +10,22 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
+  // FIX: The constructor-based state initialization was causing TypeScript errors where `this.state`
+  // and `this.props` were not being recognized. Switched to the class property syntax for state
+  // initialization, which is a more modern approach and resolves these type-checking issues.
+  // FIX: Removed the 'public' modifier from state to resolve a type inference issue with `this.props`.
+  state: State = {
     hasError: false,
   };
 
-  public static getDerivedStateFromError(_: Error): State {
+  // FIX: Removed 'public' modifier to correctly override React's lifecycle method signature.
+  static getDerivedStateFromError(_: Error): State {
     // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  // FIX: Removed 'public' modifier to correctly override React's lifecycle method signature.
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     // Di aplikasi produksi, Anda akan mengirim ini ke layanan pelaporan error
     // misalnya: logErrorToMyService(error, errorInfo);
@@ -35,7 +40,9 @@ class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   };
 
-  public render() {
+  // FIX: Converted `render` to a class property (arrow function) to ensure `this` is correctly
+  // bound. This resolves an issue where TypeScript could not find `this.props` on the component instance.
+  render = (): React.ReactNode => {
     if (this.state.hasError) {
       return (
         <div className="flex items-center justify-center min-h-screen bg-soft p-6">
