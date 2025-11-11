@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, ReactNode, useContext } from 'react';
 
 interface FavoriteContextType {
@@ -19,20 +20,33 @@ export const FavoriteProvider: React.FC<{ children: ReactNode }> = ({ children }
         try {
             const storedFavorites = localStorage.getItem(FAVORITES_STORAGE_KEY);
             if (storedFavorites) {
-                setFavoriteIds(JSON.parse(storedFavorites));
+                // Safely parse the stored data
+                const parsedFavorites = JSON.parse(storedFavorites);
+                if (Array.isArray(parsedFavorites)) {
+                    setFavoriteIds(parsedFavorites);
+                }
             }
         } catch (error) {
-            console.error("Failed to parse favorites from localStorage", error);
+            console.error("Failed to parse favorites from localStorage. Clearing corrupted data.", error);
+            // If parsing fails, the data is corrupt. Clear it to prevent future errors.
+            localStorage.removeItem(FAVORITES_STORAGE_KEY);
         }
     }, []);
 
     // Save favorites to localStorage whenever they change
     useEffect(() => {
-        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoriteIds));
+        try {
+            localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoriteIds));
+        } catch (error) {
+            console.error("Failed to save favorites to localStorage", error);
+        }
     }, [favoriteIds]);
 
     const addFavorite = (cafeId: string) => {
-        setFavoriteIds(prevIds => [...prevIds, cafeId]);
+        setFavoriteIds(prevIds => {
+            if (prevIds.includes(cafeId)) return prevIds;
+            return [...prevIds, cafeId];
+        });
     };
 
     const removeFavorite = (cafeId: string) => {

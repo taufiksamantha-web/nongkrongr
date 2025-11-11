@@ -8,6 +8,7 @@ import AdminPage from './pages/AdminPage';
 import AboutPage from './pages/AboutPage';
 import WelcomeModal from './components/WelcomeModal';
 import Footer from './components/Footer';
+import ErrorBoundary from './components/ErrorBoundary';
 import { CafeProvider } from './context/CafeContext';
 import { AuthProvider } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
@@ -149,9 +150,11 @@ const App: React.FC = () => {
       <AuthProvider>
         <FavoriteProvider>
           <CafeProvider>
-            <HashRouter>
-                <AppContent showWelcome={showWelcome} onCloseWelcome={() => setShowWelcome(false)} />
-            </HashRouter>
+            <ErrorBoundary>
+              <HashRouter>
+                  <AppContent showWelcome={showWelcome} onCloseWelcome={() => setShowWelcome(false)} />
+              </HashRouter>
+            </ErrorBoundary>
           </CafeProvider>
         </FavoriteProvider>
       </AuthProvider>
