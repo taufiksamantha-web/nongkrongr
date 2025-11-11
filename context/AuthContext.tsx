@@ -64,10 +64,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const logout = async () => {
         const { error } = await supabase.auth.signOut();
-        // Manually set user to null on successful logout for immediate UI update
-        if (!error) {
-            setCurrentUser(null);
-        }
+        // The onAuthStateChange listener will automatically handle setting the user to null.
+        // Removing the manual setCurrentUser(null) call prevents a race condition.
         return { error };
     };
 
