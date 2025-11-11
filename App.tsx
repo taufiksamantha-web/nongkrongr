@@ -35,7 +35,7 @@ const Header: React.FC = () => {
       <nav className="container mx-auto px-4 py-2 flex items-center justify-between relative">
         {/* Left: Logo */}
         <Link to="/" className="flex items-center py-2">
-          <img src="https://res.cloudinary.com/dovouihq8/image/upload/c_scale,w_200,f_auto,q_auto/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
+          <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
         </Link>
         
         {/* Center (Desktop): Nav Links */}
