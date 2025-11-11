@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Cafe, Amenity, Vibe, Spot } from '../../types';
 import { cloudinaryService } from '../../services/cloudinaryService';
@@ -40,6 +41,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
     const [spotFiles, setSpotFiles] = useState<(File | null)[]>(cafe?.spots.map(() => null) || []);
     const [isUploading, setIsUploading] = useState(false);
     const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+    const faviconUrl = "https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png";
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -216,9 +218,11 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="font-semibold text-primary block mb-2">Logo (Opsional)</label>
-                    {(logoFile || formData.logoUrl) && (
-                        <ImageWithFallback src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} alt="Logo preview" className="w-24 h-24 object-contain rounded-xl mb-2 bg-soft border border-border p-1" />
-                    )}
+                    <ImageWithFallback 
+                      src={logoFile ? URL.createObjectURL(logoFile) : (formData.logoUrl || faviconUrl)} 
+                      alt="Logo preview" 
+                      className="w-24 h-24 object-contain rounded-xl mb-2 bg-soft border border-border p-1" 
+                    />
                     <input type="file" accept="image/*" onChange={handleLogoFileChange} className={fileInputClass} />
                   </div>
                   <div>

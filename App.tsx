@@ -102,10 +102,11 @@ const AdminHeader: React.FC = () => {
 const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }> = ({ showWelcome, onCloseWelcome }) => {
     const location = useLocation();
     const isAdminPage = location.pathname.startsWith('/admin');
+    const isHomePage = location.pathname === '/';
 
     return (
         <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col">
-          {showWelcome && <WelcomeModal onClose={onCloseWelcome} />}
+          {showWelcome && isHomePage && <WelcomeModal onClose={onCloseWelcome} />}
           
           {isAdminPage ? <AdminHeader /> : <Header />}
           
@@ -126,7 +127,7 @@ const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
 };
 
 const App: React.FC = () => {
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('nongkrongr_welcome_seen'));
   const [theme, setTheme] = useState<Theme>('light');
 
   useEffect(() => {
@@ -148,6 +149,11 @@ const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  const handleCloseWelcome = () => {
+    localStorage.setItem('nongkrongr_welcome_seen', 'true');
+    setShowWelcome(false);
+  };
+
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
@@ -160,7 +166,7 @@ const App: React.FC = () => {
             <ErrorBoundary>
               <HashRouter>
                   <ScrollToTopOnNavigate />
-                  <AppContent showWelcome={showWelcome} onCloseWelcome={() => setShowWelcome(false)} />
+                  <AppContent showWelcome={showWelcome} onCloseWelcome={handleCloseWelcome} />
               </HashRouter>
             </ErrorBoundary>
           </CafeProvider>
