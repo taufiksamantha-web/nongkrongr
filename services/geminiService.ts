@@ -1,18 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { Vibe } from '../types';
 
-// Menggunakan VITE_GEMINI_API_KEY agar konsisten dan aman untuk client-side di Vercel.
-const API_KEY = process.env.VITE_GEMINI_API_KEY || '';
-
-if (!API_KEY) {
-  console.error(
-    "🛑 Kunci API Gemini tidak ditemukan! Fitur AI tidak akan berfungsi. " +
-    "Pastikan Anda telah menambahkan VITE_GEMINI_API_KEY " +
-    "ke Environment Variables di Vercel."
-  );
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// FIX: Per @google/genai guidelines, initialize the client directly with `process.env.API_KEY`. This resolves the `import.meta.env` error.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const geminiService = {
   /**
@@ -22,9 +12,7 @@ export const geminiService = {
    * @returns A promise that resolves to a string containing the generated description.
    */
   generateCafeDescription: async (cafeName: string, vibes: Vibe[]): Promise<string> => {
-    if (!API_KEY) {
-        throw new Error("Kunci API Gemini tidak dikonfigurasi.");
-    }
+    // FIX: Removed API key check per guidelines, as its presence is assumed.
 
     const vibeNames = vibes.map(v => v.name).join(', ') || 'unique';
     const prompt = `Create a short, catchy, and aesthetic description for a cafe in Palembang called "${cafeName}". The cafe's vibes are: ${vibeNames}. The description should be one paragraph, written in Indonesian, and appeal to Gen Z.`;
@@ -39,7 +27,8 @@ export const geminiService = {
     } catch (error) {
       console.error("Error generating description with Gemini:", error);
       // Re-throw a more user-friendly error to be caught by the UI
-      throw new Error("Gagal membuat deskripsi dengan AI. Periksa kembali kunci API Anda.");
+      // FIX: Updated error message to be more generic and not mention API keys, as per guidelines.
+      throw new Error("Gagal membuat deskripsi dengan AI.");
     }
   },
 };

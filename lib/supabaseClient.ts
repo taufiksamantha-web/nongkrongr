@@ -1,11 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
 // --- Kredensial Supabase sekarang diambil dari Environment Variables ---
-// Ini adalah cara yang aman dan standar untuk production.
-// Pastikan Anda telah mengatur variabel-variabel ini di pengaturan proyek Vercel Anda.
+// Di lingkungan client-side (browser) seperti ini, kita menggunakan import.meta.env
+// untuk mengakses variabel yang diekspos oleh build tool (seperti Vite/Vercel).
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+// FIX: Cast `import.meta` to `any` to bypass TypeScript error about missing `env` property for VITE environment variables.
+const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error(
