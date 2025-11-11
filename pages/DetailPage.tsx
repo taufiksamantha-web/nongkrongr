@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -47,17 +48,13 @@ const DetailPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const cafeContext = useContext(CafeContext);
-    const { cafes, loading, addReview, error, fetchCafes } = cafeContext!;
+    const { cafes, loading, addReview, error } = cafeContext!;
     const { theme } = useContext(ThemeContext);
     const { isFavorite, addFavorite, removeFavorite } = useFavorites();
     
     const [cafe, setCafe] = useState<Cafe | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [notification, setNotification] = useState<string | null>(null);
-
-    useEffect(() => {
-        fetchCafes();
-    }, [fetchCafes]);
 
     useEffect(() => {
         if (slug && cafes.length > 0) {

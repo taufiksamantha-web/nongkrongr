@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -10,12 +11,11 @@ const AdminPage: React.FC = () => {
     const navigate = useNavigate();
 
     const handleLogout = async () => {
+        navigate('/'); // Navigate away from the protected route first.
         const { error } = await logout();
         if (error) {
+            // The user is already on the homepage, so a console error is sufficient.
             console.error('Logout error:', error.message);
-            alert('Gagal untuk logout. Silakan coba lagi.');
-        } else {
-            navigate('/');
         }
     };
     

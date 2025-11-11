@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier } from '../types';
@@ -13,7 +14,7 @@ const ITEMS_PER_PAGE = 12;
 
 const ExplorePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
-  const { cafes, loading, error, fetchCafes } = cafeContext!;
+  const { cafes, loading, error } = cafeContext!;
   const { theme } = useContext(ThemeContext);
   
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,10 +29,6 @@ const ExplorePage: React.FC = () => {
     priceTier: parseInt(searchParams.get('price_tier') || '4', 10) as PriceTier,
     crowd: parseInt(searchParams.get('crowd') || '5', 10),
   });
-  
-  useEffect(() => {
-    fetchCafes();
-  }, [fetchCafes]);
   
   const handleFilterChange = <K extends keyof typeof filters,>(key: K, value: (typeof filters)[K]) => {
     setFilters(prev => ({ ...prev, [key]: value }));

@@ -106,6 +106,13 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
+    useEffect(() => {
+        fetchCafes(); // Initial fetch on component mount
+        const intervalId = setInterval(fetchCafes, 300000); // Refresh data every 5 minutes
+        return () => clearInterval(intervalId); // Cleanup interval on unmount
+    }, [fetchCafes]);
+
+
     const addCafe = async (cafeData: Partial<Cafe>) => {
         const { vibes = [], amenities = [], spots = [], coords, ...mainCafeData } = cafeData;
 
@@ -206,27 +213,35 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateReviewStatus = async (reviewId: string, status: Review['status']) => {
-        const { error } = await supabase.from('reviews').update({ status }).eq('id', reviewId);
-        if (error) throw error;
-        
-        // Alih-alih melakukan fetch ulang, perbarui state secara lokal untuk pembaruan instan
+        const { data: updatedReviews, error } = await supabase
+            .from('reviews')
+            .update({ status })
+            .eq('id', reviewId)
+            .select();
+
+        if (error) {
+            console.error("Supabase update error:", error);
+            throw error;
+        }
+
+        if (!updatedReviews || updatedReviews.length === 0) {
+            throw new Error('Gagal memperbarui review. Review tidak ditemukan atau Anda tidak memiliki izin (cek RLS).');
+        }
+
         setCafes(prevCafes => 
             prevCafes.map(cafe => {
                 const reviewIndex = cafe.reviews.findIndex(r => r.id === reviewId);
                 if (reviewIndex !== -1) {
-                    // Buat array review baru dengan status yang diperbarui
                     const updatedReviews = cafe.reviews.map(review => 
                         review.id === reviewId ? { ...review, status } : review
                     );
-                    // Buat objek kafe baru dengan review yang diperbarui
                     const updatedCafe = {
                         ...cafe,
                         reviews: updatedReviews,
                     };
-                    // Hitung ulang rata-rata untuk kafe yang diperbarui
                     return calculateAverages(updatedCafe);
                 }
-                return cafe; // Kembalikan kafe yang tidak berubah
+                return cafe;
             })
         );
     };

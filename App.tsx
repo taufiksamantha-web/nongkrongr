@@ -13,6 +13,8 @@ import { CafeProvider } from './context/CafeContext';
 import { AuthProvider } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
+import ScrollToTopOnNavigate from './components/ScrollToTopOnNavigate';
+import ScrollToTopButton from './components/ScrollToTopButton';
 
 type Theme = 'light' | 'dark';
 
@@ -114,6 +116,7 @@ const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
           </main>
 
           {!isAdminPage && <Footer />}
+          {!isAdminPage && <ScrollToTopButton />}
         </div>
     );
 };
@@ -152,6 +155,7 @@ const App: React.FC = () => {
           <CafeProvider>
             <ErrorBoundary>
               <HashRouter>
+                  <ScrollToTopOnNavigate />
                   <AppContent showWelcome={showWelcome} onCloseWelcome={() => setShowWelcome(false)} />
               </HashRouter>
             </ErrorBoundary>

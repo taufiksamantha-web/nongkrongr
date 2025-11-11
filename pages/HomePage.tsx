@@ -26,7 +26,7 @@ const SectionHeader: React.FC<{ icon?: React.ReactNode; title: string; subtitle:
 
 const HomePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
-  const { cafes, loading, error, fetchCafes } = cafeContext!;
+  const { cafes, loading, error } = cafeContext!;
   const { favoriteIds } = useFavorites();
   
   const [trendingCafes, setTrendingCafes] = useState<Cafe[]>([]);
@@ -42,15 +42,14 @@ const HomePage: React.FC = () => {
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const loadPageData = async () => {
-      await fetchCafes();
+    const loadSettings = async () => {
       const url = await settingsService.getSetting('hero_background_url');
       if (url) {
           setHeroBgUrl(url);
       }
     };
-    loadPageData();
-  }, [fetchCafes]);
+    loadSettings();
+  }, []);
 
   useEffect(() => {
     if (cafes.length > 0) {
