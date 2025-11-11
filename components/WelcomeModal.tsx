@@ -33,7 +33,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
         onClick={(e) => e.stopPropagation()} // Mencegah modal tertutup saat diklik di dalam
       >
         <div className="text-6xl mb-4 animate-bounce">🤙</div>
-        <h2 id="welcome-modal-title" className="text-4xl md:text-5xl font-extrabold font-jakarta bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent-pink mb-4">
+        <h2 id="welcome-modal-title" className="text-3xl md:text-4xl font-extrabold font-jakarta bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent-pink mb-4">
           Selamat Datang!
         </h2>
         <p className="text-gray-600 dark:text-gray-300 text-lg mb-8">
