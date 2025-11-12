@@ -10,9 +10,8 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Initialize state using modern class field syntax to resolve type errors.
-  // The constructor-based approach was failing to correctly type `this.state` and `this.props`.
-  public state: State = { hasError: false };
+  // FIX: The errors "Property 'state' does not exist" and "Property 'props' does not exist" are resolved by initializing state as a class property. This modern syntax avoids potential issues with constructor-based initialization in some TypeScript environments.
+  state: State = { hasError: false };
 
   static getDerivedStateFromError(_: Error): State {
     // Update state so the next render will show the fallback UI.

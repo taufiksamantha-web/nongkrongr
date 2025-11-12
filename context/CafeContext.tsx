@@ -142,6 +142,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const { vibes = [], amenities = [], spots = [], coords, ...mainCafeData } = cafeData;
 
         const cafeRecord = {
+            id: `cafe-${crypto.randomUUID()}`, // FIX: Generate a unique ID for the new cafe
             ...mainCafeData,
             slug: mainCafeData.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || `cafe-${Date.now()}`,
             lat: coords?.lat,

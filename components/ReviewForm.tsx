@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Review } from '../types';
 import { cloudinaryService } from '../services/cloudinaryService';
@@ -131,6 +132,11 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                         onChange={e => setPriceSpent(e.target.value)}
                         className={`${inputClass} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                     />
+                    {priceSpent && !isNaN(Number(priceSpent)) && (
+                        <p className="text-xs text-muted mt-1">
+                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Number(priceSpent))}
+                        </p>
+                    )}
                  </div>
                  <div>
                     <label className="font-semibold block mb-1">Foto (Opsional)</label>

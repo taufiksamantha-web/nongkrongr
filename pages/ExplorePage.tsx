@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier } from '../types';
@@ -5,7 +7,7 @@ import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { DISTRICTS, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
-import { MagnifyingGlassIcon, ChevronDownIcon, AdjustmentsHorizontalIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { MagnifyingGlassIcon, ChevronDownIcon, AdjustmentsHorizontalIcon, XMarkIcon, InboxIcon } from '@heroicons/react/24/solid';
 import { MapPinIcon } from '@heroicons/react/24/outline';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
@@ -345,7 +347,7 @@ const ExplorePage: React.FC = () => {
                 className="w-full p-4 pl-12 text-lg rounded-2xl border-2 border-border focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm bg-card text-primary dark:text-white dark:placeholder-muted"
             />
         </div>
-        <div className="rounded-3xl mb-8 overflow-hidden shadow-md h-96 border border-border">
+        <div className="relative z-10 rounded-3xl mb-8 overflow-hidden shadow-md h-96 border border-border">
             <InteractiveMap cafes={sortedCafes} theme={theme} showUserLocation={true} />
         </div>
         
@@ -356,6 +358,12 @@ const ExplorePage: React.FC = () => {
         {loading ? (
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
                 {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
+            </div>
+        ) : !loading && cafes.length === 0 ? (
+            <div className="text-center py-10 bg-card rounded-3xl border border-border">
+                <InboxIcon className="mx-auto h-12 w-12 text-muted" />
+                <p className="mt-4 text-xl font-bold font-jakarta">Belum Ada Cafe yang Terdaftar</p>
+                <p className="text-muted mt-2 max-w-xs mx-auto">Sepertinya belum ada data cafe yang bisa ditampilkan. Cek lagi nanti ya!</p>
             </div>
         ) : sortedCafes.length > 0 ? (
             <>

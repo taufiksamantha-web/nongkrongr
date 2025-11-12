@@ -4,7 +4,7 @@ import { Cafe, Review } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { useFavorites } from '../context/FavoriteContext';
-import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
@@ -12,7 +12,7 @@ import ImageWithFallback from '../components/common/ImageWithFallback';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
 import ShareButton from '../components/ShareButton';
-import { DEFAULT_COVER_URL, DEFAULT_FAVICON_URL } from '../constants';
+import { DEFAULT_COVER_URL } from '../constants';
 
 const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color: string }> = ({ label, score, max, color }) => {
     const percentage = max > 0 ? (score / max) * 100 : 0;
@@ -136,14 +136,19 @@ const DetailPage: React.FC = () => {
                     <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
                              <div className="flex flex-col items-center sm:flex-row sm:items-start text-center sm:text-left flex-1 min-w-0">
-                                <ImageWithFallback 
-                                    src={cafe.logoUrl} 
-                                    defaultSrc={DEFAULT_FAVICON_URL}
-                                    alt={`${cafe.name} logo`} 
-                                    className="w-16 h-16 rounded-2xl object-contain mb-4 sm:mb-0 sm:mr-4 shadow-md bg-soft p-1 border border-border"
-                                    width={100}
-                                    height={100}
-                                />
+                                {cafe.logoUrl ? (
+                                    <ImageWithFallback 
+                                        src={cafe.logoUrl} 
+                                        alt={`${cafe.name} logo`} 
+                                        className="w-16 h-16 rounded-2xl object-contain mb-4 sm:mb-0 sm:mr-4 shadow-md"
+                                        width={100}
+                                        height={100}
+                                    />
+                                ) : (
+                                    <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-2xl mb-4 sm:mb-0 sm:mr-4 shadow-md">
+                                        <BuildingStorefrontIcon className="h-8 w-8 text-muted" />
+                                    </div>
+                                )}
                                 <h1 className={`text-3xl md:text-4xl font-extrabold font-jakarta ${nameWordCount <= 2 ? 'sm:whitespace-nowrap' : ''}`}>
                                     {cafe.name}
                                 </h1>
@@ -152,7 +157,7 @@ const DetailPage: React.FC = () => {
                                  <ShareButton cafeName={cafe.name} cafeDescription={cafe.description} />
                                  <button
                                     onClick={handleFavoriteClick}
-                                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold border-2 transition-all duration-300 ${favorited ? 'bg-accent-pink/10 text-accent-pink border-accent-pink/20' : 'bg-soft border-border hover:border-accent-pink/50'}`}
+                                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold border-2 transition-all duration-300 ${favorited ? 'bg-accent-pink/10 text-accent-pink border-accent-pink/20 hover:bg-accent-pink/20' : 'bg-soft border-border hover:bg-accent-pink/10 hover:text-accent-pink hover:border-accent-pink/20'}`}
                                     aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
                                  >
                                     {favorited ? <HeartIcon className="h-6 w-6"/> : <HeartIconOutline className="h-6 w-6" />}
@@ -257,7 +262,7 @@ const DetailPage: React.FC = () => {
                 <aside className="lg:sticky lg:top-24 self-start">
                     <div className="space-y-8">
                         <div className="rounded-3xl shadow-md overflow-hidden h-64 border border-border">
-                            <InteractiveMap cafe={cafe} theme={theme} showUserLocation={true} />
+                            <InteractiveMap cafe={cafe} theme={theme} />
                         </div>
                         <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
                             Buka di Google Maps

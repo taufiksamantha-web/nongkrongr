@@ -39,7 +39,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ cafeName, cafeDescription }) 
   return (
     <button
       onClick={handleShare}
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold border-2 transition-all duration-300 ${copied ? 'bg-green-100 text-green-700 border-green-200' : 'bg-soft border-border hover:border-brand/50'}`}
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold border-2 transition-all duration-300 ${copied ? 'bg-green-100 text-green-700 border-green-200' : 'bg-soft border-border hover:bg-brand/10 hover:text-brand hover:border-brand/20'}`}
       aria-label="Bagikan kafe ini"
       style={{ minWidth: '110px', justifyContent: 'center' }}
     >

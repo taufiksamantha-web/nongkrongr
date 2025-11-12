@@ -1,4 +1,5 @@
 
+
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { Cafe } from '../../types';
 import { CafeContext } from '../../context/CafeContext';
@@ -21,16 +22,29 @@ const CafeManagementPanel: React.FC = () => {
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCafeIds, setSelectedCafeIds] = useState<string[]>([]);
+    const [isConfirmingMultiDelete, setIsConfirmingMultiDelete] = useState(false);
 
     const filteredCafes = useMemo(() => {
-        return cafes.filter(cafe =>
-            cafe.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        return cafes
+            .filter(cafe =>
+                cafe.name.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+            .sort((a, b) => {
+                const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                return dateB - dateA;
+            });
     }, [cafes, searchQuery]);
 
     useEffect(() => {
         setCurrentPage(1);
+        setSelectedCafeIds([]); // Reset selection on search
     }, [searchQuery]);
+    
+    useEffect(() => {
+        setSelectedCafeIds([]); // Reset selection on page change
+    }, [currentPage]);
     
     const totalPages = Math.ceil(filteredCafes.length / ITEMS_PER_PAGE);
     const paginatedCafes = filteredCafes.slice(
@@ -65,7 +79,6 @@ const CafeManagementPanel: React.FC = () => {
             try {
                 await deleteCafe(cafeToDelete.id);
                 setNotification({ message: `"${cafeToDelete.name}" berhasil dihapus.`, type: 'success' });
-                // If the deleted item was the last on a page, go to the previous page
                 if (paginatedCafes.length === 1 && currentPage > 1) {
                     setCurrentPage(currentPage - 1);
                 }
@@ -78,14 +91,58 @@ const CafeManagementPanel: React.FC = () => {
         }
     };
 
+    const handleSelectAllOnPage = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedCafeIds(paginatedCafes.map(c => c.id));
+        } else {
+            setSelectedCafeIds([]);
+        }
+    };
+
+    const handleSelectOne = (cafeId: string) => {
+        setSelectedCafeIds(prev =>
+            prev.includes(cafeId)
+                ? prev.filter(id => id !== cafeId)
+                : [...prev, cafeId]
+        );
+    };
+
+    const handleConfirmMultiDelete = async () => {
+        setIsSaving(true);
+        setNotification(null);
+        try {
+            await Promise.all(selectedCafeIds.map(id => deleteCafe(id)));
+            setNotification({ message: `${selectedCafeIds.length} kafe berhasil dihapus.`, type: 'success' });
+            if (paginatedCafes.length === selectedCafeIds.length && currentPage > 1) {
+                setCurrentPage(currentPage - 1);
+            }
+            setSelectedCafeIds([]);
+        } catch (error: any) {
+            setNotification({ message: `Gagal menghapus beberapa kafe: ${error.message}`, type: 'error' });
+        } finally {
+            setIsSaving(false);
+            setIsConfirmingMultiDelete(false);
+        }
+    };
+
     return (
          <>
             {notification && <FloatingNotification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
                 <h2 className="text-2xl font-bold font-jakarta">Daftar Cafe</h2>
-                <button onClick={() => { setEditingCafe(null); setIsFormOpen(true); }} className="bg-brand text-white font-bold py-2 px-6 rounded-2xl hover:bg-brand/90 transition-colors">
-                    + Tambah Cafe
-                </button>
+                <div className="flex items-center gap-4">
+                    {selectedCafeIds.length > 0 && currentUser?.role === 'admin' && (
+                        <button
+                            onClick={() => setIsConfirmingMultiDelete(true)}
+                            className="bg-accent-pink text-white font-bold py-2 px-6 rounded-2xl hover:bg-accent-pink/90 transition-colors"
+                        >
+                            Hapus Terpilih ({selectedCafeIds.length})
+                        </button>
+                    )}
+                    <button onClick={() => { setEditingCafe(null); setIsFormOpen(true); }} className="bg-brand text-white font-bold py-2 px-6 rounded-2xl hover:bg-brand/90 transition-colors">
+                        + Tambah Cafe
+                    </button>
+                </div>
             </div>
             
             <div className="relative mb-4">
@@ -122,35 +179,67 @@ const CafeManagementPanel: React.FC = () => {
                 </div>
             ) : (
                 <>
-                    <div className="bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border">
-                        <div className="space-y-2">
-                            {paginatedCafes.map(cafe => (
-                                <div key={cafe.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors duration-200">
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-primary dark:text-gray-200 truncate">{cafe.name}</p>
-                                        <div className="flex items-center gap-2 text-sm text-muted">
-                                            <span>{cafe.district}</span>
-                                            <span className="text-gray-300 dark:text-gray-600">&bull;</span>
+                    <div className="bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border overflow-x-auto">
+                         <table className="w-full text-left">
+                            <thead className="border-b-2 border-border">
+                                <tr>
+                                    {currentUser?.role === 'admin' && (
+                                        <th className="p-4 w-12">
+                                            <input
+                                                type="checkbox"
+                                                className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition"
+                                                onChange={handleSelectAllOnPage}
+                                                checked={paginatedCafes.length > 0 && paginatedCafes.every(c => selectedCafeIds.includes(c.id))}
+                                                aria-label="Pilih semua cafe di halaman ini"
+                                            />
+                                        </th>
+                                    )}
+                                    <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Nama Kafe</th>
+                                    <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider hidden sm:table-cell">Status</th>
+                                    <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {paginatedCafes.map(cafe => (
+                                    <tr key={cafe.id} className="border-b border-border last:border-0 hover:bg-brand/5 dark:hover:bg-brand/10 transition-colors">
+                                        {currentUser?.role === 'admin' && (
+                                            <td className="p-4">
+                                                <input
+                                                    type="checkbox"
+                                                    className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition"
+                                                    checked={selectedCafeIds.includes(cafe.id)}
+                                                    onChange={() => handleSelectOne(cafe.id)}
+                                                    aria-label={`Pilih ${cafe.name}`}
+                                                />
+                                            </td>
+                                        )}
+                                        <td className="p-4">
+                                            <p className="font-semibold text-primary dark:text-gray-200 truncate">{cafe.name}</p>
+                                            <p className="text-sm text-muted sm:hidden">{cafe.isSponsored ? 'Sponsored' : 'Regular'}</p>
+                                        </td>
+                                        <td className="p-4 hidden sm:table-cell">
                                             {cafe.isSponsored ? (
-                                                <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                                <span className="inline-flex items-center gap-1.5 text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-500/10 px-2 py-1 rounded-full text-xs font-semibold">
                                                     <CheckCircleIcon className="h-4 w-4" /> Sponsored
                                                 </span>
                                             ) : (
-                                                <span className="flex items-center gap-1 text-red-500 dark:text-red-400">
+                                                <span className="inline-flex items-center gap-1.5 text-red-500 dark:text-red-400 bg-red-100 dark:bg-red-500/10 px-2 py-1 rounded-full text-xs font-semibold">
                                                     <XCircleIcon className="h-4 w-4" /> Regular
                                                 </span>
                                             )}
-                                        </div>
-                                    </div>
-                                    <div className="flex-shrink-0 ml-4 space-x-4">
-                                        <button onClick={() => { setEditingCafe(cafe); setIsFormOpen(true); }} className="text-brand font-bold hover:underline">Edit</button>
-                                        {currentUser?.role === 'admin' && (
-                                            <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Delete</button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                        </td>
+                                        <td className="p-4 text-right">
+                                            <div className="flex-shrink-0 ml-4 space-x-4">
+                                                <button onClick={() => { setEditingCafe(cafe); setIsFormOpen(true); }} className="text-brand font-bold hover:underline">Edit</button>
+                                                {currentUser?.role === 'admin' && (
+                                                    <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Delete</button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                      {totalPages > 1 && (
                         <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
@@ -186,6 +275,16 @@ const CafeManagementPanel: React.FC = () => {
                     message={`Apakah Anda yakin ingin menghapus "${cafeToDelete.name}"? Tindakan ini tidak dapat diurungkan.`}
                     onConfirm={handleConfirmDeleteCafe}
                     onCancel={() => setCafeToDelete(null)}
+                />
+            )}
+
+            {isConfirmingMultiDelete && currentUser?.role === 'admin' && (
+                 <ConfirmationModal
+                    title={`Hapus ${selectedCafeIds.length} Kafe`}
+                    message={`Apakah Anda yakin ingin menghapus ${selectedCafeIds.length} kafe yang dipilih? Peringatan: Tindakan ini tidak dapat diurungkan dan akan menghapus semua data terkait (review, spot foto, dll).`}
+                    onConfirm={handleConfirmMultiDelete}
+                    onCancel={() => setIsConfirmingMultiDelete(false)}
+                    confirmText={`Ya, Hapus (${selectedCafeIds.length})`}
                 />
             )}
         </>

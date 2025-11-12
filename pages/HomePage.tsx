@@ -11,7 +11,7 @@ import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import AiRecommenderModal from '../components/AiRecommenderModal';
 import { settingsService } from '../services/settingsService';
-import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon } from '@heroicons/react/24/solid';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonFeaturedCard from '../components/SkeletonFeaturedCard';
@@ -34,6 +34,14 @@ const rotatingPlaceholders = [
   "Kopi enak di Palembang...",
   "Tempat nongkrong sore yang adem...",
 ];
+
+const EmptyState: React.FC<{ title: string; message: string }> = ({ title, message }) => (
+    <div className="text-center py-10 bg-card dark:bg-card/50 rounded-3xl border border-border col-span-full">
+        <InboxIcon className="mx-auto h-12 w-12 text-muted" />
+        <p className="mt-4 text-xl font-bold font-jakarta">{title}</p>
+        <p className="text-muted mt-2 max-w-xs mx-auto">{message}</p>
+    </div>
+);
 
 const HomePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
@@ -121,6 +129,11 @@ const HomePage: React.FC = () => {
       // Favorites
       const userFavorites = cafes.filter(cafe => favoriteIds.includes(cafe.id));
       setFavoriteCafes(userFavorites);
+    } else {
+        setTrendingCafes([]);
+        setRecommendedCafes([]);
+        setTopReviews([]);
+        setFavoriteCafes([]);
     }
   }, [cafes, favoriteIds]);
   
@@ -321,15 +334,17 @@ const HomePage: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="text-center py-10 text-muted">
-                <p>Belum ada rekomendasi yang tersedia saat ini.</p>
-            </div>
+            !loading && cafes.length > 0 && (
+                <div className="text-center py-10 text-muted">
+                    <p>Belum ada rekomendasi yang tersedia saat ini.</p>
+                </div>
+            )
           )}
         </div>
       </div>
 
       {/* Favorite Cafes Section */}
-      {favoriteCafes.length > 0 && (
+      {favoriteIds.length > 0 && !loading && (
         <div className="py-12">
           <div className="container mx-auto px-6">
             <SectionHeader 
@@ -337,11 +352,17 @@ const HomePage: React.FC = () => {
               title="Kafe Favoritmu"
               subtitle="Tempat-tempat spesial yang sudah kamu tandai."
             />
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {favoriteCafes.map((cafe, i) => (
-                <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />
-              ))}
-            </div>
+            {favoriteCafes.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {favoriteCafes.map((cafe, i) => (
+                    <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />
+                ))}
+                </div>
+            ) : (
+                 <div className="text-center py-10 text-muted">
+                    <p>Kafe favoritmu akan muncul di sini setelah kamu menambahkannya.</p>
+                </div>
+            )}
           </div>
         </div>
       )}
@@ -354,17 +375,22 @@ const HomePage: React.FC = () => {
             title="Lagi Trending Nih!"
             subtitle="Cafe dengan skor aesthetic tertinggi pilihan warga Nongkrongr."
           />
-          {loading ? (
-             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
-             </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {trendingCafes.map((cafe, i) => (
-                <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />
-              ))}
-            </div>
-          )}
+            {loading ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+                </div>
+            ) : trendingCafes.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {trendingCafes.map((cafe, i) => (
+                        <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />
+                    ))}
+                </div>
+            ) : (
+                 <EmptyState 
+                    title="Belum Ada Cafe" 
+                    message="Saat ini belum ada data cafe yang bisa ditampilkan. Cek lagi nanti ya!" 
+                />
+            )}
         </div>
       </div>
       
@@ -377,16 +403,21 @@ const HomePage: React.FC = () => {
               subtitle="Review teratas dari para penjelajah cafe di Palembang."
             />
              {loading ? (
-             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {[...Array(4)].map((_, i) => <SkeletonReviewCard key={i} />)}
-             </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {topReviews.map((review, i) => (
-                <ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />
-              ))}
-            </div>
-          )}
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {[...Array(4)].map((_, i) => <SkeletonReviewCard key={i} />)}
+                </div>
+            ) : topReviews.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {topReviews.map((review, i) => (
+                        <ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />
+                    ))}
+                </div>
+            ) : (
+                <EmptyState 
+                    title="Belum Ada Review" 
+                    message="Sepertinya belum ada review yang ditinggalkan oleh pengguna. Jadilah yang pertama!" 
+                />
+            )}
         </div>
       </div>
     </div>
