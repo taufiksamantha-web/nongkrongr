@@ -141,45 +141,58 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const addCafe = async (cafeData: Partial<Cafe>) => {
         const { vibes = [], amenities = [], spots = [], coords, ...mainCafeData } = cafeData;
 
+        const cafeId = `cafe-${crypto.randomUUID()}`;
+        const slug = mainCafeData.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || `cafe-${Date.now()}`;
+
         const cafeRecord = {
-            id: `cafe-${crypto.randomUUID()}`, // FIX: Generate a unique ID for the new cafe
             ...mainCafeData,
-            slug: mainCafeData.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || `cafe-${Date.now()}`,
+            id: cafeId,
+            slug: slug,
             lat: coords?.lat,
             lng: coords?.lng,
         };
-        const { data: newCafe, error: cafeError } = await supabase
-            .from('cafes')
-            .insert(cafeRecord)
-            .select()
-            .single();
 
-        if (cafeError) throw cafeError;
+        const { error: cafeError } = await supabase.from('cafes').insert(cafeRecord);
 
-        const cafeId = newCafe.id;
-        const vibeRelations = (vibes as Vibe[]).map(v => ({ cafe_id: cafeId, vibe_id: v.id }));
-        const amenityRelations = (amenities as Amenity[]).map(a => ({ cafe_id: cafeId, amenity_id: a.id }));
-        const spotRecords = (spots as Spot[]).map(s => ({ 
-            id: s.id, 
-            title: s.title, 
-            tip: s.tip, 
-            photoUrl: s.photoUrl, 
-            cafe_id: cafeId 
-        }));
-
-        const [vibeError, amenityError, spotError] = await Promise.all([
-            supabase.from('cafe_vibes').insert(vibeRelations),
-            supabase.from('cafe_amenities').insert(amenityRelations),
-            supabase.from('spots').insert(spotRecords)
-        ]).then(results => results.map(r => r.error));
-
-        if (vibeError || amenityError || spotError) {
-            console.error("Error inserting relations:", { vibeError, amenityError, spotError });
-            throw new Error('Failed to save all cafe details.');
+        if (cafeError) {
+            console.error("Error inserting main cafe record:", cafeError);
+            throw new Error(`Gagal menyimpan data kafe utama: ${cafeError.message}`);
         }
 
-        await fetchCafes();
-        return newCafe;
+        try {
+            const vibeRelations = (vibes as Vibe[]).map(v => ({ cafe_id: cafeId, vibe_id: v.id }));
+            const amenityRelations = (amenities as Amenity[]).map(a => ({ cafe_id: cafeId, amenity_id: a.id }));
+            const spotRecords = (spots as Spot[]).map(s => ({
+                id: s.id,
+                title: s.title,
+                tip: s.tip,
+                photoUrl: s.photoUrl,
+                cafe_id: cafeId
+            }));
+
+            const relationPromises = [
+                vibeRelations.length > 0 ? supabase.from('cafe_vibes').insert(vibeRelations) : Promise.resolve({ error: null }),
+                amenityRelations.length > 0 ? supabase.from('cafe_amenities').insert(amenityRelations) : Promise.resolve({ error: null }),
+                spotRecords.length > 0 ? supabase.from('spots').insert(spotRecords) : Promise.resolve({ error: null })
+            ];
+            
+            const results = await Promise.all(relationPromises);
+            const errors = results.map(r => r.error).filter(Boolean);
+
+            if (errors.length > 0) {
+                 const errorMessages = errors.map(e => e.message).join(', ');
+                 throw new Error(`Gagal menyimpan detail kafe (vibes/fasilitas/spot): ${errorMessages}`);
+            }
+
+            await fetchCafes();
+            return cafeRecord;
+        } catch (relationError: any) {
+            console.error("Error inserting relations, rolling back cafe creation:", relationError);
+            // Attempt to delete the orphaned cafe record
+            await supabase.from('cafes').delete().eq('id', cafeId);
+            // Re-throw the specific error to be caught by the form
+            throw relationError;
+        }
     };
     
     const updateCafe = async (id: string, updatedData: Partial<Cafe>) => {

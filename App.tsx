@@ -64,30 +64,6 @@ const Header: React.FC = () => {
   );
 };
 
-const AdminHeader: React.FC = () => {
-  const { theme, toggleTheme } = useContext(ThemeContext);
-
-  return (
-    <header className="bg-card/80 backdrop-blur-lg sticky top-0 z-50 border-b border-border">
-      <nav className="container mx-auto px-4 py-2 flex items-center justify-between">
-        {/* Left: Logo */}
-        <Link to="/" className="flex items-center py-2">
-          <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
-        </Link>
-        
-        {/* Right: Theme Toggle */}
-        <button 
-          onClick={toggleTheme} 
-          className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
-          aria-label="Toggle theme"
-        >
-          {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6 text-yellow-400" />}
-        </button>
-      </nav>
-    </header>
-  );
-};
-
 const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }> = ({ showWelcome, onCloseWelcome }) => {
     const location = useLocation();
     const isAdminPage = location.pathname.startsWith('/admin');
@@ -97,7 +73,7 @@ const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
         <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col">
           {showWelcome && isHomePage && <WelcomeModal onClose={onCloseWelcome} />}
           
-          {isAdminPage ? <AdminHeader /> : <Header />}
+          {!isAdminPage && <Header />}
           
           <main className="flex-grow">
             <Routes>

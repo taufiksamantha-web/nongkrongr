@@ -10,9 +10,13 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Replaced constructor with a class property for state initialization.
-  // The constructor was causing type inference issues for `this.state` and `this.props`.
-  state: State = { hasError: false };
+  // FIX: Replaced class property state initialization with a constructor to ensure `this.props` is correctly typed and available on the component instance.
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+    };
+  }
 
   static getDerivedStateFromError(_: Error): State {
     // Update state so the next render will show the fallback UI.
@@ -32,7 +36,7 @@ class ErrorBoundary extends React.Component<Props, State> {
     
     // Reload the page
     window.location.reload();
-  }
+  };
 
   render() {
     if (this.state.hasError) {
@@ -55,7 +59,7 @@ class ErrorBoundary extends React.Component<Props, State> {
                         onClick={this.handleClearCacheAndReload}
                         className="bg-gray-200 dark:bg-gray-700 text-primary dark:text-white font-bold py-3 px-6 rounded-2xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-300"
                     >
-                        Hapus Cache & Refresh
+                        Hapus Cache &amp; Refresh
                     </button>
                 </div>
                  <p className="mt-6 text-sm text-muted">

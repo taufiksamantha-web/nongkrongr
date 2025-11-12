@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+
+import React, { useState, useContext } from 'react';
 import { useAuth } from '../context/AuthContext';
 import LoginForm from '../components/admin/LoginForm';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserDashboard from '../components/admin/UserDashboard';
+import { ThemeContext } from '../App';
+import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
 
 const LoadingSpinner: React.FC = () => (
     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -13,6 +16,7 @@ const LoadingSpinner: React.FC = () => (
 
 const AdminPage: React.FC = () => {
     const { currentUser, logout } = useAuth();
+    const { theme, toggleTheme } = useContext(ThemeContext);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     const handleLogout = async () => {
@@ -37,19 +41,28 @@ const AdminPage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-6 py-8">
-            <div className="flex justify-between items-start mb-8 flex-wrap gap-4">
+            <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
                 <div>
                     <h2 className="text-xl">Welcome, <span className="font-bold text-primary">{currentUser.username}</span></h2>
                     <p className="text-gray-500">You are logged in as: <span className="font-semibold">{currentUser.role.toUpperCase()}</span></p>
                 </div>
-                <button 
-                    onClick={handleLogout} 
-                    className="flex items-center justify-center gap-2 bg-accent-pink text-white font-bold py-2 px-6 rounded-2xl hover:bg-accent-pink/90 transition-all disabled:opacity-75"
-                    disabled={isLoggingOut}
-                >
-                    {isLoggingOut && <LoadingSpinner />}
-                    {isLoggingOut ? 'Logging out...' : 'Logout'}
-                </button>
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={toggleTheme} 
+                        className="p-2 rounded-full text-muted bg-card hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300 border border-border"
+                        aria-label="Toggle theme"
+                    >
+                        {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6 text-yellow-400" />}
+                    </button>
+                    <button 
+                        onClick={handleLogout} 
+                        className="flex items-center justify-center gap-2 bg-accent-pink text-white font-bold py-2 px-6 rounded-2xl hover:bg-accent-pink/90 transition-all disabled:opacity-75"
+                        disabled={isLoggingOut}
+                    >
+                        {isLoggingOut && <LoadingSpinner />}
+                        {isLoggingOut ? 'Logging out...' : 'Logout'}
+                    </button>
+                </div>
             </div>
             
             {currentUser.role === 'admin' ? <AdminDashboard /> : <UserDashboard />}

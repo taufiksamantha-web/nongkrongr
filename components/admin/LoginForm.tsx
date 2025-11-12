@@ -21,7 +21,10 @@ const LoginForm: React.FC = () => {
     };
 
     return (
-        <div className="max-w-md mx-auto mt-20">
+        <div className="max-w-md mx-auto mt-12 md:mt-20 px-4">
+            <Link to="/" className="flex justify-center mb-8">
+                <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-12 w-auto" />
+            </Link>
             <form onSubmit={handleSubmit} className="bg-card p-8 rounded-3xl shadow-lg space-y-6 border border-border">
                 <h1 className="text-3xl font-bold font-jakarta text-center">Dashboard Login</h1>
                 <p className="text-center text-muted">Gunakan email & password akun Supabase Anda.</p>
