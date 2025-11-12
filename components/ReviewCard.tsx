@@ -21,7 +21,7 @@ const RatingBadge: React.FC<{ icon: React.ReactNode, score: number, color: strin
 const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
   return (
     <div 
-      className="bg-card rounded-3xl shadow-lg p-6 flex flex-col justify-between h-full transform transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl border border-border animate-fade-in-up"
+      className="bg-card rounded-3xl shadow-lg p-6 flex flex-col justify-between h-full transform transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl border border-border animate-fade-in-up review-card-optimized"
       style={{ animationDelay }}
     >
       <div>

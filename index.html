@@ -79,6 +79,15 @@
         --foreground: 0 0% 98%;
         --muted: 240 4% 65%;
       }
+      /* OPTIMIZATION: Improve scrolling performance on long lists */
+      .cafe-card-optimized {
+        content-visibility: auto;
+        contain-intrinsic-size: 350px; /* Approximate height of a CafeCard */
+      }
+      .review-card-optimized {
+        content-visibility: auto;
+        contain-intrinsic-size: 280px; /* Approximate height of a ReviewCard */
+      }
     </style>
   <script type="importmap">
 {

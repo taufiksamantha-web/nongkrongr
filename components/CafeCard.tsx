@@ -37,7 +37,7 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) =
   return (
     <Link 
       to={`/cafe/${cafe.slug}`} 
-      className="block bg-card rounded-3xl shadow-lg hover:shadow-xl dark:hover:shadow-brand/20 transition-all duration-300 overflow-hidden group transform hover:-translate-y-1 border border-transparent hover:border-brand/30 animate-fade-in-up"
+      className="block bg-card rounded-3xl shadow-lg hover:shadow-xl dark:hover:shadow-brand/20 transition-all duration-300 overflow-hidden group transform hover:-translate-y-1 border border-transparent hover:border-brand/30 animate-fade-in-up cafe-card-optimized"
       style={{ animationDelay }}
     >
       <div className="relative">
