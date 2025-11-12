@@ -219,20 +219,16 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
         if (failedDeletes.length > 0) {
             const errorDetails = failedDeletes.map(failure => {
-                // We log the full object to the console for detailed inspection.
                 console.error(`Error deleting from table "${failure.table}":`, failure.error);
 
                 let detailedMessage = 'An unknown error occurred.';
                 if (failure.error) {
-                    // Supabase errors are objects, often with a 'message' property.
                     if (typeof failure.error.message === 'string' && failure.error.message.trim()) {
                         detailedMessage = failure.error.message;
                     } else {
-                        // If no message, stringify the whole error object for more context.
                         try {
                             detailedMessage = JSON.stringify(failure.error);
                         } catch {
-                            // Fallback if stringify fails (e.g., circular references).
                             detailedMessage = 'Could not stringify the error object.';
                         }
                     }
@@ -243,15 +239,14 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             throw new Error(`Gagal menghapus data terkait kafe. Detail: ${errorDetails}`);
         }
     
-        // Only delete the main cafe record after all related data is gone.
         const { error: cafeError } = await supabase.from('cafes').delete().eq('id', id);
         if (cafeError) {
             console.error("Error deleting the main cafe record:", cafeError);
             throw cafeError;
         }
     
-        // Refresh local data.
-        await fetchCafes();
+        // Optimistically update the local state instead of re-fetching.
+        setCafes(prevCafes => prevCafes.filter(c => c.id !== id));
     };
 
     const addReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status'> & { cafe_id: string }) => {
