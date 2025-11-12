@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -11,8 +10,11 @@ import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import AiRecommenderModal from '../components/AiRecommenderModal';
 import { settingsService } from '../services/settingsService';
-import { HandThumbUpIcon, ArrowLeftIcon, ArrowRightIcon, FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon } from '@heroicons/react/24/solid';
+import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
+import SkeletonCard from '../components/SkeletonCard';
+import SkeletonFeaturedCard from '../components/SkeletonFeaturedCard';
+import SkeletonReviewCard from '../components/SkeletonReviewCard';
 
 type TopReview = Review & { cafeName: string; cafeSlug: string };
 
@@ -33,13 +35,13 @@ const HomePage: React.FC = () => {
   const [trendingCafes, setTrendingCafes] = useState<Cafe[]>([]);
   const [recommendedCafes, setRecommendedCafes] = useState<Cafe[]>([]);
   const [favoriteCafes, setFavoriteCafes] = useState<Cafe[]>([]);
-  const [currentRecommendedIndex, setCurrentRecommendedIndex] = useState(0);
   const [topReviews, setTopReviews] = useState<TopReview[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Cafe[]>([]);
   const [isResultsVisible, setIsResultsVisible] = useState(false);
   const [heroBgUrl, setHeroBgUrl] = useState<string>("https://res.cloudinary.com/dovouihq8/image/upload/v1722244300/cover-placeholder-1_pqz5kl.jpg");
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +78,7 @@ const HomePage: React.FC = () => {
         .filter(item => item.score > 0)
         .map(item => item.cafe);
       
-      setRecommendedCafes(recommended.slice(0, 3));
+      setRecommendedCafes(recommended.slice(0, 5));
 
       // Top Reviews
       const allApprovedReviews = cafes.flatMap(cafe =>
@@ -134,8 +136,13 @@ const HomePage: React.FC = () => {
     }
   };
 
-  const handlePrevRecommendation = () => setCurrentRecommendedIndex(prev => (prev === 0 ? recommendedCafes.length - 1 : prev - 1));
-  const handleNextRecommendation = () => setCurrentRecommendedIndex(prev => (prev === recommendedCafes.length - 1 ? 0 : prev + 1));
+  const nextSlide = () => {
+    setCurrentSlide(prev => (prev === recommendedCafes.length - 1 ? 0 : prev + 1));
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide(prev => (prev === 0 ? recommendedCafes.length - 1 : prev - 1));
+  };
   
   if (error) return <DatabaseConnectionError />;
 
@@ -153,10 +160,12 @@ const HomePage: React.FC = () => {
             <div className="absolute inset-0 bg-black/60"></div>
         </div>
         <div className="relative z-10 container mx-auto px-6 py-20 text-center">
-          <h1 className="text-5xl md:text-7xl font-extrabold font-jakarta bg-clip-text text-transparent bg-gradient-to-r from-brand-light to-accent-pink leading-snug drop-shadow-lg">
+          <h1 className="text-5xl md:text-7xl font-extrabold font-jakarta text-white leading-snug drop-shadow-lg">
             Temukan Spot Nongkrong
             <br />
-            Estetikmu
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-accent-pink to-brand-light">
+              Estetikmu
+            </span>
           </h1>
           <p className="mt-4 text-lg text-gray-200 max-w-2xl mx-auto">
             Jelajahi cafe-cafe paling hits dan instagramable di Palembang. Dari tempat nugas super cozy sampai spot foto OOTD terbaik.
@@ -164,13 +173,14 @@ const HomePage: React.FC = () => {
           <div className="mt-8 max-w-xl mx-auto space-y-4">
             <div ref={searchContainerRef} className="relative">
               <form onSubmit={handleSearchSubmit} className="relative">
+                <SparklesIcon className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-yellow-300 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Cari cafe di Palembang..."
+                  placeholder="Mau nongkrong di mana hari ini?"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)}
-                  className="w-full py-4 px-6 text-lg rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm text-white placeholder-gray-300"
+                  className="w-full py-4 pl-14 pr-32 text-lg rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm text-white placeholder-gray-300"
                 />
                 <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-brand text-white px-6 py-2 rounded-2xl font-bold hover:bg-brand/90 transition-all duration-300">
                   Cari
@@ -232,52 +242,42 @@ const HomePage: React.FC = () => {
       {/* Recommended Section */}
       <div className="relative py-12 overflow-hidden transition-all duration-500 bg-gradient-to-br from-brand/10 to-transparent dark:from-brand/20 dark:to-transparent">
         <div className="relative z-10 container mx-auto px-6">
-          <SectionHeader 
-            icon={<HandThumbUpIcon className="h-8 w-8"/>}
-            title="Pilihan Editor Minggu Ini"
-            subtitle="Cafe yang wajib banget kamu datengin sekarang!"
-          />
-          
           {loading ? (
-            <div className="bg-gray-200/20 dark:bg-gray-800/50 h-72 rounded-4xl animate-pulse max-w-4xl mx-auto"></div>
-          ) : recommendedCafes.length > 0 ? (
             <div className="max-w-4xl mx-auto">
+              <SkeletonFeaturedCard />
+            </div>
+          ) : recommendedCafes.length > 0 ? (
+            <div className="max-w-4xl mx-auto relative">
               <div className="overflow-hidden">
                 <div 
-                  className="flex"
-                  style={{
-                    transform: `translateX(-${currentRecommendedIndex * 100}%)`,
-                    transition: 'transform 0.5s ease-in-out',
-                  }}
+                  className="flex transition-transform duration-500 ease-in-out" 
+                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
                 >
                   {recommendedCafes.map(cafe => (
-                    <div key={cafe.id} className="flex-shrink-0 w-full">
+                    <div key={cafe.id} className="w-full flex-shrink-0">
                       <FeaturedCafeCard cafe={cafe} />
                     </div>
                   ))}
                 </div>
               </div>
+
               {recommendedCafes.length > 1 && (
-                <div className="flex justify-center items-center mt-8 space-x-6">
-                  <button onClick={handlePrevRecommendation} className="p-3 rounded-full bg-card/80 hover:bg-card border border-subtle transition-colors text-primary backdrop-blur-sm" aria-label="Previous recommendation">
-                    <ArrowLeftIcon className="h-6 w-6"/>
+                <>
+                  <button 
+                    onClick={prevSlide}
+                    className="absolute top-1/2 -translate-y-1/2 left-0 md:-left-16 p-3 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all duration-300 shadow-md z-20"
+                    aria-label="Previous recommendation"
+                  >
+                    <ChevronLeftIcon className="h-6 w-6" />
                   </button>
-
-                  <div className="flex items-center space-x-3">
-                    {recommendedCafes.map((_, index) => (
-                      <button 
-                        key={index} 
-                        onClick={() => setCurrentRecommendedIndex(index)}
-                        className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentRecommendedIndex ? 'bg-brand scale-125' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400'}`}
-                        aria-label={`Go to recommendation ${index + 1}`}
-                      ></button>
-                    ))}
-                  </div>
-
-                  <button onClick={handleNextRecommendation} className="p-3 rounded-full bg-card/80 hover:bg-card border border-subtle transition-colors text-primary backdrop-blur-sm" aria-label="Next recommendation">
-                    <ArrowRightIcon className="h-6 w-6"/>
+                  <button 
+                    onClick={nextSlide}
+                    className="absolute top-1/2 -translate-y-1/2 right-0 md:-right-16 p-3 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all duration-300 shadow-md z-20"
+                    aria-label="Next recommendation"
+                  >
+                    <ChevronRightIcon className="h-6 w-6" />
                   </button>
-                </div>
+                </>
               )}
             </div>
           ) : (
@@ -316,7 +316,7 @@ const HomePage: React.FC = () => {
           />
           {loading ? (
              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {[...Array(4)].map((_, i) => <div key={i} className="bg-card h-80 rounded-3xl animate-pulse opacity-50"></div>)}
+                {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
              </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -338,7 +338,7 @@ const HomePage: React.FC = () => {
             />
              {loading ? (
              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {[...Array(4)].map((_, i) => <div key={i} className="bg-card h-64 rounded-3xl animate-pulse opacity-50"></div>)}
+                {[...Array(4)].map((_, i) => <SkeletonReviewCard key={i} />)}
              </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">

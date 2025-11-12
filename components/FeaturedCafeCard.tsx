@@ -13,26 +13,34 @@ const FeaturedCafeCard: React.FC<FeaturedCafeCardProps> = ({ cafe }) => {
   const displayQuote = cafe.description || cafe.reviews.find(r => r.status === 'approved')?.text || `Jelajahi suasana unik dan kopi terbaik di ${cafe.name}.`;
 
   return (
-    <div className="max-w-4xl mx-auto bg-card/80 dark:bg-card/70 backdrop-blur-md rounded-4xl border-2 border-amber-400/60 shadow-lg shadow-amber-400/20 hover:shadow-xl hover:shadow-amber-400/30 transition-all duration-500 overflow-hidden group transform hover:scale-[1.01] hover:-translate-y-1 animate-fade-in-up">
+    <div className="relative max-w-4xl mx-auto bg-card/80 dark:bg-card/70 backdrop-blur-md rounded-4xl border-2 border-amber-400/60 shadow-lg shadow-amber-400/20 hover:shadow-xl hover:shadow-amber-400/30 transition-all duration-500 overflow-hidden group transform hover:scale-[1.01] hover:-translate-y-1 animate-fade-in-up">
+      <div className="absolute top-4 left-4 z-10 transform-gpu transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-12deg]">
+        <div className="p-2 bg-black/30 backdrop-blur-sm rounded-full">
+            <StarIcon className="h-8 w-8 text-amber-300 drop-shadow-lg"/>
+        </div>
+      </div>
       <Link to={`/cafe/${cafe.slug}`} className="block">
-        <div className="grid md:grid-cols-2">
-          <div className="md:col-span-1 aspect-[4/3] md:aspect-auto">
+        {/* Changed from grid to flex for better proportions */}
+        <div className="flex flex-col md:flex-row items-stretch">
+          {/* Image container now takes up 2/5 of the width on medium screens and up */}
+          <div className="md:w-2/5 flex-shrink-0">
             <ImageWithFallback 
               src={cafe.coverUrl} 
               defaultSrc={DEFAULT_COVER_URL}
               alt={cafe.name} 
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              width={400}
-              height={512}
+              width={320}
+              height={480}
             />
           </div>
-          <div className="md:col-span-1 p-6 flex flex-col">
+          {/* Text content container takes up the remaining 3/5 */}
+          <div className="md:w-3/5 p-8 flex flex-col justify-between">
             <div>
               <span className="inline-block bg-accent-amber text-yellow-900 px-4 py-1 rounded-full text-sm font-bold shadow-sm mb-4">
                 ✨ Rekomendasi Spesial
               </span>
               <h3 className="text-3xl font-extrabold font-jakarta text-primary dark:text-white mb-2">{cafe.name}</h3>
-              <p className="text-base text-muted mb-4 line-clamp-2 min-h-[2.5rem]">
+              <p className="text-base text-muted mb-6 line-clamp-3 min-h-[4.5rem]">
                 "{displayQuote}"
               </p>
               <div className="flex items-center space-x-6 mb-4">
@@ -53,7 +61,7 @@ const FeaturedCafeCard: React.FC<FeaturedCafeCardProps> = ({ cafe }) => {
               </div>
             </div>
             <div className="mt-auto pt-4">
-              <div className="inline-flex items-center text-brand font-bold group-hover:underline">
+              <div className="inline-flex items-center text-brand font-bold group-hover:underline text-lg">
                 Lihat Detail
                 <ArrowRightIcon className="h-5 w-5 ml-2 transform group-hover:translate-x-1 transition-transform" />
               </div>

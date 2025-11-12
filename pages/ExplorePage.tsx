@@ -10,6 +10,7 @@ import { MapPinIcon } from '@heroicons/react/24/outline';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
 import { calculateDistance } from '../utils/geolocation';
+import SkeletonCard from '../components/SkeletonCard';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -347,25 +348,33 @@ const ExplorePage: React.FC = () => {
         <div className="rounded-3xl mb-8 overflow-hidden shadow-md h-96 border border-border">
             <InteractiveMap cafes={sortedCafes} theme={theme} showUserLocation={true} />
         </div>
-        <h2 className="text-3xl font-bold font-jakarta mb-6">{sortedCafes.length} Cafe Ditemukan</h2>
-        {loading && visibleCafes.length === 0 ? (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-            {[...Array(6)].map((_, i) => <div key={i} className="bg-card h-80 rounded-3xl animate-pulse opacity-50"></div>)}
-          </div>
-        ) : (
-          <>
+        
+        <h2 className="text-3xl font-bold font-jakarta mb-6">
+            {loading ? 'Mencari cafe...' : `${sortedCafes.length} Cafe Ditemukan`}
+        </h2>
+
+        {loading ? (
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-              {visibleCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} distance={cafe.distance} animationDelay={`${i * 75}ms`} />)}
+                {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
             </div>
-            
-            {/* Infinite Scroll Trigger & Loading Indicator */}
-            {visibleCount < sortedCafes.length && (
-              <div ref={observerRef} className="flex justify-center items-center py-8">
-                <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-brand"></div>
-                <span className="sr-only">Loading more cafes...</span>
-              </div>
-            )}
-          </>
+        ) : sortedCafes.length > 0 ? (
+            <>
+                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+                    {visibleCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} distance={cafe.distance} animationDelay={`${i * 75}ms`} />)}
+                </div>
+                {visibleCount < sortedCafes.length && (
+                    <div ref={observerRef} className="flex justify-center items-center py-8">
+                        <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-brand"></div>
+                        <span className="sr-only">Loading more cafes...</span>
+                    </div>
+                )}
+            </>
+        ) : (
+            <div className="text-center py-10 bg-card rounded-3xl border border-border">
+                <p className="text-4xl mb-4">😕</p>
+                <p className="text-xl font-bold font-jakarta">Yah, cafe yang kamu cari tidak ditemukan.</p>
+                <p className="text-muted mt-2">Coba ganti kata kuncimu atau kurangi kriteria pencarian ya.</p>
+            </div>
         )}
       </div>
     </div>

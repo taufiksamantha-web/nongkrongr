@@ -4,7 +4,7 @@ import { Cafe, Review } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { useFavorites } from '../context/FavoriteContext';
-import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon } from '@heroicons/react/24/solid';
+import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
@@ -56,6 +56,8 @@ const DetailPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [notification, setNotification] = useState<string | null>(null);
     const [reviewsExpanded, setReviewsExpanded] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     useEffect(() => {
         if (slug && cafes.length > 0) {
@@ -63,6 +65,18 @@ const DetailPage: React.FC = () => {
             setCafe(currentCafe || null);
         }
     }, [slug, cafes]);
+
+    const openImageModal = (imageUrl: string) => {
+        setSelectedImage(imageUrl);
+        setIsModalOpen(true);
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    };
+
+    const closeImageModal = () => {
+        setIsModalOpen(false);
+        setSelectedImage(null);
+        document.body.style.overflow = 'unset';
+    };
 
     const handleAddReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status'> & { cafe_id: string }) => {
         setIsSubmitting(true);
@@ -175,27 +189,30 @@ const DetailPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Photo Spots */}
-                    <div>
-                         <h2 className="text-3xl font-bold font-jakarta mb-4">Galeri Spot Foto</h2>
-                         <div className="grid md:grid-cols-2 gap-6">
-                            {cafe.spots.map(spot => (
-                                <div key={spot.id} className="bg-card border border-border rounded-3xl shadow-sm overflow-hidden">
-                                    <ImageWithFallback 
-                                        src={spot.photoUrl} 
-                                        alt={spot.title} 
-                                        className="w-full h-48 object-cover"
-                                        width={500}
-                                        height={300}
-                                    />
-                                    <div className="p-4">
-                                        <h4 className="font-bold">{spot.title}</h4>
-                                        <p className="text-sm text-muted italic">"{spot.tip}"</p>
-                                    </div>
-                                </div>
-                            ))}
-                         </div>
-                    </div>
+                    {/* Photo Gallery */}
+                    {cafe.spots && cafe.spots.length > 0 && (
+                        <div>
+                            <h2 className="text-3xl font-bold font-jakarta mb-4">Galeri Foto</h2>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {cafe.spots.map((spot) => (
+                                    <button
+                                        key={spot.id}
+                                        onClick={() => openImageModal(spot.photoUrl)}
+                                        className="aspect-square block w-full rounded-2xl overflow-hidden group focus:outline-none focus:ring-4 focus:ring-brand/50"
+                                        aria-label={`Lihat foto ${spot.title} lebih besar`}
+                                    >
+                                        <ImageWithFallback
+                                            src={spot.photoUrl}
+                                            alt={spot.title}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            width={300}
+                                            height={300}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Reviews */}
                      <div>
@@ -249,6 +266,36 @@ const DetailPage: React.FC = () => {
                     </div>
                 </aside>
             </div>
+            
+            {/* Image Modal */}
+            {isModalOpen && selectedImage && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in-up"
+                    onClick={closeImageModal}
+                >
+                    <div 
+                        className="relative max-w-4xl w-full max-h-[90vh] p-4" 
+                        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the image container
+                    >
+                        <ImageWithFallback
+                            src={selectedImage}
+                            alt="Tampilan foto spot yang diperbesar"
+                            className="w-full h-auto max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+                            width={1920}
+                            height={1080}
+                        />
+                        <button
+                            onClick={closeImageModal}
+                            className="absolute -top-2 -right-2 sm:top-4 sm:right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/80 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                            aria-label="Tutup galeri"
+                        >
+                            <XMarkIcon className="h-6 w-6" />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

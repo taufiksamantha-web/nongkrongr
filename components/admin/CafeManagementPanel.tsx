@@ -1,12 +1,12 @@
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { Cafe } from '../../types';
 import { CafeContext } from '../../context/CafeContext';
 import { useAuth } from '../../context/AuthContext';
 import ConfirmationModal from '../common/ConfirmationModal';
 import FloatingNotification from '../common/FloatingNotification';
 import AdminCafeForm from './AdminCafeForm';
-import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -20,9 +20,20 @@ const CafeManagementPanel: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredCafes = useMemo(() => {
+        return cafes.filter(cafe =>
+            cafe.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [cafes, searchQuery]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery]);
     
-    const totalPages = Math.ceil(cafes.length / ITEMS_PER_PAGE);
-    const paginatedCafes = cafes.slice(
+    const totalPages = Math.ceil(filteredCafes.length / ITEMS_PER_PAGE);
+    const paginatedCafes = filteredCafes.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
         currentPage * ITEMS_PER_PAGE
     );
@@ -76,6 +87,17 @@ const CafeManagementPanel: React.FC = () => {
                     + Tambah Cafe
                 </button>
             </div>
+            
+            <div className="relative mb-4">
+                <MagnifyingGlassIcon className="h-5 w-5 text-muted absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                    type="text"
+                    placeholder="Cari cafe..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full p-3 pl-11 rounded-xl border border-border bg-soft dark:bg-gray-700/50 text-primary dark:text-white placeholder-muted focus:ring-2 focus:ring-brand transition-colors"
+                />
+            </div>
 
             {loading ? (
                  <div className="space-y-2">
@@ -86,8 +108,10 @@ const CafeManagementPanel: React.FC = () => {
                         </div>
                     ))}
                 </div>
-            ) : cafes.length === 0 ? (
-                <p className="text-center py-8 text-muted">Belum ada kafe yang ditambahkan.</p>
+            ) : filteredCafes.length === 0 ? (
+                <p className="text-center py-8 text-muted">
+                    {searchQuery ? `Tidak ada kafe yang cocok dengan "${searchQuery}".` : 'Belum ada kafe yang ditambahkan.'}
+                </p>
             ) : (
                 <>
                     <div className="bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border">
