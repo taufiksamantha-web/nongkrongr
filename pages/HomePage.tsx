@@ -8,8 +8,9 @@ import CafeCard from '../components/CafeCard';
 import FeaturedCafeCard from '../components/FeaturedCafeCard';
 import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
+import AiRecommenderModal from '../components/AiRecommenderModal';
 import { settingsService } from '../services/settingsService';
-import { HandThumbUpIcon, ArrowLeftIcon, ArrowRightIcon, FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon } from '@heroicons/react/24/solid';
+import { HandThumbUpIcon, ArrowLeftIcon, ArrowRightIcon, FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon } from '@heroicons/react/24/solid';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 
 type TopReview = Review & { cafeName: string; cafeSlug: string };
@@ -37,6 +38,7 @@ const HomePage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<Cafe[]>([]);
   const [isResultsVisible, setIsResultsVisible] = useState(false);
   const [heroBgUrl, setHeroBgUrl] = useState<string>("https://res.cloudinary.com/dovouihq8/image/upload/v1722244300/cover-placeholder-1_pqz5kl.jpg");
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const navigate = useNavigate();
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
@@ -134,6 +136,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div>
+      {isAiModalOpen && <AiRecommenderModal onClose={() => setIsAiModalOpen(false)} />}
       {/* Hero Section */}
       <div className="relative bg-gray-900">
         <div className="absolute inset-0 z-0">
@@ -153,51 +156,69 @@ const HomePage: React.FC = () => {
           <p className="mt-4 text-lg text-gray-200 max-w-2xl mx-auto">
             Jelajahi cafe-cafe paling hits dan instagramable di Palembang. Dari tempat nugas super cozy sampai spot foto OOTD terbaik.
           </p>
-          <div ref={searchContainerRef} className="mt-8 max-w-xl mx-auto relative">
-            <form onSubmit={handleSearchSubmit} className="relative">
-              <input
-                type="text"
-                placeholder="Cari cafe di Palembang..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)}
-                className="w-full py-4 px-6 text-lg rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm text-white placeholder-gray-300"
-              />
-              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-brand text-white px-6 py-2 rounded-2xl font-bold hover:bg-brand/90 transition-all duration-300">
-                Cari
+          <div className="mt-8 max-w-xl mx-auto space-y-4">
+            <div ref={searchContainerRef} className="relative">
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <input
+                  type="text"
+                  placeholder="Cari cafe di Palembang..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)}
+                  className="w-full py-4 px-6 text-lg rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm text-white placeholder-gray-300"
+                />
+                <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-brand text-white px-6 py-2 rounded-2xl font-bold hover:bg-brand/90 transition-all duration-300">
+                  Cari
+                </button>
+              </form>
+
+              {isResultsVisible && (
+                <div className="absolute top-full mt-2 w-full bg-card rounded-2xl shadow-lg border border-subtle z-10 max-h-80 overflow-y-auto text-left">
+                  {searchResults.length > 0 ? (
+                    <ul>
+                      {searchResults.map(cafe => (
+                        <li key={cafe.id} className="border-b border-subtle last:border-b-0">
+                          <Link 
+                            to={`/cafe/${cafe.slug}`} 
+                            className="block px-6 py-4 hover:bg-brand/10 dark:hover:bg-brand/20 transition-colors duration-200"
+                            onClick={() => setIsResultsVisible(false)}
+                          >
+                            <p className="font-bold text-primary dark:text-white">{cafe.name}</p>
+                            <p className="text-sm text-muted">{cafe.district}</p>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="px-6 py-4 text-muted">Cafe tidak ditemukan.</p>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center justify-center gap-4">
+              <hr className="w-full border-white/20"/>
+              <span className="text-gray-300 font-semibold">ATAU</span>
+              <hr className="w-full border-white/20"/>
+            </div>
+
+            <div className="text-center">
+              <button
+                onClick={() => setIsAiModalOpen(true)}
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-brand to-accent-pink text-white font-bold py-3 px-6 rounded-2xl text-lg hover:opacity-90 transition-all duration-300 transform hover:scale-105 shadow-lg focus:ring-4 focus:ring-brand/30"
+              >
+                <SparklesIcon className="h-6 w-6" />
+                Coba Asisten AI
               </button>
-            </form>
-
-            {isResultsVisible && (
-              <div className="absolute top-full mt-2 w-full bg-card rounded-2xl shadow-lg border border-subtle z-10 max-h-80 overflow-y-auto text-left">
-                {searchResults.length > 0 ? (
-                  <ul>
-                    {searchResults.map(cafe => (
-                      <li key={cafe.id} className="border-b border-subtle last:border-b-0">
-                        <Link 
-                          to={`/cafe/${cafe.slug}`} 
-                          className="block px-6 py-4 hover:bg-brand/10 dark:hover:bg-brand/20 transition-colors duration-200"
-                          onClick={() => setIsResultsVisible(false)}
-                        >
-                          <p className="font-bold text-primary dark:text-white">{cafe.name}</p>
-                          <p className="text-sm text-muted">{cafe.district}</p>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="px-6 py-4 text-muted">Cafe tidak ditemukan.</p>
-                )}
-              </div>
-            )}
-
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
+            </div>
+          </div>
+          
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
               {VIBES.slice(0, 4).map(vibe => (
                   <Link to={`/explore?vibe=${vibe.id}`} key={vibe.id} className="bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-2xl text-white hover:bg-white/20 transition-all duration-300 font-semibold">
                       {vibe.name}
                   </Link>
               ))}
-            </div>
           </div>
         </div>
       </div>

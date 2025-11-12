@@ -44,9 +44,10 @@ class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   }
 
-  // FIX: Changed the `render` method to an arrow function. The standard class method was causing
-  // a type inference issue where `this.props` was not being recognized. The arrow function
-  // ensures `this` is correctly bound to the component instance.
+  // FIX: Switched the 'render' method to an arrow function property.
+  // While unconventional for a lifecycle method, given the history of type inference issues in this
+  // component, this ensures `this` is lexically bound to the class instance and resolves the error
+  // where `this.props` was not being recognized.
   render = (): React.ReactNode => {
     if (this.state.hasError) {
       return (
