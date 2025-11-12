@@ -1,13 +1,13 @@
 id,cafe_id,title,tip,photoUrl
-s001,c001,Jendela Senja,"Datang pas golden hour, cahayanya bagus banget buat siluet.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244306/spot-placeholder-1_c0djwz.jpg
-s002,c002,Dinding Geometris,"Pakai outfit monokrom biar kontras sama dindingnya yang artsy.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244308/spot-placeholder-2_yqxvjb.jpg
-s003,c003,Ayunan Rotan,"Duduk santai di ayunan dengan latar belakang tanaman hijau, auto-aesthetic!",https://res.cloudinary.com/dovouihq8/image/upload/v1722244309/spot-placeholder-3_m42hgr.jpg
-s004,c004,Tangga Industrial,"Foto OOTD di tangga ini keren banget, kesannya edgy.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244310/spot-placeholder-4_m3g3af.jpg
-s005,c005,Rooftop View,"Ambil foto cityscape Palembang dari sini, apalagi pas malam hari.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244303/cover-placeholder-5_d5g8qj.jpg
-s006,c006,Rak Buku Antik,"Pose lagi baca buku di depan rak ini, hasilnya bakal kelihatan smart dan klasik.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244304/cover-placeholder-6_ud1kwe.jpg
-s007,c008,Cermin Estetik,"Mirror selfie di sini wajib! Frame cerminnya unik banget.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244306/cover-placeholder-8_g9kclt.jpg
-s010,c010,Area Kaca,"Manfaatkan pantulan dan cahaya alami di area teras kaca untuk foto yang dreamy.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244308/spot-placeholder-2_yqxvjb.jpg
-s011,c012,Neon Sign 'Beton & Baja',"Foto dengan latar belakang neon sign ini bikin feed kamu makin kece.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244310/spot-placeholder-4_m3g3af.jpg
-s012,c014,Depan Lukisan Abstrak,"Jadikan lukisan sebagai background, fotomu bakal kelihatan artistik.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244302/cover-placeholder-3_wazk9p.jpg
-s013,c018,Vertical Garden,"Dinding yang penuh tanaman ini jadi background yang segar untuk foto portrait.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244306/cover-placeholder-8_g9kclt.jpg
-s014,c019,Kursi Putih Minimalis,"Simplicity is key. Foto candid duduk di kursi ini dengan secangkir kopi hasilnya clean dan elegan.",https://res.cloudinary.com/dovouihq8/image/upload/v1722244300/cover-placeholder-1_pqz5kl.jpg
+s101,c101,Minimalist Corner,"Gunakan outfit berwarna bold untuk kontras dengan dinding putih bersih. Cahaya dari jendela sangat bagus di pagi hari.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324581/nongkrongr-real/luthier-spot1_n4qgwb.jpg
+s102,c101,Coffee Bar,"Ambil foto candid saat barista sedang menyeduh kopi. Angle dari samping memberikan hasil yang dinamis.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324582/nongkrongr-real/luthier-spot2_tqrfif.jpg
+s103,c102,Amphitheater Steps,"Duduk di tangga batu dengan latar belakang tanaman hijau. Cocok untuk foto grup atau OOTD.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324577/nongkrongr-real/koma-spot1_k6wszw.jpg
+s104,c103,Halaman Belakang,"Foto dengan latar belakang rumah dan tanaman rambatnya. Memberikan kesan hangat dan natural.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324578/nongkrongr-real/kozi-spot1_fcyxpc.jpg
+s105,c104,Jendela Antik,"Berpose di dekat jendela kayu besar. Gunakan mode portrait untuk menonjolkan detail klasik di sekitarnya.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324585/nongkrongr-real/sefulah-spot1_d756w1.jpg
+s106,c105,Rooftop Edge,"Ambil foto siluet saat matahari terbenam. Pemandangan kota Palembang akan menjadi background yang epik.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324588/nongkrongr-real/sore-spot1_y1xvyb.jpg
+s107,c106,Roasting Machine,"Foto dengan mesin roasting sebagai latar belakang untuk menunjukkan sisi 'serius' dari kopi.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324569/nongkrongr-real/aldente-spot1_ot3fhp.jpg
+s108,c107,Neon Sign 'Sins',"Wajib foto di depan neon sign ikonik mereka. Paling bagus saat malam hari.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324586/nongkrongr-real/sinsco-spot1_mhrj0c.jpg
+s109,c109,Sel Penjara,"Pose di dalam salah satu 'sel' mereka untuk foto yang unik dan berbeda dari yang lain.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324582/nongkrongr-real/penology-spot1_y4bdtj.jpg
+s110,c112,Panggung Live Music,"Foto dengan latar panggung saat ada penampilan live music. Tangkap suasana meriahnya.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324584/nongkrongr-real/rerumputan-spot1_tewy2s.jpg
+s111,c110,Sofa Mewah,"Duduk elegan di sofa kulit mereka. Kesannya mewah dan berkelas.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324580/nongkrongr-real/liberica-spot1_x9f44w.jpg
+s112,c108,Area Jendela Besar,"Dapatkan pencahayaan alami yang bagus di dekat jendela besar yang menghadap ke jalan Sudirman.",https://res.cloudinary.com/dovouihq8/image/upload/v1722324572/nongkrongr-real/janji-jiwa-spot1_wzk0c4.jpg

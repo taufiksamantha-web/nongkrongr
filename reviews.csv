@@ -1,26 +1,24 @@
 id,cafe_id,author,ratingAesthetic,ratingWork,crowdMorning,crowdAfternoon,crowdEvening,priceSpent,text,photos,createdAt,status
-r001,c001,Andi,9,8,2,3,4,55000,"Kopinya mantap, tempatnya cozy banget buat nongkrong sore-sore.","{https://res.cloudinary.com/dovouihq8/image/upload/v1722244304/review-placeholder-1_gqejqf.jpg}",2023-10-26T10:00:00Z,approved
-r002,c001,Bunga,8,7,3,4,5,45000,"Tempatnya bagus buat foto-foto, tapi wifinya agak lambat pas rame.","{}",2023-10-27T14:00:00Z,approved
-r003,c002,Citra,10,9,1,2,3,75000,"Estetik parah! Setiap sudutnya instagramable. Cocok buat nugas juga, sepi kalau pagi.","{}",2023-11-01T11:00:00Z,pending
-r004,c002,Doni,9,9,2,3,4,80000,"Kopi dan makanannya sepadan dengan harganya. Suasananya bikin betah.","{https://res.cloudinary.com/dovouihq8/image/upload/v1722244305/review-placeholder-2_iysnpr.jpg}",2023-11-02T15:00:00Z,approved
-r005,c003,Eka,8,7,2,3,3,40000,"Vibes tropisnya dapet banget, adem. Cocok buat santai.","{}",2023-11-05T16:00:00Z,approved
-r006,c004,Fajar,9,10,3,4,5,60000,"Best place for working! Wifi kenceng, colokan banyak. Gak heran selalu rame.","{}",2023-11-10T09:00:00Z,approved
-r007,c005,Gita,9,6,1,2,3,50000,"Pemandangan sunsetnya juara! Minumannya standar, tapi view-nya yang bikin balik lagi.","{}",2023-11-12T18:00:00Z,approved
-r008,c006,Hadi,8,9,1,1,2,35000,"Surga buat yang suka baca. Tenang banget, bisa fokus. Kopinya juga enak.","{}",2023-11-15T13:00:00Z,approved
-r009,c007,Indah,7,8,3,4,4,25000,"Kopinya strong, harganya murah. Tempatnya biasa aja tapi fungsional buat nugas.","{}",2023-11-18T10:00:00Z,approved
-r010,c008,Joko,10,8,2,3,4,70000,"Minimalis dan bersih. Cahayanya bagus banget buat foto produk.","{}",2023-11-20T14:00:00Z,approved
-r011,c009,Kartika,9,7,2,4,5,55000,"Beneran cozy kayak di rumah. Kue-kuenya enak banget!","{}",2023-11-22T19:00:00Z,approved
-r012,c010,Lia,9,8,2,3,3,65000,"Brunch di sini experience-nya 10/10. Makanannya cantik, tempatnya juga.","{}",2023-11-25T11:00:00Z,approved
-r013,c011,Mira,8,6,3,4,4,20000,"Nostalgia banget. Kopi tubruknya mantap.","{}",2023-11-28T16:00:00Z,approved
-r014,c012,Nino,8,8,2,3,5,45000,"Musiknya enak, kopinya enak, suasananya juga pas buat kerja.","{}",2023-12-01T20:00:00Z,rejected
-r015,c013,Olivia,9,5,2,3,4,30000,"Unik banget konsepnya. Adem dan sejuk, tapi banyak nyamuk kalau sore.","{}",2023-12-03T17:00:00Z,approved
-r016,c014,Putra,9,8,1,2,2,60000,"Suka banget bisa lihat-lihat karya seni sambil ngopi. Inspiring!","{}",2023-12-05T15:00:00Z,approved
-r017,c015,Rina,8,10,3,4,5,30000," penyelamat di kala deadline. Semua yang dibutuhin buat nugas ada di sini.","{}",2023-12-08T21:00:00Z,pending
-r018,c016,Sari,8,5,2,3,4,15000,"Murah meriah dan otentik. Cocok buat ngobrol santai.","{}",2023-12-10T20:00:00Z,approved
-r019,c017,Tono,8,7,2,3,4,40000,"Tempatnya keren, sering ada acara kreatif juga.","{}",2023-12-12T16:00:00Z,approved
-r020,c018,Vina,10,7,2,3,3,65000,"Seger banget liat ijo-ijoan di mana-mana. Bikin mood jadi bagus.","{}",2023-12-15T12:00:00Z,approved
-r021,c019,Wawan,10,8,1,2,3,70000,"Spot foto wajib di Palembang. Setiap sudutnya aesthetic.","{}",2023-12-18T14:00:00Z,approved
-r022,c020,Yuni,9,8,2,4,5,50000,"Pelayanannya ramah banget, bikin betah.","{}",2023-12-20T19:00:00Z,approved
-r023,c001,Zaki,7,8,3,4,5,50000,"Good coffee, good place. A bit crowded on weekends.","{}",2023-12-21T19:00:00Z,approved
-r024,c002,Amel,9,9,2,3,3,90000,"Perfect for your Instagram feed. The flat white was amazing.","{}",2023-12-22T13:00:00Z,approved
-r025,c003,Budi,8,7,2,3,4,45000,"A nice tropical escape. Will come back for sure.","{}",2023-12-23T15:00:00Z,pending
+r101,c101,Rian Adriansyah,10,9,2,3,4,45000,"Hands down, the best coffee in town. Suasananya tenang, cocok banget buat WFC. Baristanya juga ramah dan informatif.","{https://res.cloudinary.com/dovouihq8/image/upload/v1722324581/nongkrongr-real/luthier-review_p5aixm.jpg}",2023-10-26T10:00:00Z,approved
+r102,c101,Dina Lestari,9,9,1,3,3,50000,"Suka banget sama interiornya yang clean. Setiap sudutnya bagus buat foto. Kopinya juga serius enak.","{}",2023-10-27T14:00:00Z,approved
+r103,c102,Bagas Saputra,9,8,3,4,5,60000,"Tempatnya luas banget, pilihan tenant makanannya juga banyak. Outdoor areanya juara, apalagi kalau malam.","{}",2023-11-01T11:00:00Z,approved
+r104,c102,Sari Dewi,8,7,2,4,5,55000,"Asik buat nongkrong ramean. Kalau weekend rame banget, jadi agak susah cari parkir.","{https://res.cloudinary.com/dovouihq8/image/upload/v1722324577/nongkrongr-real/koma-review_g6d43e.jpg}",2023-11-02T15:00:00Z,approved
+r105,c103,Chandra,9,9,1,2,3,35000,"Hidden gem! Tempatnya adem, homey, dan kopinya murah tapi enak. Kayak ngopi di rumah teman.","{}",2023-11-05T16:00:00Z,approved
+r106,c104,Fitriani,10,7,2,3,4,40000,"Vibes-nya dapet banget! Klasik, etnik, dan setiap detailnya cantik. Betah lama-lama di sini.","{}",2023-11-10T09:00:00Z,approved
+r107,c105,Gilang,9,6,1,3,4,38000,"Best spot buat liat sunset di Palembang. Harganya juga terjangkau. Wajib datang sebelum jam 6 sore.","{}",2023-11-12T18:00:00Z,approved
+r108,c106,Hana,8,10,1,2,2,55000,"Tempat paling proper buat kerja atau nugas. Tenang, wifinya kenceng, dan kualitas kopinya gak main-main.","{}",2023-11-15T13:00:00Z,approved
+r109,c107,Ivan,7,8,3,4,5,30000,"Selalu rame, tapi seru. Kopi susu mereka emang nagih. Musiknya juga up to date.","{}",2023-11-18T10:00:00Z,approved
+r110,c108,Jasmine,8,8,2,4,4,25000,"Pilihan aman kalau lagi di tengah kota. Tempatnya bersih, AC dingin, dan banyak colokan.","{}",2023-11-20T14:00:00Z,approved
+r111,c109,Kevin,8,7,2,3,5,75000,"Konsepnya unik dan makanannya enak-enak. Cocok buat makan malam sambil ngopi.","{}",2023-11-22T19:00:00Z,approved
+r112,c110,Lina,9,8,2,3,3,80000,"Kopinya konsisten enak. Suasana mall tapi tetap nyaman buat ngobrol atau kerja sebentar.","{}",2023-11-25T11:00:00Z,approved
+r113,c111,Mario,7,9,3,4,4,75000,"Tempat andalan buat kerja remote. Walaupun di mall, suasananya cukup kondusif. Servisnya juga cepat.","{}",2023-11-28T16:00:00Z,approved
+r114,c112,Nina,9,7,1,3,5,45000,"Gila luas banget tempatnya! Perfect buat acara kumpul-kumpul. Live musicnya juga asik.","{}",2023-12-01T20:00:00Z,approved
+r115,c101,Olivia,10,10,1,2,3,48000,"My favorite place! Kopi enak, tempat nyaman, playlist lagunya juga enak. Lengkap!","{}",2023-12-03T17:00:00Z,approved
+r116,c104,Putra,9,8,2,3,3,42000,"Tempatnya sangat berkarakter. Beda dari coffee shop lain di Palembang. Recommended.","{}",2023-12-05T15:00:00Z,pending
+r117,c107,Rara,8,7,3,5,5,32000,"Kopi susunya enak, tapi tempatnya agak kecil dan selalu penuh. Mesti sabar nunggu tempat duduk.","{}",2023-12-08T21:00:00Z,approved
+r118,c102,Taufik,7,7,3,4,5,50000,"Outdoornya panas kalau siang, mending datang sore atau malam. Banyak nyamuk juga.","{}",2023-12-10T20:00:00Z,rejected
+r119,c103,Vania,9,8,1,2,3,30000,"Tempatnya agak masuk ke dalam, tapi worth it. Kopi sanger-nya juara!","{}",2023-12-12T16:00:00Z,approved
+r120,c112,Wendi,8,6,2,4,5,50000,"Tempatnya oke, tapi pilihan makanannya kurang banyak. Lebih cocok buat minum-minum aja.","{}",2023-12-15T12:00:00Z,approved
+r121,c106,Yudi,9,10,1,2,2,60000,"Beans-nya bisa pilih sendiri dan minta diseduhin manual. Pengalaman ngopi yang sesungguhnya.","{https://res.cloudinary.com/dovouihq8/image/upload/v1722324569/nongkrongr-real/aldente-review_y2uhtq.jpg}",2023-12-18T14:00:00Z,approved
+r122,c109,Zahra,8,8,2,4,5,85000,"Porsi makanannya besar, jadi sebanding sama harganya. Wajib coba Nasi Goreng Gila-nya.","{}",2023-12-20T19:00:00Z,pending
+r123,c105,Alex,7,5,1,2,3,35000,"Pemandangannya bagus, tapi pilihan minumannya standar banget. Cuma menang di view aja.","{}",2023-12-21T19:00:00Z,approved

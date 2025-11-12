@@ -203,8 +203,54 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const deleteCafe = async (id: string) => {
-        const { error } = await supabase.from('cafes').delete().eq('id', id);
-        if (error) throw error;
+        // Delete all related data first to satisfy foreign key constraints.
+        const relationsToDelete = [
+            { table: 'cafe_vibes', promise: supabase.from('cafe_vibes').delete().eq('cafe_id', id) },
+            { table: 'cafe_amenities', promise: supabase.from('cafe_amenities').delete().eq('cafe_id', id) },
+            { table: 'spots', promise: supabase.from('spots').delete().eq('cafe_id', id) },
+            { table: 'reviews', promise: supabase.from('reviews').delete().eq('cafe_id', id) },
+        ];
+    
+        const results = await Promise.all(relationsToDelete.map(r => r.promise));
+    
+        const failedDeletes = results
+            .map((result, index) => ({ ...result, table: relationsToDelete[index].table }))
+            .filter(result => result.error);
+    
+        if (failedDeletes.length > 0) {
+            const errorDetails = failedDeletes.map(failure => {
+                // We log the full object to the console for detailed inspection.
+                console.error(`Error deleting from table "${failure.table}":`, failure.error);
+
+                let detailedMessage = 'An unknown error occurred.';
+                if (failure.error) {
+                    // Supabase errors are objects, often with a 'message' property.
+                    if (typeof failure.error.message === 'string' && failure.error.message.trim()) {
+                        detailedMessage = failure.error.message;
+                    } else {
+                        // If no message, stringify the whole error object for more context.
+                        try {
+                            detailedMessage = JSON.stringify(failure.error);
+                        } catch {
+                            // Fallback if stringify fails (e.g., circular references).
+                            detailedMessage = 'Could not stringify the error object.';
+                        }
+                    }
+                }
+                return `[${failure.table}: ${detailedMessage}]`;
+            }).join(' ');
+    
+            throw new Error(`Gagal menghapus data terkait kafe. Detail: ${errorDetails}`);
+        }
+    
+        // Only delete the main cafe record after all related data is gone.
+        const { error: cafeError } = await supabase.from('cafes').delete().eq('id', id);
+        if (cafeError) {
+            console.error("Error deleting the main cafe record:", cafeError);
+            throw cafeError;
+        }
+    
+        // Refresh local data.
         await fetchCafes();
     };
 
