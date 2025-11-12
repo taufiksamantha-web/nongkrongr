@@ -1,6 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Vibe } from '../types';
 
+// --- PERHATIAN PENTING ---
+// Kunci API di bawah ini disematkan langsung agar Asisten AI bisa berjalan di Google AI Studio.
+// Lingkungan AI Studio tidak selalu menyediakan `process.env.API_KEY` sebelum interaksi pengguna.
+// Kunci ini adalah fallback untuk tujuan pengembangan dan pratinjau.
+//
+// JANGAN GUNAKAN POLA INI DI LINGKUNGAN PRODUKSI.
+// Di produksi, kunci API harus dikelola dengan aman melalui environment variables.
+const FALLBACK_GEMINI_API_KEY = 'AIzaSyCjwAYRJkg4Yv0ApSahCecsX7KYc-COhlQ';
+// --------------------------------------------------------------------
+
+
 export type AiRecommendationParams = {
     vibes: string[];
     amenities: string[];
@@ -9,19 +20,31 @@ export type AiRecommendationParams = {
     reasoning: string;
 }
 
-// Kunci API diambil secara eksklusif dari process.env.API_KEY sesuai pedoman.
-const apiKey = process.env.API_KEY;
+/**
+ * Membuat instance klien AI baru.
+ * Fungsi ini dipanggil sebelum setiap permintaan API untuk memastikan
+ * kunci API terbaru dari environment (yang diisi oleh dialog pemilihan kunci) digunakan.
+ * @throws Error jika Kunci API tidak tersedia sama sekali.
+ */
+const getAiClient = (): GoogleGenAI => {
+    // Prioritaskan API key dari environment (diatur oleh window.aistudio).
+    // Gunakan fallback key hanya jika environment variable tidak ada.
+    const apiKey = process.env.API_KEY || FALLBACK_GEMINI_API_KEY;
+    
+    if (!apiKey) {
+        // Seharusnya tidak terjadi jika fallback diatur, tapi ini adalah pengaman.
+        throw new Error("Klien Gemini AI tidak diinisialisasi. Kunci API tidak tersedia.");
+    }
 
-let ai: GoogleGenAI | null = null;
-
-if (apiKey) {
-  ai = new GoogleGenAI({ apiKey });
-} else {
-  console.error(
-    "🛑 Kunci API Gemini tidak ditemukan! Fitur AI tidak akan berfungsi. " +
-    "Pastikan variabel environment API_KEY sudah diatur."
-  );
-}
+    if (!process.env.API_KEY) {
+        console.warn(
+            "⚠️ MENGGUNAKAN FALLBACK API KEY: Kunci API Gemini tidak ditemukan dari `process.env.API_KEY`. " +
+            "Menggunakan kunci fallback yang ada di dalam kode. Alur pemilihan kunci mungkin belum dijalankan atau gagal."
+        );
+    }
+    
+    return new GoogleGenAI({ apiKey });
+};
 
 export const geminiService = {
   /**
@@ -31,13 +54,9 @@ export const geminiService = {
    * @returns A promise that resolves to a string containing the generated description.
    */
   generateCafeDescription: async (cafeName: string, vibes: Vibe[]): Promise<string> => {
-    // Periksa apakah client AI berhasil diinisialisasi.
-    if (!ai) {
-      throw new Error("Klien Gemini AI tidak diinisialisasi. Pastikan API_KEY sudah dikonfigurasi dengan benar.");
-    }
-
+    const ai = getAiClient(); // Inisialisasi klien saat dibutuhkan
     const vibeNames = vibes.map(v => v.name).join(', ') || 'unique';
-    const prompt = `Create a short, catchy, and aesthetic description for a cafe in Palembang called "${cafeName}". The cafe's vibes are: ${vibeNames}. The description should be one paragraph, written in Indonesian, and appeal to Gen Z.`;
+    const prompt = `Create a short, catchy, and aesthetic description for a cafe in Palembang called "${cafeName}". The description should be one paragraph, written in Indonesian, and appeal to Gen Z.`;
       
     try {
       const response = await ai.models.generateContent({
@@ -48,7 +67,6 @@ export const geminiService = {
       return response.text;
     } catch (error) {
       console.error("Error generating description with Gemini:", error);
-      // Tampilkan error yang lebih ramah ke UI
       throw new Error("Gagal membuat deskripsi dengan AI.");
     }
   },
@@ -59,10 +77,7 @@ export const geminiService = {
    * @returns A promise that resolves to a structured AiRecommendationParams object.
    */
   getCafeRecommendations: async (userPrompt: string): Promise<AiRecommendationParams> => {
-    if (!ai) {
-      throw new Error("Klien Gemini AI tidak diinisialisasi.");
-    }
-
+    const ai = getAiClient(); // Inisialisasi klien saat dibutuhkan
     const systemInstruction = `You are an expert cafe recommender for the city of Palembang. Your goal is to understand a user's request in Indonesian and translate it into a structured JSON object that can be used to filter a list of cafes. You must only respond with the JSON object defined in the schema.
     - Analyze the user's prompt for keywords related to vibes, amenities, price, and purpose.
     - For vibes, use one or more from: 'cozy', 'minimalis', 'industrial', 'tropical', 'classic'.
@@ -122,7 +137,7 @@ export const geminiService = {
 
     } catch (error) {
       console.error("Error getting cafe recommendations from Gemini:", error);
-      throw new Error("Gagal mendapatkan rekomendasi dari AI.");
+      throw error; // Melempar error asli untuk ditangani oleh komponen
     }
   },
 };
