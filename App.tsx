@@ -24,7 +24,7 @@ interface ThemeContextType {
 }
 
 export const ThemeContext = createContext<ThemeContextType>({
-  theme: 'light',
+  theme: 'dark',
   toggleTheme: () => {},
 });
 
@@ -129,14 +129,14 @@ const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
 
 const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('nongkrongr_welcome_seen'));
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>('dark');
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme') as Theme | null;
     if (storedTheme) {
         setTheme(storedTheme);
     } else {
-        setTheme('light');
+        setTheme('dark');
     }
   }, []);
 
