@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import ConfirmationModal from '../common/ConfirmationModal';
 import FloatingNotification from '../common/FloatingNotification';
 import AdminCafeForm from './AdminCafeForm';
-import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon } from '@heroicons/react/24/solid';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -109,9 +109,17 @@ const CafeManagementPanel: React.FC = () => {
                     ))}
                 </div>
             ) : filteredCafes.length === 0 ? (
-                <p className="text-center py-8 text-muted">
-                    {searchQuery ? `Tidak ada kafe yang cocok dengan "${searchQuery}".` : 'Belum ada kafe yang ditambahkan.'}
-                </p>
+                <div className="text-center py-10 bg-soft dark:bg-gray-700/50 rounded-2xl border border-border">
+                    <InboxIcon className="mx-auto h-12 w-12 text-muted" />
+                    <p className="mt-4 text-xl font-bold font-jakarta text-primary dark:text-gray-200">
+                        {searchQuery ? 'Kafe Tidak Ditemukan' : 'Belum Ada Kafe'}
+                    </p>
+                    <p className="text-muted mt-2 max-w-xs mx-auto">
+                        {searchQuery 
+                            ? `Tidak ada hasil yang cocok untuk pencarian "${searchQuery}". Coba kata kunci lain.` 
+                            : 'Saat ini belum ada kafe di daftar. Klik tombol "+ Tambah Cafe" untuk memulai.'}
+                    </p>
+                </div>
             ) : (
                 <>
                     <div className="bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border">

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Cafe } from '../types';
@@ -13,34 +14,31 @@ const FeaturedCafeCard: React.FC<FeaturedCafeCardProps> = ({ cafe }) => {
   const displayQuote = cafe.description || cafe.reviews.find(r => r.status === 'approved')?.text || `Jelajahi suasana unik dan kopi terbaik di ${cafe.name}.`;
 
   return (
-    <div className="relative max-w-4xl mx-auto bg-card/80 dark:bg-card/70 backdrop-blur-md rounded-4xl border-2 border-amber-400/60 shadow-lg shadow-amber-400/20 hover:shadow-xl hover:shadow-amber-400/30 transition-all duration-500 overflow-hidden group transform hover:scale-[1.01] hover:-translate-y-1 animate-fade-in-up">
+    <div className="relative max-w-2xl mx-auto bg-card/80 dark:bg-card/70 backdrop-blur-md rounded-4xl border-2 border-amber-400/60 shadow-lg shadow-amber-400/20 hover:shadow-xl hover:shadow-amber-400/30 transition-all duration-500 overflow-hidden group transform hover:scale-[1.01] hover:-translate-y-1 animate-fade-in-up">
       <div className="absolute top-4 left-4 z-10 transform-gpu transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-12deg]">
         <div className="p-2 bg-black/30 backdrop-blur-sm rounded-full">
             <StarIcon className="h-8 w-8 text-amber-300 drop-shadow-lg"/>
         </div>
       </div>
       <Link to={`/cafe/${cafe.slug}`} className="block">
-        {/* Changed from grid to flex for better proportions */}
-        <div className="flex flex-col md:flex-row items-stretch">
-          {/* Image container now takes up 2/5 of the width on medium screens and up */}
-          <div className="md:w-2/5 flex-shrink-0">
+        <div className="flex flex-col">
+          <div className="w-full">
             <ImageWithFallback 
               src={cafe.coverUrl} 
               defaultSrc={DEFAULT_COVER_URL}
               alt={cafe.name} 
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              width={320}
-              height={480}
+              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
+              width={600}
+              height={400}
             />
           </div>
-          {/* Text content container takes up the remaining 3/5 */}
-          <div className="md:w-3/5 p-8 flex flex-col justify-between">
+          <div className="p-6 flex flex-col justify-between">
             <div>
               <span className="inline-block bg-accent-amber text-yellow-900 px-4 py-1 rounded-full text-sm font-bold shadow-sm mb-4">
                 ✨ Rekomendasi Spesial
               </span>
               <h3 className="text-3xl font-extrabold font-jakarta text-primary dark:text-white mb-2">{cafe.name}</h3>
-              <p className="text-base text-muted mb-6 line-clamp-3 min-h-[4.5rem]">
+              <p className="text-base text-muted mb-6 line-clamp-2 min-h-[3rem]">
                 "{displayQuote}"
               </p>
               <div className="flex items-center space-x-6 mb-4">

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
 import { VIBES } from '../constants';
@@ -53,6 +53,7 @@ const HomePage: React.FC = () => {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const navigate = useNavigate();
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const slideIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -122,6 +123,36 @@ const HomePage: React.FC = () => {
       setFavoriteCafes(userFavorites);
     }
   }, [cafes, favoriteIds]);
+  
+  const resetInterval = useCallback(() => {
+    if (slideIntervalRef.current) {
+      clearInterval(slideIntervalRef.current);
+    }
+    slideIntervalRef.current = window.setInterval(() => {
+      setCurrentSlide(prev => (prev === recommendedCafes.length - 1 ? 0 : prev + 1));
+    }, 5000); // 5 seconds interval
+  }, [recommendedCafes.length]);
+
+  useEffect(() => {
+    if (recommendedCafes.length > 1) {
+      resetInterval();
+    }
+    return () => {
+      if (slideIntervalRef.current) {
+        clearInterval(slideIntervalRef.current);
+      }
+    };
+  }, [recommendedCafes.length, resetInterval]);
+
+  const nextSlide = () => {
+    setCurrentSlide(prev => (prev === recommendedCafes.length - 1 ? 0 : prev + 1));
+    resetInterval();
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide(prev => (prev === 0 ? recommendedCafes.length - 1 : prev - 1));
+    resetInterval();
+  };
 
   useEffect(() => {
     if (searchQuery.trim().length > 1) {
@@ -151,14 +182,6 @@ const HomePage: React.FC = () => {
     if (searchQuery.trim()) {
       navigate(`/explore?search=${encodeURIComponent(searchQuery.trim())}`);
     }
-  };
-
-  const nextSlide = () => {
-    setCurrentSlide(prev => (prev === recommendedCafes.length - 1 ? 0 : prev + 1));
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide(prev => (prev === 0 ? recommendedCafes.length - 1 : prev - 1));
   };
   
   if (error) return <DatabaseConnectionError />;

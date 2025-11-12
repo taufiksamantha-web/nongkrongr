@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { Review } from '../../types';
 import { CafeContext } from '../../context/CafeContext';
@@ -5,6 +6,8 @@ import ConfirmationModal from '../common/ConfirmationModal';
 import FloatingNotification from '../common/FloatingNotification';
 import ImageWithFallback from '../common/ImageWithFallback';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import { CheckBadgeIcon, ChatBubbleOvalLeftEllipsisIcon, ArchiveBoxXMarkIcon } from '@heroicons/react/24/outline';
+
 
 type ManagedReview = Review & { cafeName: string; cafeId: string };
 type ReviewStatus = 'pending' | 'approved' | 'rejected';
@@ -100,7 +103,31 @@ const ReviewManagement: React.FC = () => {
                 <TabButton status="rejected" label="Ditolak" count={filteredReviews.rejected.length} />
             </div>
 
-            {currentReviews.length === 0 ? <p className="text-muted py-4">Tidak ada review dalam kategori ini.</p> : (
+            {currentReviews.length === 0 ? (
+                <div className="text-center py-10 bg-soft dark:bg-gray-700/50 rounded-2xl border border-border">
+                    {activeTab === 'pending' && (
+                        <>
+                            <CheckBadgeIcon className="mx-auto h-12 w-12 text-green-500" />
+                            <p className="mt-4 text-xl font-bold font-jakarta text-primary dark:text-gray-200">Semua Sudah Direview!</p>
+                            <p className="text-muted mt-2">Kerja bagus! Tidak ada review yang menunggu persetujuan.</p>
+                        </>
+                    )}
+                    {activeTab === 'approved' && (
+                        <>
+                            <ChatBubbleOvalLeftEllipsisIcon className="mx-auto h-12 w-12 text-muted" />
+                            <p className="mt-4 text-xl font-bold font-jakarta text-primary dark:text-gray-200">Belum Ada Review Disetujui</p>
+                            <p className="text-muted mt-2">Review yang kamu setujui akan muncul di sini.</p>
+                        </>
+                    )}
+                    {activeTab === 'rejected' && (
+                        <>
+                            <ArchiveBoxXMarkIcon className="mx-auto h-12 w-12 text-muted" />
+                            <p className="mt-4 text-xl font-bold font-jakarta text-primary dark:text-gray-200">Tidak Ada Review Ditolak</p>
+                            <p className="text-muted mt-2">Review yang kamu tolak akan ditampilkan di sini.</p>
+                        </>
+                    )}
+                </div>
+            ) : (
             <div className="space-y-4">
                 {paginatedReviews.map(review => (
                     <div key={review.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-2xl border border-border">
