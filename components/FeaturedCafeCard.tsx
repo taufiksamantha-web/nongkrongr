@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Cafe } from '../types';
 import { StarIcon, BriefcaseIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
 import ImageWithFallback from './common/ImageWithFallback';
+import { DEFAULT_COVER_URL } from '../constants';
 
 interface FeaturedCafeCardProps {
   cafe: Cafe;
@@ -19,6 +19,7 @@ const FeaturedCafeCard: React.FC<FeaturedCafeCardProps> = ({ cafe }) => {
           <div className="md:col-span-1 aspect-[4/3] md:aspect-auto">
             <ImageWithFallback 
               src={cafe.coverUrl} 
+              defaultSrc={DEFAULT_COVER_URL}
               alt={cafe.name} 
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               width={400}

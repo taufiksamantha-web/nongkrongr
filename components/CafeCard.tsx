@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Cafe } from '../types';
@@ -6,6 +5,7 @@ import { StarIcon, UsersIcon, HeartIcon, MapPinIcon } from '@heroicons/react/24/
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ImageWithFallback from './common/ImageWithFallback';
 import { useFavorites } from '../context/FavoriteContext';
+import { DEFAULT_COVER_URL } from '../constants';
 
 interface CafeCardProps {
   cafe: Cafe;
@@ -43,6 +43,7 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) =
       <div className="relative">
         <ImageWithFallback 
             src={cafe.coverUrl} 
+            defaultSrc={DEFAULT_COVER_URL}
             alt={cafe.name} 
             className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
             width={400}

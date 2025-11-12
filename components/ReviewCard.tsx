@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Review } from '../types';
@@ -44,7 +43,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
                 <RatingBadge icon={<BriefcaseIcon className="h-3 w-3" />} score={review.ratingWork} color="bg-accent-cyan" />
             </div>
         </div>
-        {review.photos && review.photos.length > 0 && (
+        {review.photos && review.photos.length > 0 && review.photos[0] && (
             <div className="mt-4">
                 <ImageWithFallback 
                   src={review.photos[0]} 

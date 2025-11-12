@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -87,8 +88,12 @@ const HomePage: React.FC = () => {
       allApprovedReviews.sort((a, b) => {
         const scoreA = a.ratingAesthetic + a.ratingWork;
         const scoreB = b.ratingAesthetic + b.ratingWork;
-        if (scoreB !== scoreA) return scoreB - a.ratingWork;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        // Primary sort: combined score (descending)
+        if (scoreB !== scoreA) {
+          return scoreB - scoreA;
+        }
+        // Tie-breaker: review text length (descending) to prioritize more detailed reviews
+        return b.text.length - a.text.length;
       });
 
       setTopReviews(allApprovedReviews.slice(0, 4));

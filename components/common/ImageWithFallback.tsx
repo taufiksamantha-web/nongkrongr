@@ -3,6 +3,7 @@ import { optimizeCloudinaryImage } from '../../utils/imageOptimizer';
 
 interface ImageWithFallbackProps {
   src?: string | null;
+  defaultSrc?: string;
   alt: string;
   className: string;
   fallbackText?: string;
@@ -10,21 +11,26 @@ interface ImageWithFallbackProps {
   height?: number;
 }
 
-const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, alt, className, fallbackText = "Foto tidak tersedia", width, height }) => {
-  const [error, setError] = useState(!src);
+const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, defaultSrc, alt, className, fallbackText = "Foto tidak tersedia", width, height }) => {
+  const finalSrc = src || defaultSrc;
+  const [error, setError] = useState(!finalSrc);
   
-  const optimizedSrc = src && width && height ? optimizeCloudinaryImage(src, width, height) : src;
+  const optimizedSrc = finalSrc && width && height ? optimizeCloudinaryImage(finalSrc, width, height) : finalSrc;
 
-  // Reset error state if src changes
+  // Reset error state if src or defaultSrc changes
   useEffect(() => {
-    setError(!src);
-  }, [src]);
+    setError(!finalSrc);
+  }, [finalSrc]);
 
   const handleError = () => {
+    // If the primary src fails, and there's a defaultSrc, try it.
+    // If the defaultSrc also fails (or there's no defaultSrc), then show fallback.
+    // This logic is implicitly handled by the finalSrc logic and error state.
+    // We only set error to true, which triggers the fallback UI.
     setError(true);
   };
 
-  if (error) {
+  if (error || !finalSrc) {
     return (
       <div className={`${className} bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-center`}>
         <span className="text-gray-500 dark:text-gray-400 text-sm p-2">{fallbackText}</span>
@@ -32,12 +38,11 @@ const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, alt, classNa
     );
   }
 
-  // The container div now provides a placeholder background, using the same dimensions
-  // as the image to prevent layout shift. This improves the visual experience of lazy loading.
+  // The container div provides a placeholder background, preventing layout shift.
   return (
     <div className={`bg-gray-200 dark:bg-gray-700 ${className}`}>
         <img 
-            src={optimizedSrc!} 
+            src={optimizedSrc} 
             alt={alt} 
             className={className} 
             onError={handleError} 

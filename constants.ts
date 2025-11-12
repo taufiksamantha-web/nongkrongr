@@ -23,3 +23,7 @@ export const DISTRICTS: string[] = [
     "Sukarami", "Sako", "Sematang Borang", "Alang-Alang Lebar", "Kemuning", "Kalidoni",
     "Bukit Kecil", "Kertapati", "Plaju", "Seberang Ulu I", "Seberang Ulu II", "Jakabaring", "Gandus"
 ];
+
+// Fallback image URLs
+export const DEFAULT_FAVICON_URL = "https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png";
+export const DEFAULT_COVER_URL = "https://res.cloudinary.com/dovouihq8/image/upload/qgubxuffizriweewq9ui.png";

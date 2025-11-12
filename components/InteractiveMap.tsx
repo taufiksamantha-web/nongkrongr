@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Cafe } from '../types';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
+import { DEFAULT_COVER_URL } from '../constants';
 
 declare const L: any;
 
@@ -99,9 +100,10 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
       const bounds = L.latLngBounds();
       cafes.forEach(c => {
         if (c.coords && typeof c.coords.lat === 'number' && typeof c.coords.lng === 'number') {
+          const coverUrl = c.coverUrl || DEFAULT_COVER_URL;
           const popupContent = `
             <div class="font-sans" style="width: 200px;">
-              <img src="${optimizeCloudinaryImage(c.coverUrl, 200, 100)}" alt="${c.name}" class="w-full h-24 object-cover rounded-lg mb-2" />
+              <img src="${optimizeCloudinaryImage(coverUrl, 200, 100)}" alt="${c.name}" class="w-full h-24 object-cover rounded-lg mb-2" />
               <h3 class="font-bold font-jakarta text-base text-gray-800">${c.name}</h3>
               <p class="text-gray-600 text-sm mb-2">${c.district}</p>
               <a href="/#/cafe/${c.slug}" class="text-brand font-semibold text-sm hover:underline">Lihat Detail &rarr;</a>

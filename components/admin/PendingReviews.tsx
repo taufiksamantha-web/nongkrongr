@@ -1,9 +1,9 @@
-
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { Review } from '../../types';
 import { CafeContext } from '../../context/CafeContext';
 import ConfirmationModal from '../common/ConfirmationModal';
 import FloatingNotification from '../common/FloatingNotification';
+import ImageWithFallback from '../common/ImageWithFallback';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 
 type ManagedReview = Review & { cafeName: string; cafeId: string };
@@ -109,9 +109,17 @@ const ReviewManagement: React.FC = () => {
                                 <p className="font-bold text-lg">{review.author} <span className="font-normal text-muted">mereview</span> {review.cafeName}</p>
                                 <p className="text-primary dark:text-gray-300 my-2 italic">"{review.text}"</p>
                                 {review.photos && review.photos[0] && (
-                                    <a href={review.photos[0]} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline text-sm font-semibold">
-                                        Lihat Foto
-                                    </a>
+                                     <div className="mt-2">
+                                        <a href={review.photos[0]} target="_blank" rel="noopener noreferrer">
+                                            <ImageWithFallback
+                                                src={review.photos[0]}
+                                                alt={`Foto review oleh ${review.author}`}
+                                                className="h-24 w-auto max-w-full object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
+                                                width={150}
+                                                height={150}
+                                            />
+                                        </a>
+                                     </div>
                                 )}
                            </div>
                            <div className="flex gap-2 flex-shrink-0 ml-0 sm:ml-4">

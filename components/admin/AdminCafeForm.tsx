@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { Cafe, Amenity, Vibe, Spot } from '../../types';
 import { cloudinaryService } from '../../services/cloudinaryService';
 import { geminiService } from '../../services/geminiService';
-import { AMENITIES, VIBES, DISTRICTS } from '../../constants';
+import { AMENITIES, VIBES, DISTRICTS, DEFAULT_FAVICON_URL, DEFAULT_COVER_URL } from '../../constants';
 import { PriceTier } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import ImageWithFallback from '../common/ImageWithFallback';
@@ -41,7 +40,6 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
     const [spotFiles, setSpotFiles] = useState<(File | null)[]>(cafe?.spots.map(() => null) || []);
     const [isUploading, setIsUploading] = useState(false);
     const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
-    const faviconUrl = "https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png";
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
@@ -219,7 +217,8 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
                   <div>
                     <label className="font-semibold text-primary block mb-2">Logo (Opsional)</label>
                     <ImageWithFallback 
-                      src={logoFile ? URL.createObjectURL(logoFile) : (formData.logoUrl || faviconUrl)} 
+                      src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} 
+                      defaultSrc={DEFAULT_FAVICON_URL}
                       alt="Logo preview" 
                       className="w-24 h-24 object-contain rounded-xl mb-2 bg-soft border border-border p-1" 
                     />
@@ -227,9 +226,12 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
                   </div>
                   <div>
                     <label className="font-semibold text-primary block mb-2">Cover Image</label>
-                    {(coverFile || formData.coverUrl) && (
-                         <ImageWithFallback src={coverFile ? URL.createObjectURL(coverFile) : formData.coverUrl} alt="Cover preview" className="w-full h-24 object-cover rounded-xl mb-2" />
-                    )}
+                    <ImageWithFallback 
+                        src={coverFile ? URL.createObjectURL(coverFile) : formData.coverUrl} 
+                        defaultSrc={DEFAULT_COVER_URL}
+                        alt="Cover preview" 
+                        className="w-full h-24 object-cover rounded-xl mb-2" 
+                    />
                     <input type="file" accept="image/*" onChange={handleCoverFileChange} className={fileInputClass} />
                   </div>
                 </div>
@@ -271,9 +273,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, i
                             <div key={spot.id} className="border border-border p-3 rounded-lg bg-soft dark:bg-gray-900/50 relative pt-6">
                                 <button type="button" onClick={() => handleRemoveSpot(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300 rounded-full h-6 w-6 flex items-center justify-center font-bold text-lg leading-none hover:bg-red-500 hover:text-white dark:hover:bg-red-400 dark:hover:text-white transition-all">&times;</button>
                                 <div className="grid grid-cols-1 gap-2">
-                                    {(spotFiles[index] || spot.photoUrl) && (
-                                        <ImageWithFallback src={spotFiles[index] ? URL.createObjectURL(spotFiles[index]!) : spot.photoUrl} alt="Spot preview" className="w-full h-32 object-cover rounded-md mb-2" />
-                                    )}
+                                    <ImageWithFallback src={spotFiles[index] ? URL.createObjectURL(spotFiles[index]!) : spot.photoUrl} alt="Spot preview" className="w-full h-32 object-cover rounded-md mb-2" />
                                     <input type="file" accept="image/*" onChange={(e) => handleSpotFileChange(index, e)} className={fileInputClass} />
                                     <input name="title" value={spot.title} onChange={(e) => handleSpotChange(index, e)} placeholder="Judul Spot" className={`${spotInputClass} mt-2`} />
                                     <input name="tip" value={spot.tip} onChange={(e) => handleSpotChange(index, e)} placeholder="Tips Foto" className={spotInputClass} />

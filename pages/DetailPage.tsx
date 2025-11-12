@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -13,6 +12,7 @@ import ImageWithFallback from '../components/common/ImageWithFallback';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
 import ShareButton from '../components/ShareButton';
+import { DEFAULT_COVER_URL, DEFAULT_FAVICON_URL } from '../constants';
 
 const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color: string }> = ({ label, score, max, color }) => {
     const percentage = max > 0 ? (score / max) * 100 : 0;
@@ -83,7 +83,6 @@ const DetailPage: React.FC = () => {
     
     const favorited = isFavorite(cafe.id);
     const nameWordCount = cafe.name.split(' ').length;
-    const faviconUrl = "https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png";
 
     const handleFavoriteClick = () => {
         if (favorited) {
@@ -111,6 +110,7 @@ const DetailPage: React.FC = () => {
             {notification && <FloatingNotification message={notification} type="success" onClose={() => setNotification(null)} />}
             <ImageWithFallback 
                 src={cafe.coverUrl} 
+                defaultSrc={DEFAULT_COVER_URL}
                 alt={cafe.name} 
                 className="w-full h-96 object-cover rounded-4xl mb-8 border border-border"
                 width={1280}
@@ -123,7 +123,8 @@ const DetailPage: React.FC = () => {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
                              <div className="flex flex-col items-center sm:flex-row sm:items-start text-center sm:text-left flex-1 min-w-0">
                                 <ImageWithFallback 
-                                    src={cafe.logoUrl || faviconUrl} 
+                                    src={cafe.logoUrl} 
+                                    defaultSrc={DEFAULT_FAVICON_URL}
                                     alt={`${cafe.name} logo`} 
                                     className="w-16 h-16 rounded-2xl object-contain mb-4 sm:mb-0 sm:mr-4 shadow-md bg-soft p-1 border border-border"
                                     width={100}

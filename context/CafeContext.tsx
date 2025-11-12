@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Cafe, Review, Spot, Vibe, Amenity } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -75,13 +74,19 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 const parsedReviews = (cafe.reviews || []).map((review: any) => {
                     let photosArray: string[] = [];
-                    if (typeof review.photos === 'string' && review.photos.startsWith('{') && review.photos.endsWith('}')) {
-                        const content = review.photos.slice(1, -1);
+                    const photosData = review.photos; // Can be array, string, or null
+                    
+                    if (Array.isArray(photosData)) {
+                        // Handle native arrays, filtering out any non-string or empty values
+                        photosArray = photosData.filter(p => typeof p === 'string' && p.trim() !== '');
+                    } else if (typeof photosData === 'string' && photosData.startsWith('{') && photosData.endsWith('}')) {
+                        // Handle PostgreSQL array strings like '{"url1","url2"}' or '{}'
+                        const content = photosData.slice(1, -1);
                         if (content) {
-                            photosArray = content.split(',');
+                            photosArray = content.split(',')
+                                     .map(p => p.trim().replace(/^"|"$/g, ''))
+                                     .filter(p => p.trim() !== '');
                         }
-                    } else if (Array.isArray(review.photos)) {
-                        photosArray = review.photos;
                     }
                     return { ...review, photos: photosArray };
                 });

@@ -1,4 +1,3 @@
-
 import React, { useState, useContext } from 'react';
 import { CafeContext } from '../context/CafeContext';
 import { geminiService, AiRecommendationParams } from '../services/geminiService';
@@ -30,48 +29,67 @@ const AiRecommenderModal: React.FC<AiRecommenderModalProps> = ({ onClose }) => {
       const params = await geminiService.getCafeRecommendations(prompt);
       setReasoning(params.reasoning);
 
-      let filteredCafes = [...cafes];
+      // --- NEW: SCORING-BASED RECOMMENDATION LOGIC ---
 
-      // Filter by vibes
-      if (params.vibes && params.vibes.length > 0) {
-        filteredCafes = filteredCafes.filter(cafe =>
-          params.vibes.every(vibeId => cafe.vibes.some(v => v.id === vibeId))
-        );
-      }
+      // 1. Start with cafes that meet the hard filter (price)
+      const candidateCafes = cafes.filter(cafe => cafe.priceTier <= params.maxPriceTier);
 
-      // Filter by amenities
-      if (params.amenities && params.amenities.length > 0) {
-        filteredCafes = filteredCafes.filter(cafe =>
-          params.amenities.every(amenityId => cafe.amenities.some(a => a.id === amenityId))
-        );
-      }
-
-      // Filter by price
-      if (params.maxPriceTier) {
-        filteredCafes = filteredCafes.filter(cafe => cafe.priceTier <= params.maxPriceTier);
-      }
-      
-      // Sort results
-      if (params.sortBy) {
-        switch (params.sortBy) {
-          case 'work':
-            filteredCafes.sort((a, b) => b.avgWorkScore - a.avgWorkScore);
-            break;
-          case 'quiet':
-            // sort by evening crowd, ascending
-            filteredCafes.sort((a, b) => a.avgCrowdEvening - b.avgCrowdEvening);
-            break;
-          case 'aesthetic':
-          default:
-            filteredCafes.sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
-            break;
+      // 2. Score each candidate cafe based on how well it matches vibes and amenities
+      const scoredCafes = candidateCafes.map(cafe => {
+        let matchScore = 0;
+        
+        // Award points for matching vibes
+        if (params.vibes && params.vibes.length > 0) {
+            params.vibes.forEach(vibeId => {
+                if (cafe.vibes.some(v => v.id === vibeId)) {
+                    matchScore += 1;
+                }
+            });
         }
-      }
 
-      setResults(filteredCafes.slice(0, 6)); // Show top 6 results
+        // Award points for matching amenities
+        if (params.amenities && params.amenities.length > 0) {
+            params.amenities.forEach(amenityId => {
+                if (cafe.amenities.some(a => a.id === amenityId)) {
+                    matchScore += 1;
+                }
+            });
+        }
+        
+        return { cafe, matchScore };
+      });
+
+      // 3. Sort cafes based on the scores
+      scoredCafes.sort((a, b) => {
+        // Primary sort: by matchScore in descending order
+        if (b.matchScore !== a.matchScore) {
+            return b.matchScore - a.matchScore;
+        }
+
+        // Secondary sort: by the user's implicit preference (aesthetic, work, quiet)
+        const sortBy = params.sortBy || 'aesthetic';
+        switch (sortBy) {
+            case 'work':
+                return b.cafe.avgWorkScore - a.cafe.avgWorkScore;
+            case 'quiet':
+                // Lower crowd score is better (quieter)
+                return a.cafe.avgCrowdEvening - b.cafe.avgCrowdEvening;
+            case 'aesthetic':
+            default:
+                return b.cafe.avgAestheticScore - a.cafe.avgAestheticScore;
+        }
+      });
+
+      // 4. Set the final results
+      setResults(scoredCafes.map(item => item.cafe).slice(0, 6));
+
     } catch (e) {
       console.error(e);
-      setError('Maaf, terjadi kesalahan saat mencari rekomendasi. Coba lagi ya.');
+      if (e instanceof Error && e.message.includes("diinisialisasi")) {
+          setError('Fitur AI tidak dapat digunakan karena kunci API belum diatur.');
+      } else {
+          setError('Maaf, terjadi kesalahan saat mencari rekomendasi. Coba lagi ya.');
+      }
     } finally {
       setIsLoading(false);
     }

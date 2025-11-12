@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier } from '../types';
@@ -55,7 +54,7 @@ const FilterPanelContent: React.FC<{
             </div>
 
             {/* District */}
-            <details className="py-2 border-t border-border group" open>
+            <details className="py-2 border-t border-border group">
                 <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
                     Kecamatan
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
@@ -69,7 +68,7 @@ const FilterPanelContent: React.FC<{
             </details>
 
             {/* Vibes */}
-            <details className="py-2 border-t border-border group" open>
+            <details className="py-2 border-t border-border group">
                 <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
                     Vibes
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
@@ -84,7 +83,7 @@ const FilterPanelContent: React.FC<{
             </details>
 
             {/* Amenities */}
-            <details className="py-2 border-t border-border group" open>
+            <details className="py-2 border-t border-border group">
                 <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
                     Fasilitas
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
@@ -99,7 +98,7 @@ const FilterPanelContent: React.FC<{
             </details>
             
             {/* Price Tier */}
-            <details className="py-2 border-t border-border group" open>
+            <details className="py-2 border-t border-border group">
                 <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
                     Harga (Maks.)
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
@@ -114,7 +113,7 @@ const FilterPanelContent: React.FC<{
             </details>
 
             {/* Crowd Level */}
-            <details className="py-2 border-t border-border group" open>
+            <details className="py-2 border-t border-border group">
                 <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
                     Tingkat Keramaian (Maks.)
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
