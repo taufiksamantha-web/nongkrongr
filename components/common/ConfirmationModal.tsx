@@ -7,9 +7,10 @@ interface ConfirmationModalProps {
   cancelText?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  isConfirming?: boolean; // Tambahkan prop ini
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, message, onConfirm, onCancel, confirmText = 'Hapus', cancelText = 'Batal' }) => {
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, message, onConfirm, onCancel, confirmText = 'Hapus', cancelText = 'Batal', isConfirming = false }) => {
   React.useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -35,8 +36,12 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, message, o
           <button onClick={onCancel} className="px-6 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
             {cancelText}
           </button>
-          <button onClick={onConfirm} className="px-6 py-2 bg-accent-pink text-white rounded-xl font-semibold hover:bg-red-700 transition-colors">
-            {confirmText}
+          <button 
+            onClick={onConfirm} 
+            className="px-6 py-2 bg-accent-pink text-white rounded-xl font-semibold hover:bg-red-700 transition-colors disabled:opacity-75 disabled:cursor-wait"
+            disabled={isConfirming}
+          >
+            {isConfirming ? 'Memproses...' : confirmText}
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import React, { createContext, useState, ReactNode, useContext, useEffect } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabaseClient';
-import { AuthError } from '@supabase/supabase-js';
+import { AuthError, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
     currentUser: User | null;
@@ -16,37 +16,59 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (session?.user) {
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
-
-                // **Robustness Improvement**:
-                // If there's an error fetching the profile OR the profile doesn't exist,
-                // it means the session is invalid or the user state is inconsistent.
-                // Proactively sign out to clear the bad session from localStorage.
-                if (error || !profile) {
-                    console.error("Invalid session state: Profile not found or error fetching. Forcing logout.", error);
-                    await supabase.auth.signOut();
-                    setCurrentUser(null);
-                } else {
-                    setCurrentUser(profile as User | null);
-                }
-            } else {
-                setCurrentUser(null);
-            }
+    // Centralized function to validate a session and set the user state.
+    const validateAndSetUser = async (session: Session | null) => {
+        if (session?.user) {
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
             
-            setLoading(false);
+            // If the profile doesn't exist or there's an error, the session is invalid.
+            if (error || !profile) {
+                console.error("Invalid session: Profile not found or error fetching. Forcing logout.", error);
+                // Force sign out to clear the corrupted session from storage.
+                // This will trigger onAuthStateChange again with a SIGNED_OUT event.
+                await supabase.auth.signOut();
+                setCurrentUser(null);
+            } else {
+                setCurrentUser(profile as User);
+            }
+        } else {
+            // No session, so no user.
+            setCurrentUser(null);
+        }
+    };
+
+    useEffect(() => {
+        setLoading(true);
+
+        // 1. Perform an explicit session check on initial application load.
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            // Validate whatever session we found (or didn't find).
+            validateAndSetUser(session).finally(() => {
+                // IMPORTANT: Ensure loading is set to false only after the initial check is complete.
+                setLoading(false);
+            });
         });
 
+        // 2. Set up a listener for any subsequent auth events (login, logout, token refresh).
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (_event, session) => {
+                // Re-validate the user whenever the auth state changes.
+                // We don't manage the `loading` state here to avoid screen flashes during
+                // background token refreshes. The initial `loading` screen handles the first-load experience.
+                await validateAndSetUser(session);
+            }
+        );
+
+        // Cleanup the subscription when the component unmounts.
         return () => {
             subscription?.unsubscribe();
         };
     }, []);
+
 
     const login = async (email: string, password: string) => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -67,6 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return (
         <AuthContext.Provider value={value}>
+            {/* Render children only after the initial auth check is complete. */}
             {!loading && children}
         </AuthContext.Provider>
     );

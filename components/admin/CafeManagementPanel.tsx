@@ -111,14 +111,44 @@ const CafeManagementPanel: React.FC = () => {
         setIsSaving(true);
         setNotification(null);
         try {
-            await Promise.all(selectedCafeIds.map(id => deleteCafe(id)));
-            setNotification({ message: `${selectedCafeIds.length} kafe berhasil dihapus.`, type: 'success' });
-            if (paginatedCafes.length === selectedCafeIds.length && currentPage > 1) {
+            const deletionPromises = selectedCafeIds.map(id => deleteCafe(id));
+            const results = await Promise.allSettled(deletionPromises);
+    
+            const successes = results.filter(r => r.status === 'fulfilled').length;
+            const failures = results.filter(r => r.status === 'rejected').length;
+    
+            if (failures > 0) {
+                console.error("Gagal menghapus beberapa kafe:", results.filter(r => r.status === 'rejected'));
+            }
+    
+            let message = '';
+            let type: 'success' | 'error' = 'success';
+    
+            if (successes > 0 && failures === 0) {
+                message = `${successes} kafe berhasil dihapus.`;
+                type = 'success';
+            } else if (successes > 0 && failures > 0) {
+                message = `Berhasil hapus ${successes} kafe, gagal ${failures}. Cek konsol untuk detail.`;
+                type = 'error';
+            } else if (successes === 0 && failures > 0) {
+                message = `Gagal menghapus ${failures} kafe. Silakan coba lagi.`;
+                type = 'error';
+            }
+    
+            if (message) {
+                setNotification({ message, type });
+            }
+    
+            // Periksa jika halaman saat ini menjadi kosong setelah penghapusan
+            const remainingOnPage = paginatedCafes.length - successes;
+            if (remainingOnPage <= 0 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }
+    
             setSelectedCafeIds([]);
         } catch (error: any) {
-            setNotification({ message: `Gagal menghapus beberapa kafe: ${error.message}`, type: 'error' });
+            // Fallback untuk error yang tidak terduga
+            setNotification({ message: `Terjadi error tak terduga: ${error.message}`, type: 'error' });
         } finally {
             setIsSaving(false);
             setIsConfirmingMultiDelete(false);
@@ -135,8 +165,9 @@ const CafeManagementPanel: React.FC = () => {
                         <button
                             onClick={() => setIsConfirmingMultiDelete(true)}
                             className="bg-accent-pink text-white font-bold py-2 px-6 rounded-2xl hover:bg-accent-pink/90 transition-colors"
+                            disabled={isSaving}
                         >
-                            Hapus Terpilih ({selectedCafeIds.length})
+                            {isSaving ? 'Menghapus...' : `Hapus Terpilih (${selectedCafeIds.length})`}
                         </button>
                     )}
                     <button onClick={() => { setEditingCafe(null); setIsFormOpen(true); }} className="bg-brand text-white font-bold py-2 px-6 rounded-2xl hover:bg-brand/90 transition-colors">
@@ -275,6 +306,7 @@ const CafeManagementPanel: React.FC = () => {
                     message={`Apakah Anda yakin ingin menghapus "${cafeToDelete.name}"? Tindakan ini tidak dapat diurungkan.`}
                     onConfirm={handleConfirmDeleteCafe}
                     onCancel={() => setCafeToDelete(null)}
+                    isConfirming={isSaving}
                 />
             )}
 
@@ -285,6 +317,7 @@ const CafeManagementPanel: React.FC = () => {
                     onConfirm={handleConfirmMultiDelete}
                     onCancel={() => setIsConfirmingMultiDelete(false)}
                     confirmText={`Ya, Hapus (${selectedCafeIds.length})`}
+                    isConfirming={isSaving}
                 />
             )}
         </>
