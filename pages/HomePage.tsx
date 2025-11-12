@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -26,6 +27,13 @@ const SectionHeader: React.FC<{ icon?: React.ReactNode; title: string; subtitle:
   </div>
 );
 
+const rotatingPlaceholders = [
+  "Mau nongkrong di mana hari ini?",
+  "Cari cafe buat nugas...",
+  "Spot foto OOTD estetik...",
+  "Kopi enak di Palembang...",
+  "Tempat nongkrong sore yang adem...",
+];
 
 const HomePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
@@ -42,6 +50,7 @@ const HomePage: React.FC = () => {
   const [heroBgUrl, setHeroBgUrl] = useState<string>("https://res.cloudinary.com/dovouihq8/image/upload/v1722244300/cover-placeholder-1_pqz5kl.jpg");
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const navigate = useNavigate();
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
@@ -53,6 +62,14 @@ const HomePage: React.FC = () => {
       }
     };
     loadSettings();
+  }, []);
+  
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setPlaceholderIndex(prevIndex => (prevIndex + 1) % rotatingPlaceholders.length);
+    }, 2000); // Ganti setiap 2 detik
+
+    return () => clearInterval(intervalId); // Bersihkan interval saat komponen unmount
   }, []);
 
   useEffect(() => {
@@ -176,7 +193,7 @@ const HomePage: React.FC = () => {
                 <SparklesIcon className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-yellow-300 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Mau nongkrong di mana hari ini?"
+                  placeholder={rotatingPlaceholders[placeholderIndex]}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)}
