@@ -119,6 +119,24 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return () => clearInterval(intervalId); // Cleanup interval on unmount
     }, [fetchCafes]);
 
+    // Tambahkan useEffect baru untuk me-refresh data saat tab kembali aktif
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            // Cek jika halaman kembali terlihat
+            if (document.visibilityState === 'visible') {
+                fetchCafes(); // Panggil fungsi untuk mengambil data terbaru
+            }
+        };
+
+        // Tambahkan event listener untuk memantau perubahan visibilitas tab
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Bersihkan event listener saat komponen di-unmount
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [fetchCafes]);
+
 
     const addCafe = async (cafeData: Partial<Cafe>) => {
         const { vibes = [], amenities = [], spots = [], coords, ...mainCafeData } = cafeData;
