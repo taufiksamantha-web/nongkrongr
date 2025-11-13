@@ -62,6 +62,16 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
     const map = mapRef.current;
     if (!map) return;
 
+    // Define a custom red icon for the detail page
+    const redIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
     // --- 1. Cleanup previous markers ---
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
@@ -84,26 +94,41 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
             .bindPopup("<b>Posisi Kamu</b>");
     };
     
-    // --- 3. Add cafe markers and calculate initial bounds ---
-    const cafesToDisplay = cafes || (cafe ? [cafe] : []);
+    // --- 3. Add cafe markers and calculate bounds ---
     const bounds = L.latLngBounds();
 
-    cafesToDisplay.forEach(c => {
-        if (c.coords && typeof c.coords.lat === 'number' && typeof c.coords.lng === 'number') {
-            const coverUrl = c.coverUrl || DEFAULT_COVER_URL;
-            const popupContent = `
-                <div class="font-sans" style="width: 200px;">
-                    <img src="${optimizeCloudinaryImage(coverUrl, 200, 100)}" alt="${c.name}" class="w-full h-24 object-cover rounded-lg mb-2" />
-                    <h3 class="font-bold font-jakarta text-base text-gray-800">${c.name}</h3>
-                    <p class="text-gray-600 text-sm mb-2">${c.district}</p>
-                    <a href="/#/cafe/${c.slug}" class="text-brand font-semibold text-sm hover:underline">Lihat Detail &rarr;</a>
-                </div>
-            `;
-            const marker = L.marker([c.coords.lat, c.coords.lng]).addTo(map).bindPopup(popupContent);
+    // Logic for Detail Page (single cafe)
+    if (cafe && !cafes) {
+        if (cafe.coords && typeof cafe.coords.lat === 'number' && typeof cafe.coords.lng === 'number') {
+            const popupContent = `<div class="font-sans text-base"><b>${cafe.name}</b> berada di sini</div>`;
+            const marker = L.marker([cafe.coords.lat, cafe.coords.lng], { icon: redIcon })
+                .addTo(map)
+                .bindPopup(popupContent);
+            
             markersRef.current.push(marker);
-            bounds.extend([c.coords.lat, c.coords.lng]);
+            bounds.extend([cafe.coords.lat, cafe.coords.lng]);
+            marker.openPopup();
         }
-    });
+    } 
+    // Logic for Explore Page (multiple cafes)
+    else if (cafes) {
+        cafes.forEach(c => {
+            if (c.coords && typeof c.coords.lat === 'number' && typeof c.coords.lng === 'number') {
+                const coverUrl = c.coverUrl || DEFAULT_COVER_URL;
+                const popupContent = `
+                    <div class="font-sans" style="width: 200px;">
+                        <img src="${optimizeCloudinaryImage(coverUrl, 200, 100)}" alt="${c.name}" class="w-full h-24 object-cover rounded-lg mb-2" />
+                        <h3 class="font-bold font-jakarta text-base text-gray-800">${c.name}</h3>
+                        <p class="text-gray-600 text-sm mb-2">${c.district}</p>
+                        <a href="/#/cafe/${c.slug}" class="text-brand font-semibold text-sm hover:underline">Lihat Detail &rarr;</a>
+                    </div>
+                `;
+                const marker = L.marker([c.coords.lat, c.coords.lng]).addTo(map).bindPopup(popupContent);
+                markersRef.current.push(marker);
+                bounds.extend([c.coords.lat, c.coords.lng]);
+            }
+        });
+    }
 
     // --- 4. Function to finalize map view ---
     const finalizeMapView = (userLatLng: [number, number] | null = null) => {
@@ -112,7 +137,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
         }
         if (bounds.isValid()) {
             const padding = (cafe && userLatLng) ? [70, 70] : [50, 50];
-            const maxZoom = (cafe && userLatLng) ? 16 : 15;
+            const maxZoom = (cafe) ? 16 : 15;
             map.fitBounds(bounds, { padding, maxZoom, duration: 0.5 });
         } else if (cafe && cafe.coords) {
              map.setView([cafe.coords.lat, cafe.coords.lng], 16); // Fallback for single cafe
@@ -135,11 +160,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
         );
     } else {
         finalizeMapView(); // Finalize view immediately
-    }
-    
-    // --- 6. Open popup for detail page ---
-    if (cafe && markersRef.current.length > 0) {
-        markersRef.current[0].openPopup();
     }
 
   }, [cafe, cafes, showUserLocation]); // Dependency array ensures this runs when data changes

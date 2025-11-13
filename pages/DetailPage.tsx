@@ -234,6 +234,17 @@ const DetailPage: React.FC = () => {
                             {cafe.amenities.map(a => <span key={a.id} className="bg-gray-100 dark:bg-gray-700/50 px-3 py-1 rounded-full text-sm">{a.icon} {a.name}</span>)}
                         </div>
                     </div>
+
+                    {/* Interactive Map & Action Button */}
+                    <div className="space-y-4">
+                        <div className="relative z-10 rounded-3xl shadow-md overflow-hidden h-96 border border-border">
+                            <InteractiveMap cafe={cafe} theme={theme} showUserLocation={true} />
+                        </div>
+                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
+                            <MapPinIcon className="h-5 w-5" />
+                            Buka di Google Maps
+                        </a>
+                    </div>
                     
                     {/* Scores */}
                     <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
@@ -312,12 +323,6 @@ const DetailPage: React.FC = () => {
                 {/* Sidebar */}
                 <aside className="lg:sticky lg:top-24 self-start">
                     <div className="space-y-8">
-                        <div className="rounded-3xl shadow-md overflow-hidden h-64 border border-border">
-                            <InteractiveMap cafe={cafe} theme={theme} showUserLocation={true} />
-                        </div>
-                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
-                            Buka di Google Maps
-                        </a>
                         <ReviewForm onSubmit={(review) => handleAddReview({ ...review, cafe_id: cafe.id })} isSubmitting={isSubmitting} cafeId={cafe.id} />
                     </div>
                 </aside>
