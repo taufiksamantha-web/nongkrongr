@@ -22,7 +22,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
   // Initialize map instance
   useEffect(() => {
     if (mapContainerRef.current && !mapRef.current && typeof L !== 'undefined') {
-      const map = L.map(mapContainerRef.current).setView([-2.976, 104.745], 13);
+      const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([-2.976, 104.745], 13);
+      L.control.zoom({ position: 'topright' }).addTo(map);
       mapRef.current = map;
     }
     return () => {
@@ -56,12 +57,12 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
     tileLayerRef.current = newTileLayer;
   }, [theme]);
   
-  // Update markers for cafes and user location
+  // Update markers and view
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // --- 1. Cleanup previous layers ---
+    // --- 1. Cleanup previous markers ---
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
     if (userMarkerRef.current) {
@@ -71,85 +72,77 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
 
     // --- 2. Helper to add user marker ---
     const addUserLocationMarker = (lat: number, lng: number) => {
-      const userMarkerSvg = `
-        <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="black" flood-opacity="0.4"/>
-            </filter>
-          </defs>
-          <g filter="url(#shadow)">
-            <circle cx="16" cy="16" r="12" fill="#ef4444" stroke="white" stroke-width="3"/>
-          </g>
-        </svg>
-      `;
-      const userLocationIcon = L.divIcon({
-        html: userMarkerSvg,
-        className: '', // important to be empty
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        popupAnchor: [0, -16]
-      });
-      userMarkerRef.current = L.marker([lat, lng], { icon: userLocationIcon, zIndexOffset: 1000 })
-        .addTo(map)
-        .bindPopup("<b>Posisi Kamu</b>");
+        const userLocationIcon = L.divIcon({
+            html: `<div class="user-location-marker"><div class="pulse"></div><div class="dot"></div></div>`,
+            className: '', // important to be empty
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+            popupAnchor: [0, -12]
+        });
+        userMarkerRef.current = L.marker([lat, lng], { icon: userLocationIcon, zIndexOffset: 1000 })
+            .addTo(map)
+            .bindPopup("<b>Posisi Kamu</b>");
     };
+    
+    // --- 3. Add cafe markers and calculate initial bounds ---
+    const cafesToDisplay = cafes || (cafe ? [cafe] : []);
+    const bounds = L.latLngBounds();
 
-    // --- 3. Logic for Explore Page (multiple cafes) ---
-    if (cafes && cafes.length > 0) {
-      const bounds = L.latLngBounds();
-      cafes.forEach(c => {
+    cafesToDisplay.forEach(c => {
         if (c.coords && typeof c.coords.lat === 'number' && typeof c.coords.lng === 'number') {
-          const coverUrl = c.coverUrl || DEFAULT_COVER_URL;
-          const popupContent = `
-            <div class="font-sans" style="width: 200px;">
-              <img src="${optimizeCloudinaryImage(coverUrl, 200, 100)}" alt="${c.name}" class="w-full h-24 object-cover rounded-lg mb-2" />
-              <h3 class="font-bold font-jakarta text-base text-gray-800">${c.name}</h3>
-              <p class="text-gray-600 text-sm mb-2">${c.district}</p>
-              <a href="/#/cafe/${c.slug}" class="text-brand font-semibold text-sm hover:underline">Lihat Detail &rarr;</a>
-            </div>
-          `;
-          const marker = L.marker([c.coords.lat, c.coords.lng]).addTo(map).bindPopup(popupContent);
-          markersRef.current.push(marker);
-          bounds.extend([c.coords.lat, c.coords.lng]);
+            const coverUrl = c.coverUrl || DEFAULT_COVER_URL;
+            const popupContent = `
+                <div class="font-sans" style="width: 200px;">
+                    <img src="${optimizeCloudinaryImage(coverUrl, 200, 100)}" alt="${c.name}" class="w-full h-24 object-cover rounded-lg mb-2" />
+                    <h3 class="font-bold font-jakarta text-base text-gray-800">${c.name}</h3>
+                    <p class="text-gray-600 text-sm mb-2">${c.district}</p>
+                    <a href="/#/cafe/${c.slug}" class="text-brand font-semibold text-sm hover:underline">Lihat Detail &rarr;</a>
+                </div>
+            `;
+            const marker = L.marker([c.coords.lat, c.coords.lng]).addTo(map).bindPopup(popupContent);
+            markersRef.current.push(marker);
+            bounds.extend([c.coords.lat, c.coords.lng]);
         }
-      });
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-      }
-      if (showUserLocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => addUserLocationMarker(pos.coords.latitude, pos.coords.longitude),
-          (err) => console.warn("Gagal mendapatkan lokasi:", err.message),
-          { enableHighAccuracy: true }
-        );
-      }
-    } 
-    // --- 4. Logic for Detail Page (single cafe) ---
-    else if (cafe && cafe.coords) {
-      const cafeLatLng: [number, number] = [cafe.coords.lat, cafe.coords.lng];
-      const marker = L.marker(cafeLatLng).addTo(map).bindPopup(`<b>${cafe.name}</b>`).openPopup();
-      markersRef.current.push(marker);
+    });
 
-      if (showUserLocation) {
+    // --- 4. Function to finalize map view ---
+    const finalizeMapView = (userLatLng: [number, number] | null = null) => {
+        if (userLatLng) {
+            bounds.extend(userLatLng);
+        }
+        if (bounds.isValid()) {
+            const padding = (cafe && userLatLng) ? [70, 70] : [50, 50];
+            const maxZoom = (cafe && userLatLng) ? 16 : 15;
+            map.fitBounds(bounds, { padding, maxZoom, duration: 0.5 });
+        } else if (cafe && cafe.coords) {
+             map.setView([cafe.coords.lat, cafe.coords.lng], 16); // Fallback for single cafe
+        }
+    };
+    
+    // --- 5. Get user location if requested ---
+    if (showUserLocation) {
         navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const userLatLng: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-            addUserLocationMarker(userLatLng[0], userLatLng[1]);
-            const bounds = L.latLngBounds([cafeLatLng, userLatLng]);
-            map.fitBounds(bounds, { padding: [70, 70], maxZoom: 16 });
-          },
-          (err) => {
-            console.warn("Gagal mendapatkan lokasi, hanya menampilkan kafe:", err.message);
-            map.setView(cafeLatLng, 16); // Fallback
-          },
-          { enableHighAccuracy: true }
+            (position) => {
+                const userLatLng: [number, number] = [position.coords.latitude, position.coords.longitude];
+                addUserLocationMarker(userLatLng[0], userLatLng[1]);
+                finalizeMapView(userLatLng);
+            },
+            (error) => {
+                console.warn("Could not get user location:", error.message);
+                finalizeMapView(); // Finalize view without user location
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
         );
-      } else {
-        map.setView(cafeLatLng, 16);
-      }
+    } else {
+        finalizeMapView(); // Finalize view immediately
     }
-  }, [cafe, cafes, showUserLocation]);
+    
+    // --- 6. Open popup for detail page ---
+    if (cafe && markersRef.current.length > 0) {
+        markersRef.current[0].openPopup();
+    }
+
+  }, [cafe, cafes, showUserLocation]); // Dependency array ensures this runs when data changes
 
   return <div ref={mapContainerRef} className="w-full h-full" />;
 };

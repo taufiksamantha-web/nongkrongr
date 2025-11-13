@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Cafe } from '../types';
@@ -15,10 +14,10 @@ const FeaturedCafeCard: React.FC<FeaturedCafeCardProps> = ({ cafe }) => {
 
   return (
     <div className="relative max-w-2xl mx-auto bg-card/80 dark:bg-card/70 backdrop-blur-md rounded-4xl border-2 border-amber-400/60 shadow-lg shadow-amber-400/20 hover:shadow-xl hover:shadow-amber-400/30 transition-all duration-500 overflow-hidden group transform hover:scale-[1.01] hover:-translate-y-1 animate-fade-in-up">
-      <div className="absolute top-4 left-4 z-10 transform-gpu transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-12deg]">
-        <div className="p-2 bg-black/30 backdrop-blur-sm rounded-full">
-            <StarIcon className="h-8 w-8 text-amber-300 drop-shadow-lg"/>
-        </div>
+      <div className="absolute top-4 left-0 right-0 z-10 flex justify-center">
+        <span className="bg-accent-amber text-yellow-900 px-4 py-1 rounded-full text-sm font-bold shadow-md text-center">
+          ✨ Rekomendasi Spesial
+        </span>
       </div>
       <Link to={`/cafe/${cafe.slug}`} className="block">
         <div className="flex flex-col">
@@ -34,9 +33,6 @@ const FeaturedCafeCard: React.FC<FeaturedCafeCardProps> = ({ cafe }) => {
           </div>
           <div className="p-6 flex flex-col justify-between">
             <div>
-              <span className="inline-block bg-accent-amber text-yellow-900 px-4 py-1 rounded-full text-sm font-bold shadow-sm mb-4">
-                ✨ Rekomendasi Spesial
-              </span>
               <h3 className="text-3xl font-extrabold font-jakarta text-primary dark:text-white mb-2">{cafe.name}</h3>
               <p className="text-base text-muted mb-6 line-clamp-2 min-h-[3rem]">
                 "{displayQuote}"

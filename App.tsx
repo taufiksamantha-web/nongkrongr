@@ -12,7 +12,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { CafeProvider } from './context/CafeContext';
 import { AuthProvider } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
-import { SunIcon, MoonIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
+import { SunIcon, MoonIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import ScrollToTopOnNavigate from './components/ScrollToTopOnNavigate';
 import ScrollToTopButton from './components/ScrollToTopButton';
 
@@ -86,13 +86,13 @@ const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
           </main>
 
           {!isAdminPage && (
-            <div className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
+            <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
                 <Link 
                     to="/explore"
-                    className="flex items-center gap-2 bg-card/80 dark:bg-card/70 backdrop-blur-lg text-primary dark:text-white font-bold py-3 px-6 rounded-2xl shadow-lg border border-border transition-transform transform hover:scale-105 active:scale-95"
+                    className="flex items-center gap-3 bg-brand hover:bg-brand/90 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:shadow-brand/30 transition-all duration-300 transform hover:scale-105 active:scale-95 animate-subtle-bounce"
                 >
-                    <BuildingStorefrontIcon className="h-6 w-6 text-brand" />
-                    <span>Explore</span>
+                    <MagnifyingGlassIcon className="h-6 w-6" />
+                    <span>Jelajahi</span>
                 </Link>
             </div>
           )}

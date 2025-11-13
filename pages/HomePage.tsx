@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -11,7 +12,7 @@ import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import AiRecommenderModal from '../components/AiRecommenderModal';
 import { settingsService } from '../services/settingsService';
-import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon } from '@heroicons/react/24/solid';
+import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonFeaturedCard from '../components/SkeletonFeaturedCard';
@@ -19,11 +20,24 @@ import SkeletonReviewCard from '../components/SkeletonReviewCard';
 
 type TopReview = Review & { cafeName: string; cafeSlug: string };
 
-const SectionHeader: React.FC<{ icon?: React.ReactNode; title: string; subtitle: string; }> = ({ icon, title, subtitle }) => (
+const SectionHeader: React.FC<{ icon?: React.ReactNode; title: string; subtitle: string; link?: string; }> = ({ icon, title, subtitle, link }) => (
   <div className="text-center mb-10">
-    {icon && <div className="inline-block p-4 bg-brand/10 rounded-3xl mb-4 text-brand">{icon}</div>}
-    <h2 className="text-4xl font-bold font-jakarta text-primary dark:text-white mb-2">{title}</h2>
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-2">
+      {icon && <div className="inline-block p-4 bg-brand/10 rounded-3xl text-brand">{icon}</div>}
+      <h2 className="text-3xl sm:text-4xl font-bold font-jakarta text-primary dark:text-white">{title}</h2>
+    </div>
     <p className="text-muted max-w-2xl mx-auto">{subtitle}</p>
+    {link && (
+      <div className="mt-6">
+        <Link 
+          to={link} 
+          className="inline-flex items-center gap-2 bg-brand/10 text-brand font-bold py-2 px-5 rounded-xl hover:bg-brand/20 transition-colors duration-300 group"
+        >
+          Lihat Semua
+          <ArrowRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+        </Link>
+      </div>
+    )}
   </div>
 );
 
@@ -334,11 +348,12 @@ const HomePage: React.FC = () => {
               )}
             </div>
           ) : (
-            !loading && cafes.length > 0 && (
-                <div className="text-center py-10 text-muted">
-                    <p>Belum ada rekomendasi yang tersedia saat ini.</p>
-                </div>
-            )
+            <div className="max-w-4xl mx-auto">
+                <EmptyState 
+                    title="Rekomendasi Belum Tersedia" 
+                    message="Saat ini belum ada kafe yang bisa kami rekomendasikan secara spesial. Cek lagi nanti ya!" 
+                />
+            </div>
           )}
         </div>
       </div>
@@ -351,6 +366,7 @@ const HomePage: React.FC = () => {
               icon={<HeartIcon className="h-8 w-8"/>}
               title="Kafe Favoritmu"
               subtitle="Tempat-tempat spesial yang sudah kamu tandai."
+              link="/explore?favorites=true"
             />
             {favoriteCafes.length > 0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -374,6 +390,7 @@ const HomePage: React.FC = () => {
             icon={<FireIcon className="h-8 w-8"/>}
             title="Lagi Trending Nih!"
             subtitle="Cafe dengan skor aesthetic tertinggi pilihan warga Nongkrongr."
+            link="/explore?sort=trending"
           />
             {loading ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">

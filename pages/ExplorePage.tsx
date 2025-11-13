@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
+import { useFavorites } from '../context/FavoriteContext';
 import { DISTRICTS, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
 import { MagnifyingGlassIcon, ChevronDownIcon, AdjustmentsHorizontalIcon, XMarkIcon, InboxIcon } from '@heroicons/react/24/solid';
@@ -144,11 +145,15 @@ const ExplorePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
   const { cafes, loading, error } = cafeContext!;
   const { theme } = useContext(ThemeContext);
+  const { favoriteIds } = useFavorites();
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const observerRef = useRef<HTMLDivElement>(null);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+
+  const isFavoritesView = searchParams.get('favorites') === 'true';
+  const sortParam = searchParams.get('sort');
 
   const [filters, setFilters] = useState({
     search: searchParams.get('search') || '',
@@ -210,6 +215,9 @@ const ExplorePage: React.FC = () => {
   };
 
   useEffect(() => {
+    // Jangan update URL jika sedang dalam mode 'favorites' atau 'sort' khusus
+    if (isFavoritesView || sortParam) return;
+
     const newParams = new URLSearchParams();
     if (filters.search) newParams.set('search', filters.search);
     if (filters.district !== 'all') newParams.set('district', filters.district);
@@ -220,20 +228,27 @@ const ExplorePage: React.FC = () => {
     if (filters.crowdAfternoon < 5) newParams.set('crowd_afternoon', String(filters.crowdAfternoon));
     if (filters.crowdEvening < 5) newParams.set('crowd_evening', String(filters.crowdEvening));
     setSearchParams(newParams, { replace: true });
-  }, [filters, setSearchParams]);
+  }, [filters, setSearchParams, isFavoritesView, sortParam]);
 
   const sortedCafes: CafeWithDistance[] = useMemo(() => {
-    let processedCafes: Cafe[] = cafes.filter(cafe => {
-      if (filters.search && !cafe.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
-      if (filters.district !== 'all' && cafe.district !== filters.district) return false;
-      if (filters.vibes.length > 0 && !filters.vibes.every(v => cafe.vibes.some(cv => cv.id === v))) return false;
-      if (filters.amenities.length > 0 && !filters.amenities.every(a => cafe.amenities.some(ca => ca.id === a))) return false;
-      if (cafe.priceTier > filters.priceTier) return false;
-      if (cafe.avgCrowdMorning > filters.crowdMorning) return false;
-      if (cafe.avgCrowdAfternoon > filters.crowdAfternoon) return false;
-      if (cafe.avgCrowdEvening > filters.crowdEvening) return false;
-      return true;
-    });
+    let processedCafes: Cafe[];
+    
+    if (isFavoritesView) {
+        const favoriteSet = new Set(favoriteIds);
+        processedCafes = cafes.filter(cafe => favoriteSet.has(cafe.id));
+    } else {
+        processedCafes = cafes.filter(cafe => {
+            if (filters.search && !cafe.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+            if (filters.district !== 'all' && cafe.district !== filters.district) return false;
+            if (filters.vibes.length > 0 && !filters.vibes.every(v => cafe.vibes.some(cv => cv.id === v))) return false;
+            if (filters.amenities.length > 0 && !filters.amenities.every(a => cafe.amenities.some(ca => ca.id === a))) return false;
+            if (cafe.priceTier > filters.priceTier) return false;
+            if (cafe.avgCrowdMorning > filters.crowdMorning) return false;
+            if (cafe.avgCrowdAfternoon > filters.crowdAfternoon) return false;
+            if (cafe.avgCrowdEvening > filters.crowdEvening) return false;
+            return true;
+        });
+    }
 
     if (sortBy === 'distance' && userLocation) {
         return processedCafes
@@ -241,7 +256,11 @@ const ExplorePage: React.FC = () => {
                 ...cafe,
                 distance: calculateDistance(userLocation.lat, userLocation.lng, cafe.coords.lat, cafe.coords.lng),
             }))
-            .sort((a, b) => a.distance - b.distance);
+            .sort((a, b) => a.distance! - b.distance!);
+    }
+    
+    if (sortParam === 'trending') {
+        return [...processedCafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
     }
     
     return [...processedCafes].sort((a, b) => {
@@ -254,7 +273,7 @@ const ExplorePage: React.FC = () => {
         const bReviewCount = b.reviews?.filter(r => r.status === 'approved').length || 0;
         return bReviewCount - aReviewCount;
     });
-  }, [cafes, filters, sortBy, userLocation]);
+  }, [cafes, filters, sortBy, userLocation, isFavoritesView, favoriteIds, sortParam]);
 
   const visibleCafes = useMemo(() => {
     return sortedCafes.slice(0, visibleCount);
@@ -262,7 +281,7 @@ const ExplorePage: React.FC = () => {
 
   useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE);
-  }, [filters, sortBy]);
+  }, [filters, sortBy, isFavoritesView, sortParam]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -301,6 +320,8 @@ const ExplorePage: React.FC = () => {
   const filterPanelProps = {
     filters, handleFilterChange, toggleMultiSelect, sortBy, isLocating, locationError, handleSortByDistance
   };
+  
+  const isSpecialView = isFavoritesView || sortParam === 'trending';
 
   return (
     <div className="container mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
@@ -321,7 +342,7 @@ const ExplorePage: React.FC = () => {
       </div>
 
       {/* Filters Sidebar for Desktop */}
-      <aside className="hidden lg:block lg:w-1/4 xl:w-1/5 bg-card p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-24">
+      <aside className={`hidden lg:block lg:w-1/4 xl:w-1/5 bg-card p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-24 transition-opacity ${isSpecialView ? 'opacity-50 pointer-events-none' : ''}`}>
         <FilterPanelContent {...filterPanelProps} />
       </aside>
 
@@ -331,7 +352,8 @@ const ExplorePage: React.FC = () => {
         <div className="lg:hidden mb-6">
             <button 
                 onClick={() => setIsFiltersOpen(true)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-card border border-border rounded-2xl font-bold shadow-sm active:scale-95 transition-transform"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-card border border-border rounded-2xl font-bold shadow-sm active:scale-95 transition-transform disabled:opacity-50"
+                disabled={isSpecialView}
             >
                 <AdjustmentsHorizontalIcon className="h-6 w-6 text-brand" />
                 <span>Filter & Urutkan</span>
@@ -344,7 +366,8 @@ const ExplorePage: React.FC = () => {
                 placeholder="Cari berdasarkan nama cafe..."
                 value={filters.search}
                 onChange={e => handleFilterChange('search', e.target.value)}
-                className="w-full p-4 pl-12 text-lg rounded-2xl border-2 border-border focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm bg-card text-primary dark:text-white dark:placeholder-muted"
+                className="w-full p-4 pl-12 text-lg rounded-2xl border-2 border-border focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm bg-card text-primary dark:text-white dark:placeholder-muted disabled:opacity-50"
+                disabled={isSpecialView}
             />
         </div>
         <div className="relative z-10 rounded-3xl mb-8 overflow-hidden shadow-md h-96 border border-border">
@@ -352,7 +375,10 @@ const ExplorePage: React.FC = () => {
         </div>
         
         <h2 className="text-3xl font-bold font-jakarta mb-6">
-            {loading ? 'Mencari cafe...' : `${sortedCafes.length} Cafe Ditemukan`}
+            {loading ? 'Mencari cafe...' : 
+             isFavoritesView ? `Kafe Favoritmu (${sortedCafes.length})` :
+             sortParam === 'trending' ? `Kafe Paling Trending (${sortedCafes.length})` :
+             `${sortedCafes.length} Cafe Ditemukan`}
         </h2>
 
         {loading ? (

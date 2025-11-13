@@ -4,7 +4,7 @@ import { Cafe, Review } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { useFavorites } from '../context/FavoriteContext';
-import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
+import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
@@ -44,6 +44,47 @@ const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color:
     );
 };
 
+const checkCafeOpenStatus = (openingHours: string): boolean => {
+    if (!openingHours || openingHours.toLowerCase().includes('24')) {
+        return false; // Not closed
+    }
+
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    const parts = openingHours.split(' - ');
+    if (parts.length !== 2) {
+        return false; // Invalid format, assume open
+    }
+
+    const [openTimeStr, closeTimeStr] = parts;
+    
+    const parseTime = (timeStr: string): number | null => {
+        const timeParts = timeStr.trim().split(':');
+        if (timeParts.length !== 2) return null;
+        const hours = parseInt(timeParts[0], 10);
+        const minutes = parseInt(timeParts[1], 10);
+        if (isNaN(hours) || isNaN(minutes)) return null;
+        return hours * 60 + minutes;
+    };
+
+    const openTime = parseTime(openTimeStr);
+    const closeTime = parseTime(closeTimeStr);
+
+    if (openTime === null || closeTime === null) {
+        return false; // Invalid time format, assume open
+    }
+
+    // Handle overnight case (e.g., 16:00 - 02:00)
+    if (closeTime < openTime) {
+        // It's open if current time is after open time OR before close time
+        return !(currentTime >= openTime || currentTime < closeTime);
+    } else {
+        // Same day case (e.g., 08:00 - 22:00)
+        return !(currentTime >= openTime && currentTime < closeTime);
+    }
+};
+
 const DetailPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
@@ -58,11 +99,15 @@ const DetailPage: React.FC = () => {
     const [reviewsExpanded, setReviewsExpanded] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [isClosed, setIsClosed] = useState(false);
 
     useEffect(() => {
         if (slug && cafes.length > 0) {
             const currentCafe = cafes.find(c => c.slug === slug);
             setCafe(currentCafe || null);
+            if (currentCafe?.openingHours) {
+                setIsClosed(checkCafeOpenStatus(currentCafe.openingHours));
+            }
         }
     }, [slug, cafes]);
 
@@ -169,16 +214,22 @@ const DetailPage: React.FC = () => {
                             <MapPinIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
                             <span>{cafe.address}</span>
                         </div>
-                        <div className="flex items-center text-muted mb-4">
+                        <div className="flex items-center text-muted">
                              <ClockIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
                             <span>Buka: {cafe.openingHours}</span>
                         </div>
+                        {isClosed && (
+                            <div className="mt-3 flex items-center gap-3 bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 p-3 rounded-xl text-sm font-semibold">
+                                <ExclamationTriangleIcon className="h-6 w-6 flex-shrink-0" />
+                                <span>Kafe sudah tutup saat ini.</span>
+                            </div>
+                        )}
                         {cafe.description && (
                             <p className="my-4 text-primary dark:text-gray-300 italic text-lg border-l-4 border-brand/50 pl-4">
                                 {cafe.description}
                             </p>
                         )}
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 mt-4">
                             {cafe.vibes.map(v => <span key={v.id} className="bg-brand/10 text-brand px-3 py-1 rounded-full text-sm font-semibold dark:bg-brand/20">{v.name}</span>)}
                             {cafe.amenities.map(a => <span key={a.id} className="bg-gray-100 dark:bg-gray-700/50 px-3 py-1 rounded-full text-sm">{a.icon} {a.name}</span>)}
                         </div>
@@ -262,7 +313,7 @@ const DetailPage: React.FC = () => {
                 <aside className="lg:sticky lg:top-24 self-start">
                     <div className="space-y-8">
                         <div className="rounded-3xl shadow-md overflow-hidden h-64 border border-border">
-                            <InteractiveMap cafe={cafe} theme={theme} />
+                            <InteractiveMap cafe={cafe} theme={theme} showUserLocation={true} />
                         </div>
                         <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
                             Buka di Google Maps
