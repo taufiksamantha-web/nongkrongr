@@ -32,6 +32,39 @@ const calculateAverages = (cafe: Cafe): Cafe => {
     };
 };
 
+/**
+ * [FIX] Creates a clean data object containing only the fields that directly map to the 'cafes' table columns.
+ * This prevents sending extraneous client-side data (like calculated averages, full review objects, etc.)
+ * during insert or update operations, which can cause silent failures.
+ * @param data The raw cafe data object, likely from a form.
+ * @returns A sanitized object ready for Supabase insert/update.
+ */
+const prepareCafeRecord = (data: Partial<Cafe>) => {
+    const record = {
+        id: data.id,
+        slug: data.slug,
+        name: data.name,
+        description: data.description,
+        address: data.address,
+        city: data.city,
+        district: data.district,
+        openingHours: data.openingHours,
+        priceTier: data.priceTier,
+        lat: data.coords?.lat,
+        lng: data.coords?.lng,
+        isSponsored: data.isSponsored,
+        sponsoredUntil: data.sponsoredUntil,
+        sponsoredRank: data.sponsoredRank,
+        logoUrl: data.logoUrl,
+        coverUrl: data.coverUrl,
+        manager_id: data.manager_id,
+    };
+    // Remove any keys that are undefined to avoid issues with Supabase client
+    Object.keys(record).forEach(key => (record as any)[key] === undefined && delete (record as any)[key]);
+    return record;
+};
+
+
 interface CafeContextType {
     cafes: Cafe[];
     loading: boolean;
@@ -180,26 +213,59 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isMutating.current = false;
         }
     };
+    
+    // [REFACTOR] Centralized logic for updating relations
+    const updateRelations = async (cafeId: string, relations: Partial<Cafe>) => {
+        const { vibes, amenities, spots, events } = relations;
+        
+        // Delete existing relations first
+        await Promise.all([
+            supabase.from('cafe_vibes').delete().eq('cafe_id', cafeId),
+            supabase.from('cafe_amenities').delete().eq('cafe_id', cafeId),
+            supabase.from('spots').delete().eq('cafe_id', cafeId),
+            supabase.from('events').delete().eq('cafe_id', cafeId),
+        ]);
+
+        // Prepare insert promises
+        const insertPromises = [];
+        if (vibes && (vibes as Vibe[]).length > 0) {
+            insertPromises.push(supabase.from('cafe_vibes').insert((vibes as Vibe[]).map(v => ({ cafe_id: cafeId, vibe_id: v.id }))));
+        }
+        if (amenities && (amenities as Amenity[]).length > 0) {
+            insertPromises.push(supabase.from('cafe_amenities').insert((amenities as Amenity[]).map(a => ({ cafe_id: cafeId, amenity_id: a.id }))));
+        }
+        if (spots && (spots as Spot[]).length > 0) {
+            insertPromises.push(supabase.from('spots').insert((spots as Spot[]).map(s => ({ ...s, cafe_id: cafeId }))));
+        }
+        if (events && (events as Event[]).length > 0) {
+            insertPromises.push(supabase.from('events').insert((events as Event[]).map(e => ({ ...e, cafe_id: cafeId }))));
+        }
+        
+        const results = await Promise.all(insertPromises);
+        const errors = results.map(r => r.error).filter(Boolean);
+        if (errors.length > 0) {
+            throw new Error(`Gagal menyimpan data relasi: ${errors.map(e => e.message).join(', ')}`);
+        }
+    };
 
     const addCafe = async (cafeData: Partial<Cafe>) => {
         return performMutation(async () => {
-            const { vibes = [], amenities = [], spots = [], events = [] } = cafeData;
             const cafeId = `cafe-${crypto.randomUUID()}`;
-            
             const generateSlug = (name?: string, id?: string): string => {
                 const baseSlug = (name || 'cafe').toLowerCase().replace(/&/g, 'and').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
                 const uniquePart = id ? id.substring(id.length - 12) : Math.random().toString(36).substring(2, 9);
                 return `${baseSlug}-${uniquePart}`;
             };
-            const slug = cafeData.slug || generateSlug(cafeData.name, cafeId);
-
-            const cafeRecord = {
-                id: cafeId, slug, name: cafeData.name, description: cafeData.description, address: cafeData.address, city: cafeData.city, district: cafeData.district, openingHours: cafeData.openingHours, priceTier: cafeData.priceTier, lat: cafeData.coords?.lat, lng: cafeData.coords?.lng, isSponsored: cafeData.isSponsored, sponsoredUntil: cafeData.sponsoredUntil, sponsoredRank: cafeData.sponsoredRank, logoUrl: cafeData.logoUrl, coverUrl: cafeData.coverUrl,
+            
+            const fullCafeData = {
+                ...cafeData,
+                id: cafeId,
+                slug: cafeData.slug || generateSlug(cafeData.name, cafeId),
                 manager_id: currentUser?.role === 'admin_cafe' ? currentUser.id : null,
             };
-            
-            Object.keys(cafeRecord).forEach(key => (cafeRecord as any)[key] === undefined && delete (cafeRecord as any)[key]);
-            
+
+            const cafeRecord = prepareCafeRecord(fullCafeData);
+
             // Step 1: Insert main cafe record.
             const { error: cafeError } = await supabase.from('cafes').insert([cafeRecord]);
             if (cafeError) {
@@ -207,74 +273,25 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 throw new Error(`Gagal menyimpan data kafe: ${cafeError.message}. (Hint: Pastikan 'slug' unik).`);
             }
 
-            // Step 2: Insert relations. If any of these fail, the whole operation fails and rolls back (conceptually).
-            if ((vibes as Vibe[]).length > 0) {
-                const { error } = await supabase.from('cafe_vibes').insert((vibes as Vibe[]).map(v => ({ cafe_id: cafeId, vibe_id: v.id })));
-                if (error) throw new Error(`Gagal menyimpan Vibes: ${error.message}`);
-            }
-            if ((amenities as Amenity[]).length > 0) {
-                const { error } = await supabase.from('cafe_amenities').insert((amenities as Amenity[]).map(a => ({ cafe_id: cafeId, amenity_id: a.id })));
-                if (error) throw new Error(`Gagal menyimpan Fasilitas: ${error.message}`);
-            }
-            if ((spots as Spot[]).length > 0) {
-                const { error } = await supabase.from('spots').insert((spots as Spot[]).map(s => ({ ...s, cafe_id: cafeId })));
-                if (error) throw new Error(`Gagal menyimpan Spot Foto: ${error.message}`);
-            }
-            if ((events as Event[]).length > 0) {
-                const { error } = await supabase.from('events').insert((events as Event[]).map(e => ({ ...e, cafe_id: cafeId })));
-                if (error) throw new Error(`Gagal menyimpan Events: ${error.message}`);
-            }
-
+            // Step 2: Insert relations.
+            await updateRelations(cafeId, cafeData);
+            
             return cafeRecord;
         }, 'addCafe');
     };
     
     const updateCafe = async (id: string, updatedData: Partial<Cafe>) => {
         return performMutation(async () => {
-            const { vibes, amenities, spots, events, coords, ...mainData } = updatedData;
-
-            // Step 1: Update the main cafe data if there's any.
-            const cafeRecord = { ...mainData, ...(coords && { lat: coords.lat, lng: coords.lng }) };
-            Object.keys(cafeRecord).forEach(key => (cafeRecord as any)[key] === undefined && delete (cafeRecord as any)[key]);
-
-            if (Object.keys(cafeRecord).length > 0) {
+             // Step 1: Sanitize and update the main cafe data.
+            const cafeRecord = prepareCafeRecord(updatedData);
+            if (Object.keys(cafeRecord).length > 1) { // Check if there's more than just the ID
                  const { error: cafeError } = await supabase.from('cafes').update(cafeRecord).eq('id', id);
                  if (cafeError) throw new Error(`Gagal update data utama: ${cafeError.message}`);
             }
 
-            // Step 2: Update relations using a "delete-then-insert" strategy for simplicity.
-            if (vibes) {
-                const { error: deleteError } = await supabase.from('cafe_vibes').delete().eq('cafe_id', id);
-                if(deleteError) throw new Error(`Gagal hapus vibes lama: ${deleteError.message}`);
-                if ((vibes as Vibe[]).length > 0) {
-                    const { error: insertError } = await supabase.from('cafe_vibes').insert((vibes as Vibe[]).map(v => ({ cafe_id: id, vibe_id: v.id })));
-                    if(insertError) throw new Error(`Gagal simpan vibes baru: ${insertError.message}`);
-                }
-            }
-            if (amenities) {
-                const { error: deleteError } = await supabase.from('cafe_amenities').delete().eq('cafe_id', id);
-                if(deleteError) throw new Error(`Gagal hapus fasilitas lama: ${deleteError.message}`);
-                if ((amenities as Amenity[]).length > 0) {
-                     const { error: insertError } = await supabase.from('cafe_amenities').insert((amenities as Amenity[]).map(a => ({ cafe_id: id, amenity_id: a.id })));
-                     if(insertError) throw new Error(`Gagal simpan fasilitas baru: ${insertError.message}`);
-                }
-            }
-            if (spots) {
-                const { error: deleteError } = await supabase.from('spots').delete().eq('cafe_id', id);
-                 if(deleteError) throw new Error(`Gagal hapus spot foto lama: ${deleteError.message}`);
-                if ((spots as Spot[]).length > 0) {
-                    const { error: insertError } = await supabase.from('spots').insert((spots as Spot[]).map(s => ({ ...s, cafe_id: id })));
-                    if(insertError) throw new Error(`Gagal simpan spot foto baru: ${insertError.message}`);
-                }
-            }
-            if (events) {
-                const { error: deleteError } = await supabase.from('events').delete().eq('cafe_id', id);
-                if(deleteError) throw new Error(`Gagal hapus event lama: ${deleteError.message}`);
-                if ((events as Event[]).length > 0) {
-                    const { error: insertError } = await supabase.from('events').insert((events as Event[]).map(e => ({ ...e, cafe_id: id })));
-                    if(insertError) throw new Error(`Gagal simpan event baru: ${insertError.message}`);
-                }
-            }
+            // Step 2: Update relations using a "delete-then-insert" strategy.
+            await updateRelations(id, updatedData);
+
         }, 'updateCafe');
     };
 

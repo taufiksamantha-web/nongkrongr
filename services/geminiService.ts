@@ -69,7 +69,19 @@ export const geminiService = {
       return response.text;
     } catch (error) {
       console.error("Error generating description with Gemini:", error);
-      throw new Error("Gagal membuat deskripsi dengan AI.");
+      if (error instanceof Error) {
+          // Check for specific, user-actionable errors
+          if (error.message.includes('API key not valid')) {
+              throw new Error('Gagal: Kunci API Gemini tidak valid. Harap periksa kembali kunci Anda.');
+          }
+          if (error.message.toLowerCase().includes('quota')) {
+              throw new Error('Gagal: Kuota API Gemini Anda telah terlampaui.');
+          }
+          // For other errors, pass a more generic but still informative message
+          throw new Error(`Gagal membuat deskripsi: ${error.message}`);
+      }
+      // Fallback for non-Error objects
+      throw new Error("Terjadi kesalahan yang tidak diketahui saat menghubungi layanan AI.");
     }
   },
 

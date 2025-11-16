@@ -10,7 +10,13 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  state: State = { hasError: false };
+  // FIX: Replaced state property initializer with a constructor. This makes component
+  // initialization more explicit and can resolve TypeScript type inference issues,
+  // ensuring `this.props` is correctly recognized.
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
   static getDerivedStateFromError(_error: Error): Partial<State> {
     return { hasError: true };
@@ -26,7 +32,7 @@ class ErrorBoundary extends React.Component<Props, State> {
     window.location.reload();
   };
 
-  render() {
+  render(): ReactNode {
     if (this.state.hasError) {
        return (
         <div className="flex items-center justify-center min-h-screen bg-soft p-6">
@@ -58,8 +64,6 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
     
-    // FIX: The `props` property is inherited from React.Component. Accessing `this.props` is the correct
-    // way to get children in a class component. The previous error was likely due to a type-checking anomaly.
     return this.props.children;
   }
 }
