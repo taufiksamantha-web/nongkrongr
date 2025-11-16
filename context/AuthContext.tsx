@@ -50,6 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Validate whatever session we found (or didn't find).
             validateAndSetUser(session).finally(() => {
                 // IMPORTANT: Ensure loading is set to false only after the initial check is complete.
+                // This prevents race conditions where the app might render before the user profile is fetched.
                 setLoading(false);
             });
         });
@@ -98,7 +99,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return (
         <AuthContext.Provider value={value}>
             {/* Render children only after the initial auth check is complete. */}
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 };

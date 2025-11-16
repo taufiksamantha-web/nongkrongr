@@ -10,12 +10,15 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Reverted to a standard constructor for state initialization. The class property
-  // syntax may cause type inference issues in some environments, and using a constructor
-  // ensures `this.props` is correctly typed and accessible.
+  // FIX: The error "Property 'props' does not exist" suggests `this.props` is not
+  // being initialized. Adding an explicit constructor that calls `super(props)`
+  // ensures `this.props` is set correctly. State initialization is also moved
+  // into the constructor for consistency.
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = {
+      hasError: false,
+    };
   }
 
   public static getDerivedStateFromError(_: Error): State {
@@ -29,12 +32,18 @@ class ErrorBoundary extends React.Component<Props, State> {
     // e.g., logErrorToMyService(error, errorInfo);
   }
 
+  /**
+   * Melakukan 'hard reset' pada aplikasi.
+   * Ini akan menghapus semua data yang disimpan secara lokal di browser (seperti favorit,
+   * tema, dll.) dan kemudian memuat ulang halaman. Ini efektif untuk mengatasi
+   * masalah yang disebabkan oleh data cache atau sesi yang rusak.
+   */
   private handleClearCacheAndReload = () => {
     // Clear all locally stored data
     localStorage.clear();
     sessionStorage.clear();
     
-    // Reload the page
+    // Reload the page, forcing a re-fetch from the server
     window.location.reload();
   };
 
@@ -42,28 +51,28 @@ class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex items-center justify-center min-h-screen bg-soft p-6">
-            <div className="max-w-lg w-full bg-card p-8 rounded-3xl shadow-2xl text-center border border-border">
+            <div className="max-w-lg w-full bg-card p-8 rounded-3xl shadow-2xl text-center border border-border animate-fade-in-up">
                 <ExclamationTriangleIcon className="h-16 w-16 mx-auto text-accent-amber mb-4" />
-                <h1 className="text-3xl font-bold font-jakarta text-primary dark:text-white">Oops! Terjadi Kesalahan</h1>
+                <h1 className="text-3xl font-bold font-jakarta text-primary dark:text-white">Aplikasi Mengalami Kendala</h1>
                 <p className="text-muted mt-4">
-                    Maaf, ada sesuatu yang tidak beres. Tim kami telah diberi tahu tentang masalah ini.
+                    Maaf, terjadi kesalahan tak terduga yang menghentikan aplikasi. Anda dapat mencoba memuat ulang halaman untuk memperbaikinya.
                 </p>
                 <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
                     <button
                         onClick={() => window.location.reload()}
-                        className="bg-brand text-white font-bold py-3 px-6 rounded-2xl hover:bg-brand/90 transition-all duration-300"
+                        className="bg-gray-200 dark:bg-gray-700 text-primary dark:text-white font-bold py-3 px-6 rounded-2xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-300"
                     >
-                        Refresh Halaman
+                        Coba Refresh
                     </button>
                      <button
                         onClick={this.handleClearCacheAndReload}
-                        className="bg-gray-200 dark:bg-gray-700 text-primary dark:text-white font-bold py-3 px-6 rounded-2xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-300"
+                        className="bg-brand text-white font-bold py-3 px-6 rounded-2xl hover:bg-brand/90 transition-all duration-300"
                     >
-                        Hapus Cache &amp; Refresh
+                        Reset &amp; Muat Ulang
                     </button>
                 </div>
                  <p className="mt-6 text-sm text-muted">
-                    Jika masalah berlanjut, mencoba "Hapus Cache" mungkin bisa membantu.
+                    Jika me-refresh tidak berhasil, "Reset & Muat Ulang" akan menghapus cache dan sesi Anda untuk memulai dari awal.
                 </p>
             </div>
         </div>

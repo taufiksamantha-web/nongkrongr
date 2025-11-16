@@ -64,21 +64,56 @@ const Header: React.FC = () => {
   );
 };
 
+const FullScreenLoader: React.FC = () => (
+    <div className="fixed inset-0 bg-soft flex flex-col items-center justify-center z-[2000]">
+        <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-16 w-auto mb-6" />
+        <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-brand"></div>
+        <p className="mt-6 text-muted font-semibold">Mempersiapkan Aplikasi...</p>
+    </div>
+);
+
+
 const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }> = ({ showWelcome, onCloseWelcome }) => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { currentUser } = useAuth();
+    const { currentUser, loading: authLoading } = useAuth();
+    const [isNavigating, setIsNavigating] = useState(true);
     
     const isAdminPage = location.pathname.startsWith('/admin');
     const isHomePage = location.pathname === '/';
 
     useEffect(() => {
-        // Jika pengguna sudah login dan mencoba mengakses halaman publik (bukan dasbor),
-        // arahkan mereka secara otomatis ke dasbor mereka.
+        // Jangan lakukan apa-apa sampai pengecekan otentikasi awal selesai.
+        if (authLoading) {
+            return;
+        }
+
+        let didNavigate = false;
+
+        // Logika redirect:
+        // 1. Jika user sudah login dan berada di halaman publik, paksa ke dashboard.
         if (currentUser && !isAdminPage) {
             navigate('/admin', { replace: true });
+            didNavigate = true;
+        } 
+        // 2. Jika user tidak login (misal sesi expired) tapi masih di URL admin, paksa ke home.
+        else if (!currentUser && isAdminPage) {
+            navigate('/', { replace: true });
+            didNavigate = true;
         }
-    }, [currentUser, isAdminPage, navigate]);
+
+        // Jika tidak ada navigasi yang terjadi, kita siap untuk merender.
+        if (!didNavigate) {
+            setIsNavigating(false);
+        }
+
+    }, [currentUser, isAdminPage, authLoading, navigate]);
+
+    // Tampilkan loader selama pengecekan otentikasi awal ATAU selama logika navigasi internal kita berjalan.
+    // Ini adalah 'gerbang' yang mencegah race condition.
+    if (authLoading || isNavigating) {
+        return <FullScreenLoader />;
+    }
 
 
     return (
