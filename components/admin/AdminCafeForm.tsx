@@ -11,7 +11,7 @@ interface AdminCafeFormProps {
     cafe?: Cafe | null;
     onSave: (cafe: any) => Promise<void>;
     onCancel: () => void;
-    userRole: 'admin' | 'user';
+    userRole: 'admin' | 'user' | 'admin_cafe';
     setNotification: (notification: { message: string, type: 'success' | 'error' } | null) => void;
 }
 
@@ -61,12 +61,28 @@ const FormHelperText: React.FC<{ children: React.ReactNode }> = ({ children }) =
     <p className="text-sm text-muted mt-1">{children}</p>
 );
 
+// Helper function to safely format a date for the date input's value property
+const getDisplayDate = (date: string | Date | undefined): string => {
+    if (!date) return '';
+    try {
+        if (typeof date === 'string') {
+            // Handles both "YYYY-MM-DD" and full ISO strings like "2024-08-01T00:00:00.000Z"
+            return date.split('T')[0];
+        }
+        // Handles Date objects
+        return new Date(date).toISOString().split('T')[0];
+    } catch (error) {
+        console.warn("Could not parse date for display:", date, error);
+        return '';
+    }
+};
+
 const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, userRole, setNotification }) => {
     
     const [step, setStep] = useState(1);
     const isAdmin = userRole === 'admin';
     const formSteps = isAdmin 
-        ? ['Info Dasar', 'Operasional', 'Vibes & Fasilitas', 'Spot Foto', 'Events', 'Sponsor'] 
+        ? ['Info Dasar', 'Operasional', 'Vibes & Fasilitas', 'Spot Foto', 'Sponsor'] 
         : ['Info Dasar', 'Operasional', 'Vibes & Fasilitas', 'Spot Foto', 'Events'];
 
     const parseOpeningHours = (hoursString?: string) => {
@@ -100,7 +116,6 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
     const [spotPreviews, setSpotPreviews] = useState<(string | null)[]>([]);
     const [eventPreviews, setEventPreviews] = useState<(string | null)[]>([]);
     const [isSaving, setIsSaving] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
     const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
     const geocodeTimeoutRef = useRef<number | null>(null);
@@ -140,11 +155,26 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
             setIsGeocoding(true);
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=id`);
-                if (!res.ok) throw new Error('Geocoding service failed.');
+                if (!res.ok) throw new Error('Layanan Geocoding gagal merespons.');
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
-                setFormData(prev => ({ ...prev, address: data.display_name || '', ...(data.address.city && { city: data.address.city }), ...(data.address.suburb && { district: data.address.suburb }) }));
-                setNotification({ message: "Alamat berhasil ditemukan!", type: 'success' });
+
+                const address = data.display_name || '';
+                const city = data.address.city || data.address.county || data.address.state_district || '';
+                const district = data.address.suburb || data.address.city_district || data.address.town || '';
+                
+                setFormData(prev => ({ 
+                    ...prev, 
+                    address: address, 
+                    city: city, 
+                    district: district
+                }));
+
+                if (!city || !district) {
+                    setNotification({ message: "Alamat ditemukan, namun Kota/Kecamatan tidak terdeteksi. Harap isi manual.", type: 'error' });
+                } else {
+                    setNotification({ message: "Alamat, Kota, dan Kecamatan berhasil diisi otomatis!", type: 'success' });
+                }
             } catch (error) {
                 console.error("Reverse geocoding error:", error);
                 setNotification({ message: "Gagal mendapatkan alamat dari koordinat.", type: 'error' });
@@ -254,26 +284,81 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!validateAllSteps()) return;
+        if (isSaving || !validateAllSteps()) return;
+        
         setIsSaving(true);
-        try {
-            setIsUploading(true);
-            const [finalLogoUrl, finalCoverUrl] = await Promise.all([
-                logoFile ? cloudinaryService.uploadImage(await fileToBase64(logoFile)) : Promise.resolve(formData.logoUrl),
-                coverFile ? cloudinaryService.uploadImage(await fileToBase64(coverFile)) : Promise.resolve(formData.coverUrl),
-            ]);
-            const processedSpots = await Promise.all(formData.spots.map(async (spot, i) => ({...spot, photoUrl: spotFiles[i] ? await cloudinaryService.uploadImage(await fileToBase64(spotFiles[i]!)) : spot.photoUrl})));
-            const processedEvents = await Promise.all(formData.events.map(async (event, i) => ({...event, imageUrl: eventFiles[i] ? await cloudinaryService.uploadImage(await fileToBase64(eventFiles[i]!)) : event.imageUrl})));
-            setIsUploading(false);
+        setNotification(null);
 
-            await onSave({
-                name: formData.name, description: formData.description, address: formData.address, city: formData.city, district: formData.district, openingHours: formData.is24Hours ? '24 Jam' : `${formData.openingTime} - ${formData.closingTime}`, priceTier: Number(formData.priceTier), coords: { lat: parseFloat(String(formData.lat)), lng: parseFloat(String(formData.lng)) }, logoUrl: finalLogoUrl, coverUrl: finalCoverUrl, vibes: formData.vibes, amenities: formData.amenities, spots: processedSpots.filter(s => s.photoUrl || s.title.trim()), events: processedEvents.filter(e => e.name.trim()), isSponsored: isAdmin ? formData.isSponsored : false, sponsoredUntil: isAdmin && formData.sponsoredUntil ? new Date(formData.sponsoredUntil) : null, sponsoredRank: isAdmin ? Number(formData.sponsoredRank) : 0,
-            });
-        } catch (error) {
-            setNotification({ message: error instanceof Error ? error.message : 'Error tidak diketahui.', type: 'error' });
+        try {
+            setNotification({ message: 'Mengupload gambar...', type: 'success' });
+
+            const logoUploadPromise = logoFile ? fileToBase64(logoFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(formData.logoUrl);
+            const coverUploadPromise = coverFile ? fileToBase64(coverFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(formData.coverUrl || DEFAULT_COVER_URL);
+            const spotUploadPromises = formData.spots.map((spot, i) => spotFiles[i] ? fileToBase64(spotFiles[i]!).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(spot.photoUrl));
+            const eventUploadPromises = !isAdmin ? formData.events.map((event, i) => eventFiles[i] ? fileToBase64(eventFiles[i]!).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(event.imageUrl || '')) : [];
+            
+            const [finalLogoUrl, finalCoverUrl, ...restUrls] = await Promise.all([logoUploadPromise, coverUploadPromise, ...spotUploadPromises, ...eventUploadPromises]);
+            const finalSpotUrls = restUrls.slice(0, spotUploadPromises.length);
+            const finalEventUrls = restUrls.slice(spotUploadPromises.length);
+
+            setNotification({ message: 'Menyusun data...', type: 'success' });
+
+            const finalSpots = formData.spots
+                .map((spot, i) => ({ ...spot, photoUrl: finalSpotUrls[i] }))
+                .filter(s => s.title.trim() || s.photoUrl);
+
+            const finalEvents = !isAdmin ? formData.events
+                .map((event, i) => {
+                    const startDateString = getDisplayDate(event.start_date);
+                    const endDateString = getDisplayDate(event.end_date);
+                    return {
+                        ...event,
+                        imageUrl: finalEventUrls[i],
+                        start_date: startDateString ? `${startDateString}T00:00:00Z` : new Date().toISOString(),
+                        end_date: endDateString ? `${endDateString}T23:59:59Z` : new Date().toISOString(),
+                    };
+                })
+                .filter(e => e.name.trim()) : [];
+
+            const payload = {
+                name: formData.name.trim(),
+                description: formData.description.trim(),
+                address: formData.address.trim(),
+                city: formData.city.trim(),
+                district: formData.district.trim(),
+                openingHours: formData.is24Hours ? '24 Jam' : `${formData.openingTime} - ${formData.closingTime}`,
+                priceTier: Number(formData.priceTier),
+                coords: { lat: parseFloat(String(formData.lat)), lng: parseFloat(String(formData.lng)) },
+                logoUrl: finalLogoUrl,
+                coverUrl: finalCoverUrl,
+                vibes: formData.vibes,
+                amenities: formData.amenities,
+                spots: finalSpots,
+                events: finalEvents,
+                isSponsored: isAdmin ? formData.isSponsored : (cafe?.isSponsored || false),
+                sponsoredUntil: isAdmin && formData.isSponsored && formData.sponsoredUntil ? new Date(formData.sponsoredUntil) : null,
+                sponsoredRank: isAdmin && formData.isSponsored ? Number(formData.sponsoredRank) : 0,
+            };
+
+            if (!payload.logoUrl) delete (payload as any).logoUrl;
+
+            setNotification({ message: 'Menyimpan ke database...', type: 'success' });
+            await onSave(payload);
+
+        } catch (error: any) {
+            console.error("Save Error:", error);
+            const errorMessage = error.message || 'Terjadi kesalahan saat menyimpan.';
+            if (errorMessage.includes('unique constraint')) {
+                setNotification({ message: 'Gagal: Nama/Slug kafe ini mungkin sudah ada.', type: 'error' });
+            } else if (errorMessage.includes('Cloudinary')) {
+                setNotification({ message: `Gagal upload gambar: ${errorMessage}`, type: 'error' });
+            } else {
+                setNotification({ message: `Gagal menyimpan: ${errorMessage}`, type: 'error' });
+            }
+            // Rethrow error to let parent know submission failed
+            throw error;
         } finally {
             setIsSaving(false);
-            setIsUploading(false);
         }
     };
     
@@ -287,16 +372,16 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
             <div className="bg-card rounded-3xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <div className="p-4 sm:p-8 border-b border-border"><h2 className="text-2xl font-bold font-jakarta text-primary text-center mb-4">{cafe ? 'Edit Cafe' : 'Tambah Cafe Baru'}</h2><MultiStepProgressBar steps={formSteps} currentStep={step} onStepClick={setStep} /></div>
                 <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-4 sm:p-8 space-y-6 overflow-y-auto">
-                    {step === 1 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 1: Informasi Dasar</h3> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Identitas Kafe</legend> <FormGroup><FormLabel htmlFor="name">Nama Cafe</FormLabel><input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Contoh: Kopi Senja" className={inputClass} required /></FormGroup> <FormGroup><FormLabel htmlFor="description">Deskripsi</FormLabel><textarea id="description" name="description" value={formData.description} onChange={handleChange} placeholder="Jelaskan keunikan dari cafe ini..." className={`${inputClass} h-24`} /><FormHelperText>Tulis deskripsi singkat atau biarkan AI yang membuatnya.</FormHelperText><button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc || !formData.name} className="mt-2 w-full bg-accent-cyan/10 text-accent-cyan dark:bg-accent-cyan/20 font-semibold py-2 rounded-lg hover:bg-accent-cyan/20 dark:hover:bg-accent-cyan/30 disabled:opacity-50"> {isGeneratingDesc ? 'Generating...' : '✨ Generate Deskripsi dengan AI'} </button></FormGroup> </fieldset> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Lokasi</legend> <FormGroup><FormLabel htmlFor="coords">Koordinat Peta</FormLabel><input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /><FormHelperText>Salin & tempel koordinat dari Google Maps. Alamat akan terisi otomatis.</FormHelperText></FormGroup> <FormGroup><FormLabel htmlFor="address">Alamat (Otomatis)</FormLabel><div className="relative"><input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Menunggu koordinat..." className={`${inputClass} pr-10`} required />{isGeocoding && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>}</div></FormGroup> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="city">Kota/Kabupaten</FormLabel><select id="city" name="city" value={formData.city} onChange={handleChange} className={inputClass}>{SOUTH_SUMATRA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}</select></FormGroup><FormGroup><FormLabel htmlFor="district">Kecamatan</FormLabel><input id="district" name="district" value={formData.district} onChange={handleChange} placeholder="e.g., Ilir Barat I" className={inputClass} /></FormGroup></div> </fieldset> </div> )}
+                    {step === 1 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 1: Informasi Dasar</h3> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Identitas Kafe</legend> <FormGroup><FormLabel htmlFor="name">Nama Cafe</FormLabel><input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Contoh: Kopi Senja" className={inputClass} required /></FormGroup> <FormGroup><FormLabel htmlFor="description">Deskripsi</FormLabel><textarea id="description" name="description" value={formData.description} onChange={handleChange} placeholder="Jelaskan keunikan dari cafe ini..." className={`${inputClass} h-24`} /><FormHelperText>Tulis deskripsi singkat atau biarkan AI yang membuatnya.</FormHelperText><button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc || !formData.name} className="mt-2 w-full bg-accent-cyan/10 text-accent-cyan dark:bg-accent-cyan/20 font-semibold py-2 rounded-lg hover:bg-accent-cyan/20 dark:hover:bg-accent-cyan/30 disabled:opacity-50"> {isGeneratingDesc ? 'Generating...' : '✨ Generate Deskripsi dengan AI'} </button></FormGroup> </fieldset> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Lokasi</legend> <FormGroup><FormLabel htmlFor="coords">Koordinat Peta</FormLabel><input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /><FormHelperText>Salin & tempel koordinat dari Google Maps. Alamat akan terisi otomatis.</FormHelperText></FormGroup> <FormGroup><FormLabel htmlFor="address">Alamat (Otomatis)</FormLabel><div className="relative"><input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Menunggu koordinat..." className={`${inputClass} pr-10`} required />{isGeocoding && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>}</div></FormGroup> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="city">Kota/Kabupaten</FormLabel><input id="city" name="city" value={formData.city} onChange={handleChange} placeholder="e.g., Palembang" className={inputClass} /></FormGroup><FormGroup><FormLabel htmlFor="district">Kecamatan</FormLabel><input id="district" name="district" value={formData.district} onChange={handleChange} placeholder="e.g., Ilir Barat I" className={inputClass} /></FormGroup></div> </fieldset> </div> )}
                     {step === 2 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 2: Detail Operasional</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Jam Operasional</legend><div className="flex items-center gap-4"><input type="checkbox" id="is24Hours" name="is24Hours" checked={formData.is24Hours} onChange={handleChange} className="h-5 w-5 rounded text-brand focus:ring-brand" /><label htmlFor="is24Hours" className="font-medium text-primary">Buka 24 Jam</label></div>{!formData.is24Hours && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="openingTime">Jam Buka</FormLabel><input id="openingTime" name="openingTime" type="time" value={formData.openingTime} onChange={handleChange} className={inputClass} required={!formData.is24Hours} /></FormGroup><FormGroup><FormLabel htmlFor="closingTime">Jam Tutup</FormLabel><input id="closingTime" name="closingTime" type="time" value={formData.closingTime} onChange={handleChange} className={inputClass} required={!formData.is24Hours} /></FormGroup></div>)}</fieldset> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Detail Lainnya</legend><FormGroup><FormLabel htmlFor="priceTier">Kisaran Harga</FormLabel><select id="priceTier" name="priceTier" value={formData.priceTier} onChange={handleChange} className={inputClass}><option value={PriceTier.BUDGET}>Budget ($)</option><option value={PriceTier.STANDARD}>Standard ($$)</option><option value={PriceTier.PREMIUM}>Premium ($$$)</option><option value={PriceTier.LUXURY}>Luxury ($$$$)</option></select></FormGroup></fieldset> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Gambar</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormGroup><FormLabel htmlFor="logo">Logo (Opsional)</FormLabel><ImageWithFallback src={logoPreview || formData.logoUrl} alt="Logo" className="w-24 h-24 object-contain rounded-xl mb-2 bg-soft border" fallbackText="Logo"/><input id="logo" type="file" accept="image/*" onChange={(e) => e.target.files && setLogoFile(e.target.files[0])} className={fileInputClass} /></FormGroup><FormGroup><FormLabel htmlFor="cover">Cover Image (Wajib)</FormLabel><ImageWithFallback src={coverPreview || formData.coverUrl} defaultSrc={DEFAULT_COVER_URL} alt="Cover" className="w-full h-24 object-cover rounded-xl mb-2" /><input id="cover" type="file" accept="image/*" onChange={(e) => e.target.files && setCoverFile(e.target.files[0])} className={fileInputClass} /></FormGroup></div></fieldset> </div> )}
                     {step === 3 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 3: Vibe & Fasilitas</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Pilih Vibe</legend><div className="flex flex-wrap gap-3">{VIBES.map(v => <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v)} className={`px-4 py-2 rounded-full border-2 font-semibold ${formData.vibes.some(fv => fv.id === v.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>{v.name}</button>)}</div></fieldset> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Pilih Fasilitas</legend><div className="flex flex-wrap gap-3">{AMENITIES.map(a => <button type="button" key={a.id} onClick={() => handleMultiSelectChange('amenities', a)} className={`px-4 py-2 rounded-full border-2 font-semibold ${formData.amenities.some(fa => fa.id === a.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>{a.icon} {a.name}</button>)}</div></fieldset> </div> )}
                     {step === 4 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 4: Spot Foto</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Galeri Spot Foto</legend><div className="space-y-4 max-h-80 overflow-y-auto pr-2">{formData.spots.map((spot, index) => (<div key={spot.id} className="border p-4 rounded-lg bg-soft dark:bg-gray-900/50 relative"><button type="button" onClick={() => handleRemoveSpot(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 dark:bg-red-500/20 rounded-full h-7 w-7 flex items-center justify-center font-bold text-xl hover:bg-red-500 hover:text-white">&times;</button><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor={`spot-photo-${index}`}>Foto Spot</FormLabel><ImageWithFallback src={spotPreviews[index] || spot.photoUrl} alt="Spot" className="w-full h-32 object-cover rounded-md mb-2" /><input id={`spot-photo-${index}`} type="file" accept="image/*" onChange={e => handleSpotFileChange(index, e)} className={fileInputClass} /></FormGroup><div className="space-y-3"><FormGroup><FormLabel htmlFor={`spot-title-${index}`}>Judul Spot</FormLabel><input id={`spot-title-${index}`} name="title" value={spot.title} onChange={e => handleSpotChange(index, e)} placeholder="Cth: Sudut Jendela Senja" className={inputClass} /></FormGroup><FormGroup><FormLabel htmlFor={`spot-tip-${index}`}>Tips Foto</FormLabel><input id={`spot-tip-${index}`} name="tip" value={spot.tip} onChange={e => handleSpotChange(index, e)} placeholder="Cth: Ambil foto saat sore hari" className={inputClass} /></FormGroup></div></div></div>))}{formData.spots.length === 0 && <p className="text-muted text-center py-4">Belum ada spot foto. Klik tombol di bawah untuk menambahkan.</p>}</div><button type="button" onClick={handleAddSpot} className="mt-4 w-full bg-gray-100 dark:bg-gray-700 text-primary hover:bg-gray-200 font-semibold py-2 rounded-lg">+ Tambah Spot Foto</button></fieldset> </div> )}
-                    {step === 5 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 5: Events & Promo</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Manajemen Event</legend><div className="space-y-4 max-h-80 overflow-y-auto pr-2">{formData.events.map((event, index) => (<div key={event.id} className="border p-4 rounded-lg bg-soft dark:bg-gray-900/50 relative"><button type="button" onClick={() => handleRemoveEvent(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 dark:bg-red-500/20 rounded-full h-7 w-7 flex items-center justify-center font-bold text-xl hover:bg-red-500 hover:text-white">&times;</button><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup className="space-y-3"><FormLabel htmlFor={`event-name-${index}`}>Nama Event</FormLabel><input id={`event-name-${index}`} name="name" value={event.name} onChange={e => handleEventChange(index, e)} placeholder="Cth: Live Music Akustik" className={inputClass} required/><FormLabel htmlFor={`event-desc-${index}`}>Deskripsi</FormLabel><textarea id={`event-desc-${index}`} name="description" value={event.description} onChange={e => handleEventChange(index, e)} placeholder="Detail event" className={`${inputClass} h-20`}></textarea></FormGroup><div className="space-y-3"><FormGroup><FormLabel htmlFor={`event-photo-${index}`}>Gambar (Opsional)</FormLabel><ImageWithFallback src={eventPreviews[index] || event.imageUrl} alt="Event" className="w-full h-20 object-cover rounded-md mb-2" /><input id={`event-photo-${index}`} type="file" accept="image/*" onChange={e => handleEventFileChange(index, e)} className={fileInputClass} /></FormGroup><div className="flex gap-2"><FormGroup className="flex-1"><FormLabel htmlFor={`event-start-${index}`}>Tgl Mulai</FormLabel><input id={`event-start-${index}`} name="start_date" type="date" value={new Date(event.start_date).toISOString().split('T')[0]} onChange={e => handleEventChange(index, e)} className={inputClass} required/></FormGroup><FormGroup className="flex-1"><FormLabel htmlFor={`event-end-${index}`}>Tgl Selesai</FormLabel><input id={`event-end-${index}`} name="end_date" type="date" value={new Date(event.end_date).toISOString().split('T')[0]} onChange={e => handleEventChange(index, e)} className={inputClass} required/></FormGroup></div></div></div></div>))}{formData.events.length === 0 && <p className="text-muted text-center py-4">Belum ada event. Klik tombol di bawah untuk menambahkan.</p>}</div><button type="button" onClick={handleAddEvent} className="mt-4 w-full bg-gray-100 dark:bg-gray-700 text-primary hover:bg-gray-200 font-semibold py-2 rounded-lg">+ Tambah Event</button></fieldset> </div> )}
-                    {step === 6 && isAdmin && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 6: Sponsorship</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Detail Sponsorship (Admin Only)</legend><div className="flex items-center gap-4"><input type="checkbox" id="isSponsored" name="isSponsored" checked={formData.isSponsored} onChange={handleChange} className="h-5 w-5 rounded text-brand focus:ring-brand" /><label htmlFor="isSponsored" className="font-medium text-primary">Aktifkan Sponsorship</label></div>{formData.isSponsored && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="sponsoredRank">Ranking Sponsor</FormLabel><input id="sponsoredRank" name="sponsoredRank" type="number" value={formData.sponsoredRank} onChange={handleChange} placeholder="Urutan (cth: 1)" className={inputClass} /><FormHelperText>Angka lebih kecil tampil lebih dulu.</FormHelperText></FormGroup><FormGroup><FormLabel htmlFor="sponsoredUntil">Sponsor Hingga</FormLabel><input id="sponsoredUntil" name="sponsoredUntil" type="date" value={formData.sponsoredUntil} onChange={handleChange} className={inputClass} /></FormGroup></div>)}</fieldset> </div> )}
+                    {step === 5 && !isAdmin && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 5: Events & Promo</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Manajemen Event</legend><div className="space-y-4 max-h-80 overflow-y-auto pr-2">{formData.events.map((event, index) => (<div key={event.id} className="border p-4 rounded-lg bg-soft dark:bg-gray-900/50 relative"><button type="button" onClick={() => handleRemoveEvent(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 dark:bg-red-500/20 rounded-full h-7 w-7 flex items-center justify-center font-bold text-xl hover:bg-red-500 hover:text-white">&times;</button><div className="flex flex-col lg:flex-row gap-6"><div className="lg:w-1/3 flex-shrink-0"><FormGroup><FormLabel htmlFor={`event-photo-${index}`}>Gambar (Opsional)</FormLabel><ImageWithFallback src={eventPreviews[index] || event.imageUrl} alt="Event" className="w-full aspect-video object-cover rounded-md mb-2" /><input id={`event-photo-${index}`} type="file" accept="image/*" onChange={e => handleEventFileChange(index, e)} className={fileInputClass} /></FormGroup></div><div className="flex-1 space-y-4"><FormGroup><FormLabel htmlFor={`event-name-${index}`}>Nama Event</FormLabel><input id={`event-name-${index}`} name="name" value={event.name} onChange={e => handleEventChange(index, e)} placeholder="Cth: Live Music Akustik" className={inputClass} required/></FormGroup><FormGroup><FormLabel htmlFor={`event-desc-${index}`}>Deskripsi</FormLabel><textarea id={`event-desc-${index}`} name="description" value={event.description} onChange={e => handleEventChange(index, e)} placeholder="Detail event" className={`${inputClass} h-20`}></textarea></FormGroup><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor={`event-start-${index}`}>Tgl Mulai</FormLabel><input id={`event-start-${index}`} name="start_date" type="date" value={getDisplayDate(event.start_date)} onChange={e => handleEventChange(index, e)} className={inputClass} required/></FormGroup><FormGroup><FormLabel htmlFor={`event-end-${index}`}>Tgl Selesai</FormLabel><input id={`event-end-${index}`} name="end_date" type="date" value={getDisplayDate(event.end_date)} onChange={e => handleEventChange(index, e)} className={inputClass} required/></FormGroup></div></div></div></div>))}{formData.events.length === 0 && <p className="text-muted text-center py-4">Belum ada event. Klik tombol di bawah untuk menambahkan.</p>}</div><button type="button" onClick={handleAddEvent} className="mt-4 w-full bg-gray-100 dark:bg-gray-700 text-primary hover:bg-gray-200 font-semibold py-2 rounded-lg">+ Tambah Event</button></fieldset> </div> )}
+                    {step === 5 && isAdmin && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 5: Sponsorship</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Detail Sponsorship (Admin Only)</legend><div className="flex items-center gap-4"><input type="checkbox" id="isSponsored" name="isSponsored" checked={formData.isSponsored} onChange={handleChange} className="h-5 w-5 rounded text-brand focus:ring-brand" /><label htmlFor="isSponsored" className="font-medium text-primary">Aktifkan Sponsorship</label></div>{formData.isSponsored && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="sponsoredRank">Ranking Sponsor</FormLabel><input id="sponsoredRank" name="sponsoredRank" type="number" value={formData.sponsoredRank} onChange={handleChange} placeholder="Urutan (cth: 1)" className={inputClass} /><FormHelperText>Angka lebih kecil tampil lebih dulu.</FormHelperText></FormGroup><FormGroup><FormLabel htmlFor="sponsoredUntil">Sponsor Hingga</FormLabel><input id="sponsoredUntil" name="sponsoredUntil" type="date" value={formData.sponsoredUntil} onChange={handleChange} className={inputClass} /></FormGroup></div>)}</fieldset> </div> )}
                 </form>
                 <div className="p-6 flex justify-between gap-4 border-t border-border mt-auto">
                     <button type="button" onClick={step === 1 ? onCancel : prevStep} className="px-6 py-2 bg-gray-100 dark:bg-gray-700 text-primary hover:bg-gray-200 rounded-xl font-semibold"> {step === 1 ? 'Batal' : 'Kembali'} </button>
-                    {step < formSteps.length ? ( <button type="button" onClick={nextStep} className="px-6 py-2 bg-brand text-white rounded-xl font-semibold hover:bg-brand/90"> Lanjut </button> ) : ( <button type="submit" onClick={handleSubmit} className="px-6 py-2 bg-brand text-white rounded-xl font-semibold hover:bg-brand/90 disabled:bg-brand/50" disabled={isSaving || isUploading}> {isUploading ? 'Uploading...' : (isSaving ? 'Menyimpan...' : 'Simpan')} </button> )}
+                    {step < formSteps.length ? ( <button type="button" onClick={nextStep} className="px-6 py-2 bg-brand text-white rounded-xl font-semibold hover:bg-brand/90"> Lanjut </button> ) : ( <button type="submit" onClick={handleSubmit} className="px-6 py-2 bg-brand text-white rounded-xl font-semibold hover:bg-brand/90 disabled:bg-brand/50" disabled={isSaving}> {isSaving ? 'Menyimpan...' : 'Simpan'} </button> )}
                 </div>
             </div>
         </div>

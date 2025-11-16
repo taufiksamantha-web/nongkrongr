@@ -10,46 +10,25 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // Initialize state using a public class field. This is a modern approach for React class components
-  // that simplifies state setup.
-  public state: State = { hasError: false };
+  state: State = { hasError: false };
 
-  // FIX: Added a constructor and called super(props) to ensure this.props is properly initialized
-  // for the component instance, resolving the TypeScript error.
-  constructor(props: Props) {
-    super(props);
-  }
-
-  public static getDerivedStateFromError(_: Error): State {
-    // Update state so the next render will show the fallback UI.
+  static getDerivedStateFromError(_error: Error): Partial<State> {
     return { hasError: true };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
-    // In a production app, you would send this to an error reporting service
-    // e.g., logErrorToMyService(error, errorInfo);
   }
-
-  /**
-   * Melakukan 'hard reset' pada aplikasi.
-   * Ini akan menghapus semua data yang disimpan secara lokal di browser (seperti favorit,
-   * tema, dll.) dan kemudian memaksa muat ulang halaman dari server, mengabaikan cache.
-   * Ini efektif untuk mengatasi masalah yang disebabkan oleh data cache atau sesi yang rusak.
-   */
+  
   private handleClearCacheAndReload = () => {
-    // Hapus semua data yang disimpan secara lokal
     localStorage.clear();
     sessionStorage.clear();
-    
-    // Paksa muat ulang dari server, bukan dari cache browser.
-    // The boolean argument for reload() is deprecated. The modern method takes no arguments.
     window.location.reload();
   };
 
-  public render() {
+  render() {
     if (this.state.hasError) {
-      return (
+       return (
         <div className="flex items-center justify-center min-h-screen bg-soft p-6">
             <div className="max-w-lg w-full bg-card p-8 rounded-3xl shadow-2xl text-center border border-border animate-fade-in-up">
                 <ExclamationTriangleIcon className="h-16 w-16 mx-auto text-accent-amber mb-4" />
@@ -78,7 +57,9 @@ class ErrorBoundary extends React.Component<Props, State> {
         </div>
       );
     }
-
+    
+    // FIX: The `props` property is inherited from React.Component. Accessing `this.props` is the correct
+    // way to get children in a class component. The previous error was likely due to a type-checking anomaly.
     return this.props.children;
   }
 }

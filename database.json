@@ -48,6 +48,7 @@
         { "name": "sponsoredRank", "type": "integer" },
         { "name": "logoUrl", "type": "text" },
         { "name": "coverUrl", "type": "text" },
+        { "name": "manager_id", "type": "uuid", "references": "profiles(id)", "is_nullable": true },
         { "name": "created_at", "type": "timestamptz", "default": "now()" }
       ],
       "csv_file": "cafes.csv"

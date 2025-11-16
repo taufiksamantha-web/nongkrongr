@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserDashboard from '../components/admin/UserDashboard';
+import AdminCafeDashboard from '../components/admin/AdminCafeDashboard'; // Import new dashboard
 import FloatingNotification from '../components/common/FloatingNotification';
 import { ThemeContext } from '../App';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
@@ -42,6 +43,19 @@ const AdminPage: React.FC = () => {
         return null;
     }
 
+    const renderDashboardByRole = () => {
+        switch (currentUser.role) {
+            case 'admin':
+                return <AdminDashboard />;
+            case 'admin_cafe':
+                return <AdminCafeDashboard />;
+            case 'user':
+                return <UserDashboard />;
+            default:
+                return <UserDashboard />;
+        }
+    };
+
     return (
         <div className="bg-soft min-h-screen text-primary dark:text-gray-200">
             <div className="container mx-auto px-6 py-8">
@@ -49,7 +63,7 @@ const AdminPage: React.FC = () => {
                 <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
                     <div>
                         <h2 className="text-xl">Welcome, <span className="font-bold text-primary">{currentUser.username}</span></h2>
-                        <p className="text-gray-500">You are logged in as: <span className="font-semibold">{currentUser.role.toUpperCase()}</span></p>
+                        <p className="text-gray-500">You are logged in as: <span className="font-semibold">{currentUser.role.toUpperCase().replace('_', ' ')}</span></p>
                     </div>
                     <div className="flex items-center gap-4">
                         <button 
@@ -70,7 +84,7 @@ const AdminPage: React.FC = () => {
                     </div>
                 </div>
                 
-                {currentUser.role === 'admin' ? <AdminDashboard /> : <UserDashboard />}
+                {renderDashboardByRole()}
             </div>
         </div>
     );

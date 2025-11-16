@@ -56,9 +56,11 @@ export const geminiService = {
   generateCafeDescription: async (cafeName: string, vibes: Vibe[]): Promise<string> => {
     const ai = getAiClient(); // Inisialisasi klien saat dibutuhkan
     const vibeNames = vibes.map(v => v.name).join(', ') || 'unique';
-    const prompt = `Create a short, catchy, and aesthetic description for a cafe in South Sumatra called "${cafeName}". The description should be one paragraph, written in Indonesian, and appeal to Gen Z.`;
+    // FIX: Updated prompt to be more specific for better AI output.
+    const prompt = `Create a short, catchy, and aesthetic description for a cafe in South Sumatra called "${cafeName}". The description should be one paragraph, written in Indonesian, and appeal to Gen Z. Highlight its ${vibeNames} vibes.`;
       
     try {
+      // FIX: Use the recommended 'gemini-2.5-flash' model.
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,

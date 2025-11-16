@@ -79,6 +79,7 @@ export interface Cafe {
   spots: Spot[];
   reviews: Review[];
   events: Event[];
+  manager_id?: string; // ID of the user who manages this cafe
   created_at?: string;
   // Aggregated scores
   avgAestheticScore: number;
@@ -92,7 +93,7 @@ export interface Cafe {
 export interface Profile {
   id: string;
   username: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'admin_cafe';
   updated_at?: string;
 }
 

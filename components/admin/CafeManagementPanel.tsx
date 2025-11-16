@@ -67,7 +67,13 @@ const CafeManagementPanel: React.FC = () => {
     };
 
     const sortedAndFilteredCafes = useMemo(() => {
-        const filtered = cafes.filter(cafe =>
+        let cafesToDisplay = cafes;
+        // Filter cafes for cafe admins
+        if (currentUser?.role === 'admin_cafe') {
+            cafesToDisplay = cafes.filter(c => c.manager_id === currentUser.id);
+        }
+
+        const filtered = cafesToDisplay.filter(cafe =>
             cafe.name.toLowerCase().includes(searchQuery.toLowerCase())
         );
 
@@ -87,7 +93,7 @@ const CafeManagementPanel: React.FC = () => {
             if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
             return 0;
         });
-    }, [cafes, searchQuery, sortConfig]);
+    }, [cafes, searchQuery, sortConfig, currentUser]);
 
     const handleSort = (key: SortableKeys) => {
         setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -118,7 +124,8 @@ const CafeManagementPanel: React.FC = () => {
     const paginatedCafes = sortedAndFilteredCafes.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     const handleSave = async (data: any) => {
-        setIsSaving(true);
+        // This function will be called from AdminCafeForm
+        // We re-throw the error so the form can catch it and display a specific message.
         try {
             if (editingCafe) {
                 await updateCafe(editingCafe.id, data);
@@ -130,10 +137,8 @@ const CafeManagementPanel: React.FC = () => {
             setIsFormOpen(false);
             setEditingCafe(null);
         } catch (error: any) {
-            setNotification({ message: `Gagal menyimpan: ${error.message}`, type: 'error' });
-            return Promise.reject(error);
-        } finally {
-            setIsSaving(false);
+            // Re-throw the error to be caught by the form's handleSubmit
+            throw error;
         }
     };
 
@@ -237,7 +242,7 @@ const CafeManagementPanel: React.FC = () => {
                                     <p className="text-sm text-muted"><strong>Reviews:</strong> {cafe.reviews.length}</p>
                                     <div className="flex gap-4">
                                         <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 font-bold hover:underline">Statistik</button>
-                                        {currentUser?.role === 'admin' && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
+                                        {(currentUser?.role === 'admin' || currentUser?.id === cafe.manager_id) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
                                     </div>
                                 </div>
                             </div>
@@ -262,7 +267,7 @@ const CafeManagementPanel: React.FC = () => {
                                 </div>
                                 <div className="text-right space-x-4">
                                     <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 font-bold hover:underline">Statistik</button>
-                                    {currentUser?.role === 'admin' && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
+                                    {(currentUser?.role === 'admin' || currentUser?.id === cafe.manager_id) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
                                 </div>
                             </div>
                         </div>
@@ -280,7 +285,7 @@ const CafeManagementPanel: React.FC = () => {
 
             {isFormOpen && <AdminCafeForm cafe={editingCafe} userRole={currentUser!.role} onSave={handleSave} onCancel={() => { setIsFormOpen(false); setEditingCafe(null); }} setNotification={setNotification} />}
             {isStatsModalOpen && statsCafe && <CafeStatisticsModal cafe={statsCafe} onClose={() => setIsStatsModalOpen(false)} />}
-            {cafeToDelete && currentUser?.role === 'admin' && <ConfirmationModal title="Hapus Cafe" message={`Yakin ingin menghapus "${cafeToDelete.name}"? Ini akan menghapus semua data terkait. Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmDeleteCafe} onCancel={() => setCafeToDelete(null)} isConfirming={isSaving}/>}
+            {cafeToDelete && (currentUser?.role === 'admin' || currentUser?.id === cafeToDelete.manager_id) && <ConfirmationModal title="Hapus Cafe" message={`Yakin ingin menghapus "${cafeToDelete.name}"? Ini akan menghapus semua data terkait. Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmDeleteCafe} onCancel={() => setCafeToDelete(null)} isConfirming={isSaving}/>}
             {isConfirmingMultiDelete && currentUser?.role === 'admin' && <ConfirmationModal title={`Hapus ${selectedCafeIds.length} Kafe`} message={`Yakin ingin menghapus ${selectedCafeIds.length} kafe yang dipilih? Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmMultiDelete} onCancel={() => setIsConfirmingMultiDelete(false)} confirmText={`Ya, Hapus (${selectedCafeIds.length})`} isConfirming={isSaving}/>}
         </>
     )

@@ -11,21 +11,32 @@ import { MapPinIcon } from '@heroicons/react/24/outline';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
 import { calculateDistance } from '../utils/geolocation';
+import { checkIfOpen, checkIfOpenLate } from '../utils/timeUtils';
 import SkeletonCard from '../components/SkeletonCard';
 
 const ITEMS_PER_PAGE = 12;
 
 type CafeWithDistance = Cafe & { distance?: number };
+type OpeningStatus = 'all' | 'open_now' | 'open_late' | 'closed';
 
 const FilterPanelContent: React.FC<{
     filters: any;
     handleFilterChange: (key: string, value: any) => void;
     toggleMultiSelect: (key: 'vibes' | 'amenities', value: string) => void;
+    setOpeningStatus: (status: OpeningStatus) => void;
     sortBy: 'default' | 'distance';
     isLocating: boolean;
     locationError: string | null;
     handleSortByDistance: () => void;
-}> = ({ filters, handleFilterChange, toggleMultiSelect, sortBy, isLocating, locationError, handleSortByDistance }) => {
+}> = ({ filters, handleFilterChange, toggleMultiSelect, setOpeningStatus, sortBy, isLocating, locationError, handleSortByDistance }) => {
+    
+    const openingStatusOptions: { value: OpeningStatus; label: string }[] = [
+        { value: 'all', label: 'Semua' },
+        { value: 'open_now', label: 'Buka Sekarang' },
+        { value: 'open_late', label: 'Buka Sampai Malam' },
+        { value: 'closed', label: 'Tertutup' },
+    ];
+    
     return (
         <>
             {/* Sort by distance */}
@@ -66,6 +77,29 @@ const FilterPanelContent: React.FC<{
                         <option value="all">Semua Kota/Kabupaten</option>
                         {SOUTH_SUMATRA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
+                </div>
+            </details>
+
+            {/* Opening Status */}
+            <details className="py-2 border-t border-border group" open>
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                    Status Buka
+                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                </summary>
+                <div className="mt-4 space-y-2">
+                    {openingStatusOptions.map(({ value, label }) => (
+                        <label key={value} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-soft dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                            <input
+                                type="radio"
+                                name="openingStatus"
+                                value={value}
+                                checked={filters.openingStatus === value}
+                                onChange={() => setOpeningStatus(value)}
+                                className="h-4 w-4 text-brand focus:ring-brand focus:ring-2 border-gray-300 dark:border-gray-500 bg-soft dark:bg-gray-700"
+                            />
+                            <span className="font-medium text-primary dark:text-white">{label}</span>
+                        </label>
+                    ))}
                 </div>
             </details>
 
@@ -163,6 +197,7 @@ const ExplorePage: React.FC = () => {
     crowdMorning: parseInt(searchParams.get('crowd_morning') || '5', 10),
     crowdAfternoon: parseInt(searchParams.get('crowd_afternoon') || '5', 10),
     crowdEvening: parseInt(searchParams.get('crowd_evening') || '5', 10),
+    openingStatus: 'all' as OpeningStatus,
   });
   
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -186,6 +221,10 @@ const ExplorePage: React.FC = () => {
     if (sortBy === 'distance') {
         setSortBy('default');
     }
+  };
+
+  const setOpeningStatus = (status: OpeningStatus) => {
+    setFilters(prev => ({ ...prev, openingStatus: status }));
   };
 
   const handleSortByDistance = () => {
@@ -245,6 +284,9 @@ const ExplorePage: React.FC = () => {
             if (cafe.avgCrowdMorning > filters.crowdMorning) return false;
             if (cafe.avgCrowdAfternoon > filters.crowdAfternoon) return false;
             if (cafe.avgCrowdEvening > filters.crowdEvening) return false;
+            if (filters.openingStatus === 'open_now' && !checkIfOpen(cafe.openingHours)) return false;
+            if (filters.openingStatus === 'open_late' && !checkIfOpenLate(cafe.openingHours)) return false;
+            if (filters.openingStatus === 'closed' && checkIfOpen(cafe.openingHours)) return false;
             return true;
         });
     }
@@ -317,7 +359,7 @@ const ExplorePage: React.FC = () => {
   if (error) return <DatabaseConnectionError />;
 
   const filterPanelProps = {
-    filters, handleFilterChange, toggleMultiSelect, sortBy, isLocating, locationError, handleSortByDistance
+    filters, handleFilterChange, toggleMultiSelect, setOpeningStatus, sortBy, isLocating, locationError, handleSortByDistance
   };
   
   const isSpecialView = isFavoritesView || sortParam === 'trending';

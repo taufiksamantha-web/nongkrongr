@@ -10,7 +10,7 @@ interface UserFormModalProps {
 const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onSave, onCancel }) => {
     const [formData, setFormData] = useState({
         username: '',
-        role: 'user' as 'admin' | 'user',
+        role: 'user' as 'admin' | 'user' | 'admin_cafe',
     });
 
     useEffect(() => {
@@ -43,6 +43,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onSave, onCan
                 <select name="role" value={formData.role} onChange={handleChange} className={inputClass}>
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
+                    <option value="admin_cafe">Cafe Admin</option>
                 </select>
 
                 <div className="pt-2 text-sm text-gray-500 dark:text-gray-400">
