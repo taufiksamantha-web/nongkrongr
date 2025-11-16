@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { HashRouter, Routes, Route, Link, NavLink, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import ExplorePage from './pages/ExplorePage';
 import DetailPage from './pages/DetailPage';
@@ -10,7 +10,7 @@ import WelcomeModal from './components/WelcomeModal';
 import Footer from './components/Footer';
 import ErrorBoundary from './components/ErrorBoundary';
 import { CafeProvider } from './context/CafeContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
 import { SunIcon, MoonIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import ScrollToTopOnNavigate from './components/ScrollToTopOnNavigate';
@@ -66,8 +66,20 @@ const Header: React.FC = () => {
 
 const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }> = ({ showWelcome, onCloseWelcome }) => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { currentUser } = useAuth();
+    
     const isAdminPage = location.pathname.startsWith('/admin');
     const isHomePage = location.pathname === '/';
+
+    useEffect(() => {
+        // Jika pengguna sudah login dan mencoba mengakses halaman publik (bukan dasbor),
+        // arahkan mereka secara otomatis ke dasbor mereka.
+        if (currentUser && !isAdminPage) {
+            navigate('/admin', { replace: true });
+        }
+    }, [currentUser, isAdminPage, navigate]);
+
 
     return (
         <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col">

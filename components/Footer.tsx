@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 
@@ -32,7 +33,7 @@ const Footer: React.FC = () => {
                            <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-8 lg:h-10 w-auto mx-auto lg:mx-0" />
                         </Link>
                         <p className="mt-2 text-muted max-w-sm mx-auto lg:mx-0">
-                            Platform rekomendasi cafe aesthetic di Palembang untuk Gen Z yang hobi nongkrong, hunting foto, dan nugas.
+                            Platform rekomendasi cafe aesthetic di Sumatera Selatan untuk Gen Z yang hobi nongkrong, hunting foto, dan nugas.
                         </p>
                     </div>
                     
@@ -59,7 +60,7 @@ const Footer: React.FC = () => {
                 </div>
 
                 <div className="mt-12 border-t border-border pt-8 text-center text-muted text-sm">
-                    <p>&copy; {new Date().getFullYear()} Nongkrongr. Dibuat dengan 💜 di Palembang.</p>
+                    <p>&copy; {new Date().getFullYear()} Nongkrongr. Dibuat dengan 💜 di Sumatera Selatan.</p>
                 </div>
             </div>
         </footer>

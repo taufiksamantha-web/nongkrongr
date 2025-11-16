@@ -56,7 +56,7 @@ export const geminiService = {
   generateCafeDescription: async (cafeName: string, vibes: Vibe[]): Promise<string> => {
     const ai = getAiClient(); // Inisialisasi klien saat dibutuhkan
     const vibeNames = vibes.map(v => v.name).join(', ') || 'unique';
-    const prompt = `Create a short, catchy, and aesthetic description for a cafe in Palembang called "${cafeName}". The description should be one paragraph, written in Indonesian, and appeal to Gen Z.`;
+    const prompt = `Create a short, catchy, and aesthetic description for a cafe in South Sumatra called "${cafeName}". The description should be one paragraph, written in Indonesian, and appeal to Gen Z.`;
       
     try {
       const response = await ai.models.generateContent({
@@ -78,7 +78,7 @@ export const geminiService = {
    */
   getCafeRecommendations: async (userPrompt: string): Promise<AiRecommendationParams> => {
     const ai = getAiClient(); // Inisialisasi klien saat dibutuhkan
-    const systemInstruction = `You are an expert cafe recommender for the city of Palembang. Your goal is to understand a user's request in Indonesian and translate it into a structured JSON object that can be used to filter a list of cafes. You must only respond with the JSON object defined in the schema.
+    const systemInstruction = `You are an expert cafe recommender for the province of South Sumatra. Your goal is to understand a user's request in Indonesian and translate it into a structured JSON object that can be used to filter a list of cafes. You must only respond with the JSON object defined in the schema.
     - Analyze the user's prompt for keywords related to vibes, amenities, price, and purpose.
     - For vibes, use one or more from: 'cozy', 'minimalis', 'industrial', 'tropical', 'classic'.
     - For amenities, use one or more from: 'wifi', 'power' (for power outlets/colokan), 'ac', 'outdoor', 'indoor', 'musholla', 'parking'.

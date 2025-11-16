@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, ReactNode, useContext, useEffect } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -54,6 +55,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         // 2. Set up a listener for any subsequent auth events (login, logout, token refresh).
+        // CATATAN: Listener ini sangat penting untuk keamanan.
+        // Ketika token sesi pengguna kedaluwarsa, Supabase akan mencoba memperbaruinya di latar belakang.
+        // Jika pembaruan gagal (misalnya karena masalah jaringan, atau sesi pengguna dicabut di server),
+        // Supabase akan memicu event 'SIGNED_OUT'. Listener ini menangkap event tersebut,
+        // memanggil validateAndSetUser(null), yang akan mengatur currentUser menjadi null.
+        // Ini secara otomatis dan aman mengeluarkan pengguna dari sistem, memenuhi permintaan untuk
+        // "menampilkan kembali panel login setelah terlalu lama tidak aktif". Ini adalah perilaku yang diharapkan.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (_event, session) => {
                 // Re-validate the user whenever the auth state changes.

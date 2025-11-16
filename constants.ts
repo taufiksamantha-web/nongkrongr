@@ -18,10 +18,11 @@ export const VIBES: Vibe[] = [
   { id: 'classic', name: 'Klasik' },
 ];
 
-export const DISTRICTS: string[] = [
-    "Ilir Timur I", "Ilir Timur II", "Ilir Timur III", "Ilir Barat I", "Ilir Barat II",
-    "Sukarami", "Sako", "Sematang Borang", "Alang-Alang Lebar", "Kemuning", "Kalidoni",
-    "Bukit Kecil", "Kertapati", "Plaju", "Seberang Ulu I", "Seberang Ulu II", "Jakabaring", "Gandus"
+export const SOUTH_SUMATRA_CITIES: string[] = [
+    "Palembang", "Prabumulih", "Lubuklinggau", "Pagar Alam", 
+    "Banyuasin", "Empat Lawang", "Lahat", "Muara Enim", "Musi Banyuasin",
+    "Musi Rawas", "Musi Rawas Utara", "Ogan Ilir", "Ogan Komering Ilir",
+    "Ogan Komering Ulu", "OKU Selatan", "OKU Timur", "Penukal Abab Lematang Ilir"
 ];
 
 // Fallback image URLs

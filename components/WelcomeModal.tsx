@@ -35,7 +35,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
           Selamat Datang!
         </h2>
         <p className="text-muted text-lg mb-8">
-          Nongkrongr siap membantumu menemukan cafe paling estetik dan PW di Palembang.
+          Nongkrongr siap membantumu menemukan cafe paling estetik dan PW di Sumatera Selatan.
         </p>
         <button
           onClick={handleClose}

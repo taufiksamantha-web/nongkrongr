@@ -49,6 +49,7 @@ export interface Cafe {
   name: string;
   description: string;
   address: string;
+  city: string;
   district: string;
   openingHours: string;
   priceTier: PriceTier;

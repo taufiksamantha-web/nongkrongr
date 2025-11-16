@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Cafe } from '../types';
@@ -63,7 +64,7 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) =
         </button>
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
           <h3 className="text-white text-2xl font-bold font-jakarta truncate">{cafe.name}</h3>
-          <p className="text-gray-200 text-sm">{cafe.district}</p>
+          <p className="text-gray-200 text-sm">{cafe.city}</p>
         </div>
       </div>
       <div className="p-4">
@@ -73,7 +74,7 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) =
                 <ScoreBadge icon={<UsersIcon className="h-4 w-4" />} score={cafe.avgCrowdEvening} color="bg-brand" />
             </div>
              {distance !== undefined ? (
-                <div className="flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300">
+                <div className="flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-bold bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300 flex-shrink-0 whitespace-nowrap">
                     <MapPinIcon className="h-4 w-4" />
                     <span>{distance.toFixed(1)} km</span>
                 </div>

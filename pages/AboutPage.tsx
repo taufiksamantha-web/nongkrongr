@@ -21,7 +21,7 @@ const AboutPage: React.FC = () => {
           Cerita di Balik Secangkir Kopi
         </h1>
         <p className="mt-4 text-lg text-muted max-w-3xl mx-auto">
-          Nongkrongr lahir dari kecintaan pada kopi dan kota Palembang. Kami percaya setiap sudut kota ini menyimpan cerita, dan setiap kedai kopi adalah panggungnya. Misi kami adalah menjadi teman terbaikmu dalam menjelajahi panggung-panggung itu.
+          Nongkrongr lahir dari kecintaan pada kopi dan Bumi Sriwijaya. Kami percaya setiap sudut daerah ini menyimpan cerita, dan setiap kedai kopi adalah panggungnya. Misi kami adalah menjadi teman terbaikmu dalam menjelajahi panggung-panggung itu.
         </p>
       </div>
 
@@ -37,7 +37,7 @@ const AboutPage: React.FC = () => {
               icon={<SparklesIcon className="h-8 w-8" />}
               title="Menemukan Hidden Gems"
             >
-              Kami menjelajahi setiap sudut Palembang untuk menemukan kafe-kafe tersembunyi yang punya karakter unik, agar kamu bisa merasakan pengalaman baru di luar tempat mainstream.
+              Kami menjelajahi setiap sudut Sumatera Selatan untuk menemukan kafe-kafe tersembunyi yang punya karakter unik, agar kamu bisa merasakan pengalaman baru di luar tempat mainstream.
             </MissionCard>
             <MissionCard
               icon={<UsersIcon className="h-8 w-8" />}
@@ -49,7 +49,7 @@ const AboutPage: React.FC = () => {
               icon={<BuildingStorefrontIcon className="h-8 w-8" />}
               title="Mendukung Bisnis Lokal"
             >
-              Dengan mempromosikan kafe-kafe lokal, kami berharap dapat membantu mereka tumbuh dan berkembang, menjadikan ekosistem kopi di Palembang semakin hidup dan beragam.
+              Dengan mempromosikan kafe-kafe lokal, kami berharap dapat membantu mereka tumbuh dan berkembang, menjadikan ekosistem kopi di Sumatera Selatan semakin hidup dan beragam.
             </MissionCard>
           </div>
         </div>
@@ -59,7 +59,7 @@ const AboutPage: React.FC = () => {
       <div className="container mx-auto px-6 py-16 text-center">
         <h2 className="text-4xl font-bold font-jakarta mb-4">Siap Menjadi Bagian dari Cerita?</h2>
         <p className="text-muted max-w-2xl mx-auto mb-8">
-          Petualangan kopimu di Palembang dimulai di sini. Jelajahi, review, dan temukan spot favorit barumu bersama ribuan penikmat kopi lainnya.
+          Petualangan kopimu di Sumatera Selatan dimulai di sini. Jelajahi, review, dan temukan spot favorit barumu bersama ribuan penikmat kopi lainnya.
         </p>
         <Link 
           to="/explore"

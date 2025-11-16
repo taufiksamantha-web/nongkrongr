@@ -11,14 +11,17 @@ import FeaturedCafeCard from '../components/FeaturedCafeCard';
 import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import AiRecommenderModal from '../components/AiRecommenderModal';
-import { settingsService } from '../services/settingsService';
-import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
+import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon, MapPinIcon, RocketLaunchIcon } from '@heroicons/react/24/solid';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonFeaturedCard from '../components/SkeletonFeaturedCard';
 import SkeletonReviewCard from '../components/SkeletonReviewCard';
+import { calculateDistance } from '../utils/geolocation';
+import { settingsService } from '../services/settingsService';
 
 type TopReview = Review & { cafeName: string; cafeSlug: string };
+type CafeWithDistance = Cafe & { distance: number };
+
 
 const SectionHeader: React.FC<{ icon?: React.ReactNode; title: string; subtitle: string; link?: string; }> = ({ icon, title, subtitle, link }) => (
   <div className="text-center mb-10">
@@ -43,10 +46,25 @@ const SectionHeader: React.FC<{ icon?: React.ReactNode; title: string; subtitle:
 
 const rotatingPlaceholders = [
   "Mau nongkrong di mana hari ini?",
-  "Cari cafe buat nugas...",
-  "Spot foto OOTD estetik...",
-  "Kopi enak di Palembang...",
+  "Cari cafe buat nugas di Prabumulih...",
+  "Spot foto OOTD estetik di Lahat...",
+  "Kopi enak di Sumatera Selatan...",
   "Tempat nongkrong sore yang adem...",
+  "Kafe dengan WiFi kencang di Pagar Alam?",
+  "Tempat meeting santai di Lubuklinggau...",
+  "Kafe industrial di Muara Enim...",
+  "Cari yang ada outdoor areanya...",
+  "Tempat ngopi murah meriah di Banyuasin...",
+  "Kafe klasik dengan suasana vintage...",
+  "Spot OOTD dengan lighting bagus...",
+  "Tempat yang cocok buat kerja remote...",
+  "Kafe tropical di Ogan Ilir...",
+  "Cari tempat yang kids-friendly...",
+  "Kopi susu gula aren terenak di mana?",
+  "Tempat yang buka sampai malam...",
+  "Rekomendasi kafe baru di Palembang...",
+  "Kafe dengan parkir luas...",
+  "Tempat yang gak terlalu ramai...",
 ];
 
 const EmptyState: React.FC<{ title: string; message: string }> = ({ title, message }) => (
@@ -65,34 +83,66 @@ const HomePage: React.FC = () => {
   const [trendingCafes, setTrendingCafes] = useState<Cafe[]>([]);
   const [recommendedCafes, setRecommendedCafes] = useState<Cafe[]>([]);
   const [favoriteCafes, setFavoriteCafes] = useState<Cafe[]>([]);
+  const [newcomerCafes, setNewcomerCafes] = useState<Cafe[]>([]);
+  const [nearestCafes, setNearestCafes] = useState<CafeWithDistance[]>([]);
   const [topReviews, setTopReviews] = useState<TopReview[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Cafe[]>([]);
   const [isResultsVisible, setIsResultsVisible] = useState(false);
-  const [heroBgUrl, setHeroBgUrl] = useState<string>("https://res.cloudinary.com/dovouihq8/image/upload/v1722244300/cover-placeholder-1_pqz5kl.jpg");
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(true);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
+  const [scrollY, setScrollY] = useState(0);
+
   const navigate = useNavigate();
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const slideIntervalRef = useRef<number | null>(null);
 
+  const defaultHeroBgUrl = "https://res.cloudinary.com/dovouihq8/image/upload/v1762917599/mg7uygdmahzogqrzlayx.png";
+
   useEffect(() => {
-    const loadSettings = async () => {
-      const url = await settingsService.getSetting('hero_background_url');
-      if (url) {
-          setHeroBgUrl(url);
-      }
+    const fetchHeroBg = async () => {
+        const url = await settingsService.getSetting('hero_background_url');
+        setHeroBgUrl(url || defaultHeroBgUrl);
     };
-    loadSettings();
+    fetchHeroBg();
   }, []);
   
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   useEffect(() => {
     const intervalId = setInterval(() => {
       setPlaceholderIndex(prevIndex => (prevIndex + 1) % rotatingPlaceholders.length);
     }, 2000); // Ganti setiap 2 detik
 
     return () => clearInterval(intervalId); // Bersihkan interval saat komponen unmount
+  }, []);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            setUserLocation({ lat: latitude, lng: longitude });
+            setLocationError(null);
+            setIsLocating(false);
+        },
+        (error) => {
+            console.warn("Geolocation error:", error);
+            setLocationError("Gagal mendapatkan lokasimu. Fitur kafe terdekat tidak akan aktif.");
+            setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
   }, []);
 
   useEffect(() => {
@@ -120,6 +170,23 @@ const HomePage: React.FC = () => {
       
       setRecommendedCafes(recommended.slice(0, 5));
 
+      // Newcomers
+      const sortedByNew = [...cafes].sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
+      setNewcomerCafes(sortedByNew.slice(0, 4));
+
+      // Nearest Cafes
+      if (userLocation) {
+          const cafesWithDistance = cafes.map(cafe => ({
+              ...cafe,
+              distance: calculateDistance(userLocation.lat, userLocation.lng, cafe.coords.lat, cafe.coords.lng)
+          })).sort((a, b) => a.distance - b.distance);
+          setNearestCafes(cafesWithDistance.slice(0, 4));
+      }
+
       // Top Reviews
       const allApprovedReviews = cafes.flatMap(cafe =>
         cafe.reviews
@@ -130,11 +197,7 @@ const HomePage: React.FC = () => {
       allApprovedReviews.sort((a, b) => {
         const scoreA = a.ratingAesthetic + a.ratingWork;
         const scoreB = b.ratingAesthetic + b.ratingWork;
-        // Primary sort: combined score (descending)
-        if (scoreB !== scoreA) {
-          return scoreB - scoreA;
-        }
-        // Tie-breaker: review text length (descending) to prioritize more detailed reviews
+        if (scoreB !== scoreA) return scoreB - a.score;
         return b.text.length - a.text.length;
       });
 
@@ -146,46 +209,31 @@ const HomePage: React.FC = () => {
     } else {
         setTrendingCafes([]);
         setRecommendedCafes([]);
+        setNewcomerCafes([]);
+        setNearestCafes([]);
         setTopReviews([]);
         setFavoriteCafes([]);
     }
-  }, [cafes, favoriteIds]);
+  }, [cafes, favoriteIds, userLocation]);
   
   const resetInterval = useCallback(() => {
-    if (slideIntervalRef.current) {
-      clearInterval(slideIntervalRef.current);
-    }
+    if (slideIntervalRef.current) clearInterval(slideIntervalRef.current);
     slideIntervalRef.current = window.setInterval(() => {
       setCurrentSlide(prev => (prev === recommendedCafes.length - 1 ? 0 : prev + 1));
-    }, 5000); // 5 seconds interval
+    }, 5000);
   }, [recommendedCafes.length]);
 
   useEffect(() => {
-    if (recommendedCafes.length > 1) {
-      resetInterval();
-    }
-    return () => {
-      if (slideIntervalRef.current) {
-        clearInterval(slideIntervalRef.current);
-      }
-    };
+    if (recommendedCafes.length > 1) resetInterval();
+    return () => { if (slideIntervalRef.current) clearInterval(slideIntervalRef.current); };
   }, [recommendedCafes.length, resetInterval]);
 
-  const nextSlide = () => {
-    setCurrentSlide(prev => (prev === recommendedCafes.length - 1 ? 0 : prev + 1));
-    resetInterval();
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide(prev => (prev === 0 ? recommendedCafes.length - 1 : prev - 1));
-    resetInterval();
-  };
+  const nextSlide = () => { setCurrentSlide(prev => (prev === recommendedCafes.length - 1 ? 0 : prev + 1)); resetInterval(); };
+  const prevSlide = () => { setCurrentSlide(prev => (prev === 0 ? recommendedCafes.length - 1 : prev - 1)); resetInterval(); };
 
   useEffect(() => {
     if (searchQuery.trim().length > 1) {
-      const filtered = cafes.filter(cafe =>
-        cafe.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
-      );
+      const filtered = cafes.filter(cafe => cafe.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
       setSearchResults(filtered);
       setIsResultsVisible(true);
     } else {
@@ -196,9 +244,7 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
-        setIsResultsVisible(false);
-      }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) setIsResultsVisible(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -206,9 +252,7 @@ const HomePage: React.FC = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/explore?search=${encodeURIComponent(searchQuery.trim())}`);
-    }
+    if (searchQuery.trim()) navigate(`/explore?search=${encodeURIComponent(searchQuery.trim())}`);
   };
   
   if (error) return <DatabaseConnectionError />;
@@ -216,225 +260,108 @@ const HomePage: React.FC = () => {
   return (
     <div>
       {isAiModalOpen && <AiRecommenderModal onClose={() => setIsAiModalOpen(false)} />}
-      {/* Hero Section */}
-      <div className="relative bg-gray-900">
-        <div className="absolute inset-0 z-0">
-           <img 
-              src={optimizeCloudinaryImage(heroBgUrl, 1280, 720)}
-              alt="Suasana cafe yang nyaman"
-              className="w-full h-full object-cover blur-sm"
-            />
+      <div className="relative bg-gray-900 overflow-hidden">
+        <div 
+          className="absolute inset-0 z-0"
+          style={{ transform: `translateY(${scrollY * 0.4}px)`, willChange: 'transform' }}
+        >
+           {heroBgUrl ? (
+                <img 
+                    src={optimizeCloudinaryImage(heroBgUrl, 1280, 720)}
+                    alt="Suasana cafe yang nyaman"
+                    className="w-full h-full object-cover animate-ken-burns"
+                />
+           ) : (
+                <div className="w-full h-full bg-gray-800"></div>
+           )}
             <div className="absolute inset-0 bg-black/60"></div>
         </div>
         <div className="relative z-10 container mx-auto px-6 py-20 text-center">
           <h1 className="text-5xl md:text-7xl font-extrabold font-jakarta text-white leading-snug drop-shadow-lg">
-            Temukan Spot Nongkrong
-            <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-accent-pink to-brand-light">
-              Estetikmu
-            </span>
+            Temukan Spot Nongkrong<br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-accent-pink to-brand-light">Estetikmu</span>
           </h1>
-          <p className="mt-4 text-lg text-gray-200 max-w-2xl mx-auto">
-            Jelajahi cafe-cafe paling hits dan instagramable di Palembang. Dari tempat nugas super cozy sampai spot foto OOTD terbaik.
-          </p>
+          <p className="mt-4 text-lg text-gray-200 max-w-2xl mx-auto">Jelajahi cafe-cafe paling hits dan instagramable di Sumatera Selatan. Dari tempat nugas super cozy sampai spot foto OOTD terbaik.</p>
           <div className="mt-8 max-w-xl mx-auto space-y-4">
             <div ref={searchContainerRef} className="relative">
               <form onSubmit={handleSearchSubmit} className="relative">
                 <SparklesIcon className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-yellow-300 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder={rotatingPlaceholders[placeholderIndex]}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)}
-                  className="w-full py-4 pl-14 pr-32 text-lg rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm text-white placeholder-gray-300"
-                />
-                <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-brand text-white px-6 py-2 rounded-2xl font-bold hover:bg-brand/90 transition-all duration-300">
-                  Cari
-                </button>
+                <input type="text" placeholder={rotatingPlaceholders[placeholderIndex]} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)} className="w-full py-4 pl-14 pr-32 text-lg rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm text-white placeholder-gray-300" />
+                <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-brand text-white px-6 py-2 rounded-2xl font-bold hover:bg-brand/90 transition-all duration-300">Cari</button>
               </form>
-
               {isResultsVisible && (
                 <div className="absolute top-full mt-2 w-full bg-card rounded-2xl shadow-lg border border-subtle z-10 max-h-80 overflow-y-auto text-left">
                   {searchResults.length > 0 ? (
                     <ul>
-                      {searchResults.map(cafe => (
-                        <li key={cafe.id} className="border-b border-subtle last:border-b-0">
-                          <Link 
-                            to={`/cafe/${cafe.slug}`} 
-                            className="block px-6 py-4 hover:bg-brand/10 dark:hover:bg-brand/20 transition-colors duration-200"
-                            onClick={() => setIsResultsVisible(false)}
-                          >
-                            <p className="font-bold text-primary dark:text-white">{cafe.name}</p>
-                            <p className="text-sm text-muted">{cafe.district}</p>
-                          </Link>
-                        </li>
-                      ))}
+                      {searchResults.map(cafe => (<li key={cafe.id} className="border-b border-subtle last:border-b-0"><Link to={`/cafe/${cafe.slug}`} className="block px-6 py-4 hover:bg-brand/10 dark:hover:bg-brand/20 transition-colors duration-200" onClick={() => setIsResultsVisible(false)}><p className="font-bold text-primary dark:text-white">{cafe.name}</p><p className="text-sm text-muted">{cafe.city}</p></Link></li>))}
                     </ul>
-                  ) : (
-                    <p className="px-6 py-4 text-muted">Cafe tidak ditemukan.</p>
-                  )}
+                  ) : (<p className="px-6 py-4 text-muted">Cafe tidak ditemukan.</p>)}
                 </div>
               )}
             </div>
-            
-            <div className="flex items-center justify-center gap-4">
-              <hr className="w-full border-white/20"/>
-              <span className="text-gray-300 font-semibold">ATAU</span>
-              <hr className="w-full border-white/20"/>
-            </div>
-
+            <div className="flex items-center justify-center gap-4"><hr className="w-full border-white/20"/><span className="text-gray-300 font-semibold">ATAU</span><hr className="w-full border-white/20"/></div>
             <div className="text-center">
-              <button
-                onClick={() => setIsAiModalOpen(true)}
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-brand to-accent-pink text-white font-bold py-3 px-6 rounded-2xl text-lg hover:opacity-90 transition-all duration-300 transform hover:scale-105 shadow-lg focus:ring-4 focus:ring-brand/30"
-              >
-                <SparklesIcon className="h-6 w-6" />
-                Coba Asisten AI
-              </button>
+              <button onClick={() => setIsAiModalOpen(true)} className="inline-flex items-center gap-3 bg-gradient-to-r from-brand to-accent-pink text-white font-bold py-3 px-6 rounded-2xl text-lg hover:opacity-90 transition-all duration-300 transform hover:scale-105 shadow-lg focus:ring-4 focus:ring-brand/30"><SparklesIcon className="h-6 w-6" />Coba Asisten AI</button>
             </div>
           </div>
-          
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-              {VIBES.slice(0, 4).map(vibe => (
-                  <Link to={`/explore?vibe=${vibe.id}`} key={vibe.id} className="bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-2xl text-white hover:bg-white/20 transition-all duration-300 font-semibold">
-                      {vibe.name}
-                  </Link>
-              ))}
+            {VIBES.slice(0, 4).map(vibe => (<Link to={`/explore?vibe=${vibe.id}`} key={vibe.id} className="bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-2xl text-white hover:bg-white/20 transition-all duration-300 font-semibold">{vibe.name}</Link>))}
           </div>
         </div>
       </div>
 
-
-      {/* Recommended Section */}
       <div className="relative py-12 overflow-hidden transition-all duration-500 bg-gradient-to-br from-brand/10 to-transparent dark:from-brand/20 dark:to-transparent">
         <div className="relative z-10 container mx-auto px-6">
-          {loading ? (
-            <div className="max-w-4xl mx-auto">
-              <SkeletonFeaturedCard />
-            </div>
-          ) : recommendedCafes.length > 0 ? (
-            <div className="max-w-4xl mx-auto relative">
-              <div className="overflow-hidden">
-                <div 
-                  className="flex transition-transform duration-500 ease-in-out" 
-                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-                >
-                  {recommendedCafes.map(cafe => (
-                    <div key={cafe.id} className="w-full flex-shrink-0">
-                      <FeaturedCafeCard cafe={cafe} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {recommendedCafes.length > 1 && (
-                <>
-                  <button 
-                    onClick={prevSlide}
-                    className="absolute top-1/2 -translate-y-1/2 left-0 md:-left-16 p-3 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all duration-300 shadow-md z-20"
-                    aria-label="Previous recommendation"
-                  >
-                    <ChevronLeftIcon className="h-6 w-6" />
-                  </button>
-                  <button 
-                    onClick={nextSlide}
-                    className="absolute top-1/2 -translate-y-1/2 right-0 md:-right-16 p-3 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all duration-300 shadow-md z-20"
-                    aria-label="Next recommendation"
-                  >
-                    <ChevronRightIcon className="h-6 w-6" />
-                  </button>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="max-w-4xl mx-auto">
-                <EmptyState 
-                    title="Rekomendasi Belum Tersedia" 
-                    message="Saat ini belum ada kafe yang bisa kami rekomendasikan secara spesial. Cek lagi nanti ya!" 
-                />
-            </div>
-          )}
+          {loading ? (<div className="max-w-4xl mx-auto"><SkeletonFeaturedCard /></div>) : recommendedCafes.length > 0 ? (<div className="max-w-4xl mx-auto relative"><div className="overflow-hidden"><div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>{recommendedCafes.map(cafe => (<div key={cafe.id} className="w-full flex-shrink-0"><FeaturedCafeCard cafe={cafe} /></div>))}</div></div>{recommendedCafes.length > 1 && (<><button onClick={prevSlide} className="absolute top-1/2 -translate-y-1/2 left-0 md:-left-16 p-3 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all duration-300 shadow-md z-20" aria-label="Previous recommendation"><ChevronLeftIcon className="h-6 w-6" /></button><button onClick={nextSlide} className="absolute top-1/2 -translate-y-1/2 right-0 md:-right-16 p-3 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all duration-300 shadow-md z-20" aria-label="Next recommendation"><ChevronRightIcon className="h-6 w-6" /></button></>)}</div>) : (<div className="max-w-4xl mx-auto"><EmptyState title="Rekomendasi Belum Tersedia" message="Saat ini belum ada kafe yang bisa kami rekomendasikan secara spesial. Cek lagi nanti ya!" /></div>)}
         </div>
       </div>
 
-      {/* Favorite Cafes Section */}
+      {!isLocating && userLocation && nearestCafes.length > 0 && (
+        <div className="py-12">
+            <div className="container mx-auto px-6">
+                <SectionHeader icon={<MapPinIcon className="h-8 w-8" />} title="Terdekat Denganmu" subtitle="Kafe-kafe paling dekat dari lokasimu saat ini. Makin gampang buat nentuin tujuan!" />
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {nearestCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} distance={cafe.distance} animationDelay={`${i * 75}ms`} />))}
+                </div>
+            </div>
+        </div>
+      )}
+
+      <div className="py-12 bg-brand/5 dark:bg-brand/10">
+        <div className="container mx-auto px-6">
+          <SectionHeader icon={<RocketLaunchIcon className="h-8 w-8" />} title="Pendatang Baru" subtitle="Kafe-kafe paling fresh yang baru aja gabung di Nongkrongr." />
+            {loading ? (<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}</div>
+            ) : newcomerCafes.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {newcomerCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}
+                </div>
+            ) : ( <EmptyState title="Belum Ada Cafe Baru" message="Saat ini belum ada data cafe baru. Cek lagi nanti ya!" />)}
+        </div>
+      </div>
+
       {favoriteIds.length > 0 && !loading && (
         <div className="py-12">
           <div className="container mx-auto px-6">
-            <SectionHeader 
-              icon={<HeartIcon className="h-8 w-8"/>}
-              title="Kafe Favoritmu"
-              subtitle="Tempat-tempat spesial yang sudah kamu tandai."
-              link="/explore?favorites=true"
-            />
-            {favoriteCafes.length > 0 ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {favoriteCafes.map((cafe, i) => (
-                    <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />
-                ))}
-                </div>
-            ) : (
-                 <div className="text-center py-10 text-muted">
-                    <p>Kafe favoritmu akan muncul di sini setelah kamu menambahkannya.</p>
-                </div>
-            )}
+            <SectionHeader icon={<HeartIcon className="h-8 w-8"/>} title="Kafe Favoritmu" subtitle="Tempat-tempat spesial yang sudah kamu tandai." link="/explore?favorites=true" />
+            {favoriteCafes.length > 0 ? (<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{favoriteCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}</div>) : (<div className="text-center py-10 text-muted"><p>Kafe favoritmu akan muncul di sini setelah kamu menambahkannya.</p></div>)}
           </div>
         </div>
       )}
 
-      {/* Trending Section */}
       <div className="py-12">
         <div className="container mx-auto px-6">
-          <SectionHeader 
-            icon={<FireIcon className="h-8 w-8"/>}
-            title="Lagi Trending Nih!"
-            subtitle="Cafe dengan skor aesthetic tertinggi pilihan warga Nongkrongr."
-            link="/explore?sort=trending"
-          />
-            {loading ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
-                </div>
+          <SectionHeader icon={<FireIcon className="h-8 w-8"/>} title="Lagi Trending Nih!" subtitle="Cafe dengan skor aesthetic tertinggi pilihan warga Nongkrongr." link="/explore?sort=trending" />
+            {loading ? (<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}</div>
             ) : trendingCafes.length > 0 ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {trendingCafes.map((cafe, i) => (
-                        <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />
-                    ))}
-                </div>
-            ) : (
-                 <EmptyState 
-                    title="Belum Ada Cafe" 
-                    message="Saat ini belum ada data cafe yang bisa ditampilkan. Cek lagi nanti ya!" 
-                />
-            )}
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{trendingCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}</div>
+            ) : (<EmptyState title="Belum Ada Cafe" message="Saat ini belum ada data cafe yang bisa ditampilkan. Cek lagi nanti ya!" />)}
         </div>
       </div>
       
-      {/* Top Reviews Section */}
       <div className="py-12 bg-brand/5 dark:bg-brand/10">
         <div className="container mx-auto px-6">
-            <SectionHeader 
-              icon={<ChatBubbleBottomCenterTextIcon className="h-8 w-8"/>}
-              title="Kata Mereka Tentang Cafe Hits"
-              subtitle="Review teratas dari para penjelajah cafe di Palembang."
-            />
-             {loading ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {[...Array(4)].map((_, i) => <SkeletonReviewCard key={i} />)}
-                </div>
-            ) : topReviews.length > 0 ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {topReviews.map((review, i) => (
-                        <ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />
-                    ))}
-                </div>
-            ) : (
-                <EmptyState 
-                    title="Belum Ada Review" 
-                    message="Sepertinya belum ada review yang ditinggalkan oleh pengguna. Jadilah yang pertama!" 
-                />
-            )}
+            <SectionHeader icon={<ChatBubbleBottomCenterTextIcon className="h-8 w-8"/>} title="Kata Mereka Tentang Cafe Hits" subtitle="Review teratas dari para penjelajah cafe di Sumatera Selatan." />
+             {loading ? (<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{[...Array(4)].map((_, i) => <SkeletonReviewCard key={i} />)}</div>) : topReviews.length > 0 ? (<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{topReviews.map((review, i) => (<ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />))}</div>) : (<EmptyState title="Belum Ada Review" message="Sepertinya belum ada review yang ditinggalkan oleh pengguna. Jadilah yang pertama!" />)}
         </div>
       </div>
     </div>

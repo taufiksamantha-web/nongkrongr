@@ -37,6 +37,7 @@
         { "name": "name", "type": "text" },
         { "name": "description", "type": "text" },
         { "name": "address", "type": "text" },
+        { "name": "city", "type": "text" },
         { "name": "district", "type": "text" },
         { "name": "openingHours", "type": "text" },
         { "name": "priceTier", "type": "smallint" },

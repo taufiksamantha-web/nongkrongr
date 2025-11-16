@@ -10,22 +10,17 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Switched from public class fields to a constructor for state initialization.
-  // This is a more broadly compatible approach that ensures `this.props` is 
-  // correctly initialized via `super(props)`, resolving the type error.
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-    };
-  }
+  // FIX: Use class property for state initialization.
+  // The constructor-based approach was causing type inference issues where `this.props`
+  // and `this.state` were not recognized within the `render` method.
+  public state: State = { hasError: false };
 
-  static getDerivedStateFromError(_: Error): State {
+  public static getDerivedStateFromError(_: Error): State {
     // Update state so the next render will show the fallback UI.
     return { hasError: true };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
     // In a production app, you would send this to an error reporting service
     // e.g., logErrorToMyService(error, errorInfo);
@@ -40,14 +35,14 @@ class ErrorBoundary extends React.Component<Props, State> {
     window.location.reload();
   };
 
-  render() {
+  public render() {
     if (this.state.hasError) {
       return (
         <div className="flex items-center justify-center min-h-screen bg-soft p-6">
             <div className="max-w-lg w-full bg-card p-8 rounded-3xl shadow-2xl text-center border border-border">
                 <ExclamationTriangleIcon className="h-16 w-16 mx-auto text-accent-amber mb-4" />
                 <h1 className="text-3xl font-bold font-jakarta text-primary dark:text-white">Oops! Terjadi Kesalahan</h1>
-                <p className="mt-4 text-muted">
+                <p className="text-muted mt-4">
                     Maaf, ada sesuatu yang tidak beres. Tim kami telah diberi tahu tentang masalah ini.
                 </p>
                 <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">

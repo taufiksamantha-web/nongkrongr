@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nongkrongr: Palembang Cafe Finder</title>
+    <title>Nongkrongr: South Sumatra Cafe Finder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -57,10 +57,19 @@
                   transform: 'translateY(-6px)',
                 },
               },
+              'ken-burns': {
+                '0%': {
+                  transform: 'scale(1.1) translate(2%, -2%)',
+                },
+                '100%': {
+                  transform: 'scale(1) translate(0, 0)',
+                },
+              },
             },
             animation: {
               'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
               'subtle-bounce': 'subtle-bounce 2.5s ease-in-out infinite',
+              'ken-burns': 'ken-burns 15s ease-out forwards',
             }
           }
         }

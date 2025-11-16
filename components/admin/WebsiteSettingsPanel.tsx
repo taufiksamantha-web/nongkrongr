@@ -58,7 +58,7 @@ const WebsiteSettingsPanel: React.FC = () => {
         ) : (
           <div>
             <p className="text-sm text-muted mb-2">Gambar saat ini:</p>
-            <ImageWithFallback src={heroBgUrl} alt="Hero background preview" className="w-full h-40 object-cover rounded-2xl mb-4" fallbackText="Belum ada background kustom."/>
+            <ImageWithFallback src={heroBgUrl} alt="Hero background preview" className="w-full h-40 object-cover rounded-2xl mb-4" fallbackText="Belum ada background kustom." width={400} height={200}/>
             <label htmlFor="hero-bg-upload" className={`w-full text-center cursor-pointer bg-brand/10 text-brand font-semibold p-3 rounded-xl block hover:bg-brand/20 transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
               {isUploading ? 'Mengupload...' : 'Unggah Gambar Baru'}
             </label>

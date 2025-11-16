@@ -1,11 +1,13 @@
 
 import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LoginForm from '../components/admin/LoginForm';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserDashboard from '../components/admin/UserDashboard';
 import { ThemeContext } from '../App';
 import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
+import FloatingNotification from '../components/common/FloatingNotification';
 
 const LoadingSpinner: React.FC = () => (
     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -18,20 +20,20 @@ const AdminPage: React.FC = () => {
     const { currentUser, logout } = useAuth();
     const { theme, toggleTheme } = useContext(ThemeContext);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const navigate = useNavigate();
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
         const { error } = await logout();
         if (error) {
             console.error('Logout error:', error.message);
-            alert(`Logout error: ${error.message}`);
+            setNotification({ message: `Gagal logout: ${error.message}. Coba lagi.`, type: 'error'});
             setIsLoggingOut(false);
-            // Optionally force reload even on error to clear state
-            window.location.reload();
         } else {
-            // Using window.location.href is a robust way to ensure a full redirect
-            // and page reload, clearing all application state.
-            window.location.href = '/';
+            // Logout berhasil, listener di AuthContext akan menghapus state user.
+            // Cukup arahkan pengguna ke halaman utama.
+            navigate('/');
         }
     };
     
@@ -41,6 +43,7 @@ const AdminPage: React.FC = () => {
 
     return (
         <div className="container mx-auto px-6 py-8">
+            {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
             <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
                 <div>
                     <h2 className="text-xl">Welcome, <span className="font-bold text-primary">{currentUser.username}</span></h2>

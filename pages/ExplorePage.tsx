@@ -6,7 +6,7 @@ import { Cafe, PriceTier } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { useFavorites } from '../context/FavoriteContext';
-import { DISTRICTS, VIBES, AMENITIES } from '../constants';
+import { SOUTH_SUMATRA_CITIES, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
 import { MagnifyingGlassIcon, ChevronDownIcon, AdjustmentsHorizontalIcon, XMarkIcon, InboxIcon } from '@heroicons/react/24/solid';
 import { MapPinIcon } from '@heroicons/react/24/outline';
@@ -57,16 +57,16 @@ const FilterPanelContent: React.FC<{
                 {locationError && <p className="text-xs text-accent-pink mt-1">{locationError}</p>}
             </div>
 
-            {/* District */}
-            <details className="py-2 border-t border-border group">
+            {/* City */}
+            <details className="py-2 border-t border-border group" open>
                 <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
-                    Kecamatan
+                    Kota/Kabupaten
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
                 <div className="mt-4">
-                    <select value={filters.district} onChange={e => handleFilterChange('district', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white">
-                        <option value="all">Semua Kecamatan</option>
-                        {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+                    <select value={filters.city} onChange={e => handleFilterChange('city', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white">
+                        <option value="all">Semua Kota/Kabupaten</option>
+                        {SOUTH_SUMATRA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
             </details>
@@ -157,7 +157,7 @@ const ExplorePage: React.FC = () => {
 
   const [filters, setFilters] = useState({
     search: searchParams.get('search') || '',
-    district: searchParams.get('district') || 'all',
+    city: searchParams.get('city') || 'all',
     vibes: searchParams.getAll('vibe') || [],
     amenities: searchParams.getAll('amenity') || [],
     priceTier: parseInt(searchParams.get('price_tier') || '4', 10) as PriceTier,
@@ -220,7 +220,7 @@ const ExplorePage: React.FC = () => {
 
     const newParams = new URLSearchParams();
     if (filters.search) newParams.set('search', filters.search);
-    if (filters.district !== 'all') newParams.set('district', filters.district);
+    if (filters.city !== 'all') newParams.set('city', filters.city);
     filters.vibes.forEach(vibe => newParams.append('vibe', vibe));
     filters.amenities.forEach(amenity => newParams.append('amenity', amenity));
     if (filters.priceTier < 4) newParams.set('price_tier', String(filters.priceTier));
@@ -239,7 +239,7 @@ const ExplorePage: React.FC = () => {
     } else {
         processedCafes = cafes.filter(cafe => {
             if (filters.search && !cafe.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
-            if (filters.district !== 'all' && cafe.district !== filters.district) return false;
+            if (filters.city !== 'all' && cafe.city !== filters.city) return false;
             if (filters.vibes.length > 0 && !filters.vibes.every(v => cafe.vibes.some(cv => cv.id === v))) return false;
             if (filters.amenities.length > 0 && !filters.amenities.every(a => cafe.amenities.some(ca => ca.id === a))) return false;
             if (cafe.priceTier > filters.priceTier) return false;

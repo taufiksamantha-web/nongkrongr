@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Cafe, Review, Spot, Vibe, Amenity } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { useAuth } from './AuthContext';
 
 // Helper function to calculate averages client-side
 const calculateAverages = (cafe: Cafe): Cafe => {
@@ -52,6 +53,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [cafes, setCafes] = useState<Cafe[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const { currentUser } = useAuth();
 
     const fetchCafes = useCallback(async () => {
         setLoading(true);
@@ -113,47 +115,65 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
+    // Consolidated effect to fetch data on mount and on auth changes.
+    // This ensures data is always fresh and respects RLS policies after login/logout.
     useEffect(() => {
-        fetchCafes(); // Initial fetch on component mount
+        fetchCafes();
+        
         const intervalId = setInterval(fetchCafes, 300000); // Refresh data every 5 minutes
-        return () => clearInterval(intervalId); // Cleanup interval on unmount
-    }, [fetchCafes]);
-
-    // Tambahkan useEffect baru untuk me-refresh data saat tab kembali aktif
-    useEffect(() => {
+        
         const handleVisibilityChange = () => {
-            // Cek jika halaman kembali terlihat
             if (document.visibilityState === 'visible') {
-                fetchCafes(); // Panggil fungsi untuk mengambil data terbaru
+                fetchCafes();
             }
         };
 
-        // Tambahkan event listener untuk memantau perubahan visibilitas tab
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
-        // Bersihkan event listener saat komponen di-unmount
+        // Cleanup will run on unmount or when currentUser changes, which is what we want.
         return () => {
+            clearInterval(intervalId);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, [fetchCafes]);
+    }, [currentUser, fetchCafes]);
 
 
     const addCafe = async (cafeData: Partial<Cafe>) => {
-        const { vibes = [], amenities = [], spots = [], coords, ...mainCafeData } = cafeData;
-
+        const { vibes = [], amenities = [], spots = [] } = cafeData;
         const cafeId = `cafe-${crypto.randomUUID()}`;
-        const slug = mainCafeData.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || `cafe-${Date.now()}`;
+        
+        const generateSlug = (name?: string): string => {
+            const baseSlug = (name || 'cafe')
+                .toLowerCase()
+                .replace(/&/g, 'and')
+                .replace(/[^\w\s-]/g, '')
+                .trim()
+                .replace(/\s+/g, '-');
+            const randomSuffix = Math.random().toString(36).substring(2, 6);
+            return `${baseSlug}-${randomSuffix}`;
+        };
+        const slug = generateSlug(cafeData.name);
 
         const cafeRecord = {
-            ...mainCafeData,
             id: cafeId,
             slug: slug,
-            lat: coords?.lat,
-            lng: coords?.lng,
+            name: cafeData.name,
+            description: cafeData.description,
+            address: cafeData.address,
+            city: cafeData.city,
+            district: cafeData.district,
+            openingHours: cafeData.openingHours,
+            priceTier: cafeData.priceTier,
+            lat: cafeData.coords?.lat,
+            lng: cafeData.coords?.lng,
+            isSponsored: cafeData.isSponsored,
+            sponsoredUntil: cafeData.sponsoredUntil,
+            sponsoredRank: cafeData.sponsoredRank,
+            logoUrl: cafeData.logoUrl,
+            coverUrl: cafeData.coverUrl,
         };
 
         const { error: cafeError } = await supabase.from('cafes').insert(cafeRecord);
-
         if (cafeError) {
             console.error("Error inserting main cafe record:", cafeError);
             throw new Error(`Gagal menyimpan data kafe utama: ${cafeError.message}`);
@@ -187,21 +207,41 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             await fetchCafes();
             return cafeRecord;
         } catch (relationError: any) {
-            console.error("Error inserting relations, rolling back cafe creation:", relationError);
-            // Attempt to delete the orphaned cafe record
-            await supabase.from('cafes').delete().eq('id', cafeId);
-            // Re-throw the specific error to be caught by the form
-            throw relationError;
+            // BUG FIX: The original code tried an automatic rollback which could fail and "freeze" the app.
+            // This new approach prevents the freeze by not attempting a risky operation inside a catch block.
+            // It provides a clear, actionable error message to the user instead.
+            console.error("CRITICAL: Error inserting relations after cafe creation. Orphaned record exists.", { cafeId, relationError });
+            throw new Error(
+              `Kafe "${cafeRecord.name}" berhasil dibuat, TAPI GAGAL menyimpan detailnya (vibes/fasilitas/spot). ` +
+              `Harap hapus kafe ini dari daftar dan coba buat lagi. Pesan error: ${relationError.message}`
+            );
         }
     };
     
     const updateCafe = async (id: string, updatedData: Partial<Cafe>) => {
-        const { vibes, amenities, spots, coords, ...mainCafeData } = updatedData;
+        const { vibes, amenities, spots, coords } = updatedData;
 
+        // FIX: Explicitly map properties to only update valid columns.
         const cafeRecord = {
-            ...mainCafeData,
+            name: updatedData.name,
+            description: updatedData.description,
+            address: updatedData.address,
+            city: updatedData.city,
+            district: updatedData.district,
+            openingHours: updatedData.openingHours,
+            priceTier: updatedData.priceTier,
+            isSponsored: updatedData.isSponsored,
+            sponsoredUntil: updatedData.sponsoredUntil,
+            sponsoredRank: updatedData.sponsoredRank,
+            logoUrl: updatedData.logoUrl,
+            coverUrl: updatedData.coverUrl,
             ...(coords && { lat: coords.lat, lng: coords.lng }),
         };
+
+        // Remove undefined keys so we don't overwrite existing data with null
+        Object.keys(cafeRecord).forEach(key => (cafeRecord as any)[key] === undefined && delete (cafeRecord as any)[key]);
+
+
         const { error: cafeError } = await supabase
             .from('cafes')
             .update(cafeRecord)
