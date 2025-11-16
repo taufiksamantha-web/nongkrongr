@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -8,6 +9,12 @@ const LoginForm: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const emailInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        // Otomatis fokus ke input email saat komponen dimuat
+        emailInputRef.current?.focus();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -32,6 +39,7 @@ const LoginForm: React.FC = () => {
                 <div>
                     <label className="font-semibold">Email</label>
                     <input
+                        ref={emailInputRef}
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
