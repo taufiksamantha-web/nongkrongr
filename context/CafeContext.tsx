@@ -53,7 +53,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [cafes, setCafes] = useState<Cafe[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const { currentUser } = useAuth();
+    const { currentUser, loading: authLoading } = useAuth();
 
     const fetchCafes = useCallback(async () => {
         setLoading(true);
@@ -115,9 +115,14 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
-    // Consolidated effect to fetch data on mount and on auth changes.
-    // This ensures data is always fresh and respects RLS policies after login/logout.
+    // Fetch data only after the initial authentication check is complete.
+    // This prevents a race condition on hard refresh where data is fetched
+    // for an anonymous user before the session is fully validated.
     useEffect(() => {
+        if (authLoading) {
+            return; // Wait for authentication to resolve.
+        }
+        
         fetchCafes();
         
         const intervalId = setInterval(fetchCafes, 300000); // Refresh data every 5 minutes
@@ -130,12 +135,11 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
-        // Cleanup will run on unmount or when currentUser changes, which is what we want.
         return () => {
             clearInterval(intervalId);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, [currentUser, fetchCafes]);
+    }, [currentUser, authLoading, fetchCafes]);
 
 
     const addCafe = async (cafeData: Partial<Cafe>) => {
