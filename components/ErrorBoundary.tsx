@@ -10,7 +10,7 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Added constructor to initialize state and call super(props).
+  // FIX: Initialize state in the constructor and call super(props).
   // This resolves errors related to `this.state` and `this.props` being undefined
   // in class component lifecycle methods and render.
   constructor(props: Props) {
@@ -34,15 +34,17 @@ class ErrorBoundary extends React.Component<Props, State> {
   /**
    * Melakukan 'hard reset' pada aplikasi.
    * Ini akan menghapus semua data yang disimpan secara lokal di browser (seperti favorit,
-   * tema, dll.) dan kemudian memuat ulang halaman. Ini efektif untuk mengatasi
-   * masalah yang disebabkan oleh data cache atau sesi yang rusak.
+   * tema, dll.) dan kemudian memaksa muat ulang halaman dari server, mengabaikan cache.
+   * Ini efektif untuk mengatasi masalah yang disebabkan oleh data cache atau sesi yang rusak.
    */
   private handleClearCacheAndReload = () => {
-    // Clear all locally stored data
+    // Hapus semua data yang disimpan secara lokal
     localStorage.clear();
     sessionStorage.clear();
     
-    // Reload the page, forcing a re-fetch from the server
+    // Paksa muat ulang dari server, bukan dari cache browser.
+    // FIX: The boolean argument for reload() is deprecated and causes a TypeScript error.
+    // The modern method takes no arguments.
     window.location.reload();
   };
 
