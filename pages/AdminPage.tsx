@@ -1,8 +1,8 @@
 
+
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import LoginForm from '../components/admin/LoginForm';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserDashboard from '../components/admin/UserDashboard';
 import { ThemeContext } from '../App';
@@ -31,14 +31,18 @@ const AdminPage: React.FC = () => {
             setNotification({ message: `Gagal logout: ${error.message}. Coba lagi.`, type: 'error'});
             setIsLoggingOut(false);
         } else {
-            // Logout berhasil, listener di AuthContext akan menghapus state user.
-            // Cukup arahkan pengguna ke halaman utama.
-            navigate('/');
+            // Pengalihan tidak lagi diperlukan di sini karena AuthContext
+            // akan memicu perubahan state, dan ProtectedRoute akan menangani
+            // pengalihan ke halaman login secara otomatis.
+            // Cukup reset state.
+            setIsLoggingOut(false);
         }
     };
     
+    // currentUser dijamin ada karena halaman ini dilindungi oleh ProtectedRoute
     if (!currentUser) {
-        return <LoginForm />;
+        // Tampilan ini seharusnya tidak pernah muncul, tapi sebagai fallback
+        return null;
     }
 
     return (

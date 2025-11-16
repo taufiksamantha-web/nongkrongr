@@ -10,10 +10,9 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: The error "Property 'props' does not exist" suggests `this.props` is not
-  // being initialized. Adding an explicit constructor that calls `super(props)`
-  // ensures `this.props` is set correctly. State initialization is also moved
-  // into the constructor for consistency.
+  // FIX: Added constructor to initialize state and call super(props).
+  // This resolves errors related to `this.state` and `this.props` being undefined
+  // in class component lifecycle methods and render.
   constructor(props: Props) {
     super(props);
     this.state = {

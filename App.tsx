@@ -1,11 +1,13 @@
 
+
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { HashRouter, Routes, Route, Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, NavLink, useLocation, Navigate, Outlet } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import ExplorePage from './pages/ExplorePage';
 import DetailPage from './pages/DetailPage';
 import AdminPage from './pages/AdminPage';
 import AboutPage from './pages/AboutPage';
+import LoginPage from './pages/LoginPage';
 import WelcomeModal from './components/WelcomeModal';
 import Footer from './components/Footer';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -68,74 +70,48 @@ const FullScreenLoader: React.FC = () => (
     <div className="fixed inset-0 bg-soft flex flex-col items-center justify-center z-[2000]">
         <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-16 w-auto mb-6" />
         <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-brand"></div>
-        <p className="mt-6 text-muted font-semibold">Mempersiapkan Aplikasi...</p>
+        <p className="mt-6 text-muted font-semibold">Memeriksa Sesi...</p>
     </div>
 );
 
-
-const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }> = ({ showWelcome, onCloseWelcome }) => {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const { currentUser, loading: authLoading } = useAuth();
-    const [isNavigating, setIsNavigating] = useState(true);
-    
-    const isAdminPage = location.pathname.startsWith('/admin');
-    const isHomePage = location.pathname === '/';
-
-    useEffect(() => {
-        // Jangan lakukan apa-apa sampai pengecekan otentikasi awal selesai.
-        if (authLoading) {
-            return;
-        }
-
-        let didNavigate = false;
-
-        // Logika redirect:
-        // 1. Jika user sudah login dan berada di halaman publik, paksa ke dashboard.
-        if (currentUser && !isAdminPage) {
-            navigate('/admin', { replace: true });
-            didNavigate = true;
-        } 
-        // 2. BUG FIX: Logika di bawah ini salah. Logika ini memaksa pengguna yang belum login
-        // keluar dari halaman /admin, sehingga panel login tidak pernah bisa muncul.
-        // Dihapus agar komponen AdminPage dapat memutuskan sendiri untuk menampilkan
-        // LoginForm saat currentUser null.
-        /* else if (!currentUser && isAdminPage) {
-            navigate('/', { replace: true });
-            didNavigate = true;
-        } */
-
-        // Jika tidak ada navigasi yang terjadi, kita siap untuk merender.
-        if (!didNavigate) {
-            setIsNavigating(false);
-        }
-
-    }, [currentUser, isAdminPage, authLoading, navigate]);
-
-    // Tampilkan loader selama pengecekan otentikasi awal ATAU selama logika navigasi internal kita berjalan.
-    // Ini adalah 'gerbang' yang mencegah race condition.
-    if (authLoading || isNavigating) {
+// NEW: Protected Route Guard Component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { currentUser, loading } = useAuth();
+    if (loading) {
         return <FullScreenLoader />;
     }
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
+    return <>{children}</>;
+};
 
+// NEW: Guest Route Guard Component (for login page)
+const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { currentUser, loading } = useAuth();
+    if (loading) {
+        return <FullScreenLoader />;
+    }
+    if (currentUser) {
+        return <Navigate to="/admin" replace />;
+    }
+    return <>{children}</>;
+};
+
+// NEW: Main Layout for all Public Pages
+const MainLayout: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }> = ({ showWelcome, onCloseWelcome }) => {
+    const location = useLocation();
+    const isHomePage = location.pathname === '/';
 
     return (
         <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col">
-          {showWelcome && isHomePage && <WelcomeModal onClose={onCloseWelcome} />}
-          
-          {!isAdminPage && <Header />}
-          
-          <main className="flex-grow">
-            <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/explore" element={<ExplorePage />} />
-                <Route path="/cafe/:slug" element={<DetailPage />} />
-                <Route path="/admin" element={<AdminPage />} />
-                <Route path="/about" element={<AboutPage />} />
-            </Routes>
-          </main>
-
-          {!isAdminPage && (
+            {showWelcome && isHomePage && <WelcomeModal onClose={onCloseWelcome} />}
+            <Header />
+            <main className="flex-grow">
+                <Outlet /> {/* Renders the matched child route component (HomePage, ExplorePage, etc.) */}
+            </main>
+            
+            {/* Mobile Explore Button */}
             <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
                 <Link 
                     to="/explore"
@@ -145,13 +121,13 @@ const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
                     <span>Jelajahi</span>
                 </Link>
             </div>
-          )}
 
-          {!isAdminPage && <Footer />}
-          {!isAdminPage && <ScrollToTopButton />}
+            <Footer />
+            <ScrollToTopButton />
         </div>
     );
 };
+
 
 const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('nongkrongr_welcome_seen'));
@@ -193,7 +169,29 @@ const App: React.FC = () => {
             <ErrorBoundary>
               <HashRouter>
                   <ScrollToTopOnNavigate />
-                  <AppContent showWelcome={showWelcome} onCloseWelcome={handleCloseWelcome} />
+                  <Routes>
+                    {/* Public pages are wrapped in the MainLayout */}
+                    <Route element={<MainLayout showWelcome={showWelcome} onCloseWelcome={handleCloseWelcome} />}>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/explore" element={<ExplorePage />} />
+                        <Route path="/cafe/:slug" element={<DetailPage />} />
+                        <Route path="/about" element={<AboutPage />} />
+                    </Route>
+                    
+                    {/* A guest-only route for the login page */}
+                    <Route path="/login" element={
+                        <GuestRoute>
+                            <LoginPage />
+                        </GuestRoute>
+                    } />
+                    
+                    {/* A protected route for the admin/user dashboard */}
+                    <Route path="/admin" element={
+                        <ProtectedRoute>
+                            <AdminPage />
+                        </ProtectedRoute>
+                    } />
+                  </Routes>
               </HashRouter>
             </ErrorBoundary>
           </CafeProvider>
