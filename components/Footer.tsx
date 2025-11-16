@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 
@@ -43,8 +41,9 @@ const Footer: React.FC = () => {
                         <nav className="mt-4 space-y-2">
                             <Link to="/" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Home</Link>
                             <Link to="/explore" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Explore</Link>
-                            <Link to="/admin" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Admin</Link>
+                            <Link to="/leaderboard" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Leaderboard</Link>
                             <Link to="/about" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Tentang Kami</Link>
+                            <Link to="/admin" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Admin</Link>
                         </nav>
                     </div>
 

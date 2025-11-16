@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -11,13 +9,14 @@ import FeaturedCafeCard from '../components/FeaturedCafeCard';
 import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import AiRecommenderModal from '../components/AiRecommenderModal';
-import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon, MapPinIcon, RocketLaunchIcon } from '@heroicons/react/24/solid';
+import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon, MapPinIcon, RocketLaunchIcon, TrophyIcon } from '@heroicons/react/24/solid';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonFeaturedCard from '../components/SkeletonFeaturedCard';
 import SkeletonReviewCard from '../components/SkeletonReviewCard';
 import { calculateDistance } from '../utils/geolocation';
 import { settingsService } from '../services/settingsService';
+import CafeOfTheWeekCard from '../components/CafeOfTheWeekCard';
 
 type TopReview = Review & { cafeName: string; cafeSlug: string };
 type CafeWithDistance = Cafe & { distance: number };
@@ -86,6 +85,7 @@ const HomePage: React.FC = () => {
   const [newcomerCafes, setNewcomerCafes] = useState<Cafe[]>([]);
   const [nearestCafes, setNearestCafes] = useState<CafeWithDistance[]>([]);
   const [topReviews, setTopReviews] = useState<TopReview[]>([]);
+  const [cafeOfTheWeek, setCafeOfTheWeek] = useState<Cafe | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Cafe[]>([]);
   const [isResultsVisible, setIsResultsVisible] = useState(false);
@@ -105,11 +105,11 @@ const HomePage: React.FC = () => {
   const defaultHeroBgUrl = "https://res.cloudinary.com/dovouihq8/image/upload/v1762917599/mg7uygdmahzogqrzlayx.png";
 
   useEffect(() => {
-    const fetchHeroBg = async () => {
+    const fetchSettings = async () => {
         const url = await settingsService.getSetting('hero_background_url');
         setHeroBgUrl(url || defaultHeroBgUrl);
     };
-    fetchHeroBg();
+    fetchSettings();
   }, []);
   
   useEffect(() => {
@@ -147,6 +147,16 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     if (cafes.length > 0) {
+      // Cafe of the week
+      const fetchCafeOfTheWeek = async () => {
+          const cafeId = await settingsService.getSetting('cafe_of_the_week_id');
+          if (cafeId) {
+              const foundCafe = cafes.find(c => c.id === cafeId);
+              setCafeOfTheWeek(foundCafe || null);
+          }
+      };
+      fetchCafeOfTheWeek();
+
       // Trending
       const sortedByAesthetic = [...cafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
       setTrendingCafes(sortedByAesthetic.slice(0, 4));
@@ -195,9 +205,9 @@ const HomePage: React.FC = () => {
       );
       
       allApprovedReviews.sort((a, b) => {
-        const scoreA = a.ratingAesthetic + a.ratingWork;
-        const scoreB = b.ratingAesthetic + b.ratingWork;
-        if (scoreB !== scoreA) return scoreB - a.score;
+        const scoreA = (a.ratingAesthetic + a.ratingWork) + (a.helpful_count || 0);
+        const scoreB = (b.ratingAesthetic + b.ratingWork) + (b.helpful_count || 0);
+        if (scoreB !== scoreA) return scoreB - scoreA;
         return b.text.length - a.text.length;
       });
 
@@ -213,6 +223,7 @@ const HomePage: React.FC = () => {
         setNearestCafes([]);
         setTopReviews([]);
         setFavoriteCafes([]);
+        setCafeOfTheWeek(null);
     }
   }, [cafes, favoriteIds, userLocation]);
   
@@ -315,6 +326,14 @@ const HomePage: React.FC = () => {
           {loading ? (<div className="max-w-4xl mx-auto"><SkeletonFeaturedCard /></div>) : recommendedCafes.length > 0 ? (<div className="max-w-4xl mx-auto relative"><div className="overflow-hidden"><div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>{recommendedCafes.map(cafe => (<div key={cafe.id} className="w-full flex-shrink-0"><FeaturedCafeCard cafe={cafe} /></div>))}</div></div>{recommendedCafes.length > 1 && (<><button onClick={prevSlide} className="absolute top-1/2 -translate-y-1/2 left-0 md:-left-16 p-3 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all duration-300 shadow-md z-20" aria-label="Previous recommendation"><ChevronLeftIcon className="h-6 w-6" /></button><button onClick={nextSlide} className="absolute top-1/2 -translate-y-1/2 right-0 md:-right-16 p-3 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all duration-300 shadow-md z-20" aria-label="Next recommendation"><ChevronRightIcon className="h-6 w-6" /></button></>)}</div>) : (<div className="max-w-4xl mx-auto"><EmptyState title="Rekomendasi Belum Tersedia" message="Saat ini belum ada kafe yang bisa kami rekomendasikan secara spesial. Cek lagi nanti ya!" /></div>)}
         </div>
       </div>
+
+      {!loading && cafeOfTheWeek && (
+          <div className="py-12">
+              <div className="container mx-auto px-6">
+                  <CafeOfTheWeekCard cafe={cafeOfTheWeek} />
+              </div>
+          </div>
+      )}
 
       {!isLocating && userLocation && nearestCafes.length > 0 && (
         <div className="py-12">

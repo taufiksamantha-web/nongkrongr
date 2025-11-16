@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier } from '../types';
@@ -8,7 +6,7 @@ import { ThemeContext } from '../App';
 import { useFavorites } from '../context/FavoriteContext';
 import { SOUTH_SUMATRA_CITIES, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
-import { MagnifyingGlassIcon, ChevronDownIcon, AdjustmentsHorizontalIcon, XMarkIcon, InboxIcon } from '@heroicons/react/24/solid';
+import { MagnifyingGlassIcon, ChevronDownIcon, AdjustmentsHorizontalIcon, XMarkIcon, InboxIcon, FireIcon } from '@heroicons/react/24/solid';
 import { MapPinIcon } from '@heroicons/react/24/outline';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
@@ -151,6 +149,7 @@ const ExplorePage: React.FC = () => {
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const observerRef = useRef<HTMLDivElement>(null);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(false);
 
   const isFavoritesView = searchParams.get('favorites') === 'true';
   const sortParam = searchParams.get('sort');
@@ -371,7 +370,14 @@ const ExplorePage: React.FC = () => {
             />
         </div>
         <div className="relative z-10 rounded-3xl mb-8 overflow-hidden shadow-md h-96 border border-border">
-            <InteractiveMap cafes={sortedCafes} theme={theme} showUserLocation={true} />
+            <InteractiveMap cafes={sortedCafes} theme={theme} showUserLocation={true} showHeatmap={showHeatmap} />
+            <button
+                onClick={() => setShowHeatmap(!showHeatmap)}
+                className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-card/80 backdrop-blur-sm text-primary font-bold py-2 px-4 rounded-full shadow-lg hover:bg-card transition-colors"
+            >
+                <FireIcon className={`h-5 w-5 transition-colors ${showHeatmap ? 'text-red-500' : 'text-muted'}`} />
+                {showHeatmap ? 'Peta Panas: Aktif' : 'Peta Panas: Nonaktif'}
+            </button>
         </div>
         
         <h2 className="text-3xl font-bold font-jakarta mb-6">

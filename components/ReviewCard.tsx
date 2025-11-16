@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { Review } from '../types';
-import { StarIcon, BriefcaseIcon } from '@heroicons/react/24/solid';
+import { CafeContext } from '../context/CafeContext';
+import { StarIcon, BriefcaseIcon, HandThumbUpIcon } from '@heroicons/react/24/solid';
 import ImageWithFallback from './common/ImageWithFallback';
 
 type TopReview = Review & { cafeName: string; cafeSlug: string };
@@ -19,32 +20,55 @@ const RatingBadge: React.FC<{ icon: React.ReactNode, score: number, color: strin
 );
 
 const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
+  const cafeContext = useContext(CafeContext);
+  const [voted, setVoted] = useState(false);
+  const storageKey = `voted_review_${review.id}`;
+
+  useEffect(() => {
+    if (localStorage.getItem(storageKey)) {
+        setVoted(true);
+    }
+  }, [storageKey]);
+
+  const handleVote = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (voted || !cafeContext) return;
+      
+      cafeContext.incrementHelpfulCount(review.id);
+      localStorage.setItem(storageKey, 'true');
+      setVoted(true);
+  };
+  
+  const content = (
+    <div>
+      <div className="flex justify-between items-start">
+        <p className="text-5xl text-brand font-bold opacity-20 -ml-2">“</p>
+        <div className="flex flex-col space-y-1 items-end flex-shrink-0 ml-2">
+            <RatingBadge icon={<StarIcon className="h-3 w-3" />} score={review.ratingAesthetic} color="bg-accent-pink" />
+            <RatingBadge icon={<BriefcaseIcon className="h-3 w-3" />} score={review.ratingWork} color="bg-accent-cyan" />
+        </div>
+      </div>
+      <p className="text-muted italic -mt-8 line-clamp-4 min-h-[80px]">
+        {review.text}
+      </p>
+    </div>
+  );
+
   return (
     <div 
-      className="bg-card rounded-3xl shadow-lg p-6 flex flex-col justify-between h-full transform transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl border border-border animate-fade-in-up review-card-optimized"
+      className="bg-card rounded-3xl shadow-lg p-6 flex flex-col h-full transform transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl border border-border animate-fade-in-up review-card-optimized"
       style={{ animationDelay }}
     >
-      <div>
-        <p className="text-5xl text-brand font-bold opacity-20">“</p>
-        <p className="text-muted italic -mt-6 line-clamp-4">
-          {review.text}
-        </p>
-      </div>
+      {/* Jika ada foto, linknya di foto. Jika tidak, linknya di seluruh card */}
+      {review.photos && review.photos.length > 0 && review.photos[0] 
+        ? content 
+        : <Link to={`/cafe/${review.cafeSlug}`} className="block flex-grow">{content}</Link>
+      }
+
       <div className="mt-4 pt-4 border-t border-border">
-        <div className="flex justify-between items-center">
-            <div>
-                <p className="font-bold text-primary dark:text-gray-100">{review.author}</p>
-                <Link to={`/cafe/${review.cafeSlug}`} className="text-sm text-brand hover:underline font-semibold">
-                    di {review.cafeName}
-                </Link>
-            </div>
-            <div className="flex flex-col space-y-1 items-end">
-                <RatingBadge icon={<StarIcon className="h-3 w-3" />} score={review.ratingAesthetic} color="bg-accent-pink" />
-                <RatingBadge icon={<BriefcaseIcon className="h-3 w-3" />} score={review.ratingWork} color="bg-accent-cyan" />
-            </div>
-        </div>
-        {review.photos && review.photos.length > 0 && review.photos[0] && (
-            <div className="mt-4">
+          {review.photos && review.photos.length > 0 && review.photos[0] && (
+            <Link to={`/cafe/${review.cafeSlug}`} className="block mb-4">
                 <ImageWithFallback 
                   src={review.photos[0]} 
                   alt={`Review by ${review.author}`} 
@@ -52,8 +76,28 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
                   width={250}
                   height={150}
                 />
-            </div>
+            </Link>
         )}
+        <div className="flex justify-between items-center">
+            <div>
+                <p className="font-bold text-primary dark:text-gray-100">{review.author}</p>
+                <Link to={`/cafe/${review.cafeSlug}`} className="text-sm text-brand hover:underline font-semibold">
+                    di {review.cafeName}
+                </Link>
+            </div>
+            <button
+              onClick={handleVote}
+              disabled={voted}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold transition-all ${
+                voted 
+                ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300'
+                : 'bg-gray-100 dark:bg-gray-700/50 text-muted hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <HandThumbUpIcon className="h-4 w-4"/>
+              <span>{review.helpful_count || 0}</span>
+            </button>
+        </div>
       </div>
     </div>
   );

@@ -22,7 +22,6 @@ const AdminPage: React.FC = () => {
     const { theme, toggleTheme } = useContext(ThemeContext);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-    const navigate = useNavigate();
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
@@ -31,11 +30,10 @@ const AdminPage: React.FC = () => {
             console.error('Logout error:', error.message);
             setNotification({ message: `Gagal logout: ${error.message}. Coba lagi.`, type: 'error'});
             setIsLoggingOut(false);
-        } else {
-            // Navigasi eksplisit ke halaman login untuk pengalaman pengguna yang lebih
-            // mulus dan untuk menghindari potensi 'freeze' atau race condition.
-            navigate('/login');
         }
+        // Navigasi akan ditangani secara otomatis oleh ProtectedRoute 
+        // saat currentUser menjadi null. Tidak perlu navigasi manual di sini untuk
+        // menghindari race condition dan memastikan alur yang lebih stabil.
     };
     
     // currentUser dijamin ada karena halaman ini dilindungi oleh ProtectedRoute

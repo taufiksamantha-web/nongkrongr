@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink, useLocation, Navigate, Outlet } from 'react-router-dom';
 import HomePage from './pages/HomePage';
@@ -9,6 +6,7 @@ import DetailPage from './pages/DetailPage';
 import AdminPage from './pages/AdminPage';
 import AboutPage from './pages/AboutPage';
 import LoginPage from './pages/LoginPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 import WelcomeModal from './components/WelcomeModal';
 import Footer from './components/Footer';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -198,6 +196,7 @@ const App: React.FC = () => {
                         <Route path="/explore" element={<ExplorePage />} />
                         <Route path="/cafe/:slug" element={<DetailPage />} />
                         <Route path="/about" element={<AboutPage />} />
+                        <Route path="/leaderboard" element={<LeaderboardPage />} />
                     </Route>
                     
                     {/* A guest-only route for the login page */}

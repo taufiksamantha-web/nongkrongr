@@ -27,6 +27,17 @@ export interface Spot {
   created_at?: string;
 }
 
+export interface Event {
+  id: string;
+  cafe_id?: string;
+  name: string;
+  description: string;
+  start_date: string | Date;
+  end_date: string | Date;
+  imageUrl?: string;
+  created_at?: string;
+}
+
 export interface Review {
   id: string;
   cafe_id?: string;
@@ -41,6 +52,7 @@ export interface Review {
   photos: string[];
   createdAt: string | Date;
   status: 'pending' | 'approved' | 'rejected';
+  helpful_count: number;
 }
 
 export interface Cafe {
@@ -66,6 +78,7 @@ export interface Cafe {
   amenities: Amenity[];
   spots: Spot[];
   reviews: Review[];
+  events: Event[];
   created_at?: string;
   // Aggregated scores
   avgAestheticScore: number;

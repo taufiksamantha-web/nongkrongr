@@ -9,6 +9,7 @@ import UserManagementPanel from './UserManagementPanel';
 import WebsiteSettingsPanel from './WebsiteSettingsPanel';
 import StatCard from './StatCard';
 import StatChart from './StatChart';
+import AdminWelcomeHint from './AdminWelcomeHint';
 
 const AdminDashboard: React.FC = () => {
     const { cafes } = useContext(CafeContext)!;
@@ -19,6 +20,7 @@ const AdminDashboard: React.FC = () => {
 
     return (
         <div>
+            <AdminWelcomeHint />
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
                 <h1 className="text-4xl font-bold font-jakarta">Dashboard Overview</h1>
             </div>

@@ -67,7 +67,8 @@
         { "name": "text", "type": "text" },
         { "name": "photos", "type": "text[]" },
         { "name": "createdAt", "type": "timestamptz", "default": "now()" },
-        { "name": "status", "type": "text", "default": "pending" }
+        { "name": "status", "type": "text", "default": "pending" },
+        { "name": "helpful_count", "type": "integer", "default": 0 }
       ],
       "csv_file": "reviews.csv"
     },
@@ -82,6 +83,19 @@
         { "name": "created_at", "type": "timestamptz", "default": "now()" }
       ],
       "csv_file": "spots.csv"
+    },
+    {
+      "name": "events",
+      "columns": [
+        { "name": "id", "type": "text", "is_primary_key": true },
+        { "name": "cafe_id", "type": "text", "references": "cafes(id)" },
+        { "name": "name", "type": "text" },
+        { "name": "description", "type": "text" },
+        { "name": "start_date", "type": "timestamptz" },
+        { "name": "end_date", "type": "timestamptz" },
+        { "name": "imageUrl", "type": "text" },
+        { "name": "created_at", "type": "timestamptz", "default": "now()" }
+      ]
     },
     {
       "name": "cafe_vibes",

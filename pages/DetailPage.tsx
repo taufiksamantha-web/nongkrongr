@@ -4,7 +4,7 @@ import { Cafe, Review } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { useFavorites } from '../context/FavoriteContext';
-import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
+import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
@@ -12,6 +12,8 @@ import ImageWithFallback from '../components/common/ImageWithFallback';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
 import ShareButton from '../components/ShareButton';
+import EventCard from '../components/EventCard';
+import ReviewCard from '../components/ReviewCard';
 import { DEFAULT_COVER_URL } from '../constants';
 
 const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color: string }> = ({ label, score, max, color }) => {
@@ -123,7 +125,7 @@ const DetailPage: React.FC = () => {
         document.body.style.overflow = 'unset';
     };
 
-    const handleAddReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status'> & { cafe_id: string }) => {
+    const handleAddReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => {
         setIsSubmitting(true);
         try {
             await addReview(review);
@@ -154,6 +156,7 @@ const DetailPage: React.FC = () => {
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${cafe.coords.lat},${cafe.coords.lng}`;
     const approvedReviews = cafe.reviews?.filter(r => r.status === 'approved') || [];
     const visibleReviews = reviewsExpanded ? approvedReviews : approvedReviews.slice(0, 10);
+    const cafeEvents = cafe.events?.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()) || [];
 
 
     return (
@@ -221,7 +224,7 @@ const DetailPage: React.FC = () => {
                         {isClosed && (
                             <div className="mt-3 flex items-center gap-3 bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 p-3 rounded-xl text-sm font-semibold">
                                 <ExclamationTriangleIcon className="h-6 w-6 flex-shrink-0" />
-                                <span>Kafe sudah tutup saat ini.</span>
+                                <span>Kafe mungkin sudah tutup saat ini.</span>
                             </div>
                         )}
                         {cafe.description && (
@@ -256,6 +259,21 @@ const DetailPage: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* Events */}
+                    {cafeEvents.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-3 mb-4">
+                                <CalendarDaysIcon className="h-8 w-8 text-brand" />
+                                <h2 className="text-3xl font-bold font-jakarta">Event & Promo</h2>
+                            </div>
+                            <div className="space-y-4">
+                                {cafeEvents.map(event => (
+                                    <EventCard key={event.id} event={event} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Photo Gallery */}
                     {cafe.spots && cafe.spots.length > 0 && (
                         <div>
@@ -286,25 +304,10 @@ const DetailPage: React.FC = () => {
                          <h2 className="text-3xl font-bold font-jakarta mb-4">Reviews ({approvedReviews.length})</h2>
                          <div className="space-y-4">
                             {approvedReviews.length > 0 ? visibleReviews.map(review => (
-                                <div key={review.id} className="bg-card border border-border p-4 rounded-2xl shadow-sm">
-                                    <p className="font-bold">{review.author}</p>
-                                    <p className="text-muted my-2">"{review.text}"</p>
-                                    {review.photos && review.photos.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {review.photos.map((photo, index) => (
-                                                <a href={photo} target="_blank" rel="noopener noreferrer" key={index}>
-                                                    <ImageWithFallback 
-                                                        src={photo} 
-                                                        alt={`Review photo by ${review.author}`} 
-                                                        className="h-24 w-24 object-cover rounded-lg hover:scale-105 transition-transform"
-                                                        width={150}
-                                                        height={150}
-                                                    />
-                                                </a>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                                <ReviewCard 
+                                    key={review.id} 
+                                    review={{...review, cafeName: cafe.name, cafeSlug: cafe.slug}} 
+                                />
                             )) : <p className="text-muted">Belum ada review untuk cafe ini.</p>}
                          </div>
                          {approvedReviews.length > 10 && !reviewsExpanded && (
