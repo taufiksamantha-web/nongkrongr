@@ -96,11 +96,14 @@ const AppContent: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
             navigate('/admin', { replace: true });
             didNavigate = true;
         } 
-        // 2. Jika user tidak login (misal sesi expired) tapi masih di URL admin, paksa ke home.
-        else if (!currentUser && isAdminPage) {
+        // 2. BUG FIX: Logika di bawah ini salah. Logika ini memaksa pengguna yang belum login
+        // keluar dari halaman /admin, sehingga panel login tidak pernah bisa muncul.
+        // Dihapus agar komponen AdminPage dapat memutuskan sendiri untuk menampilkan
+        // LoginForm saat currentUser null.
+        /* else if (!currentUser && isAdminPage) {
             navigate('/', { replace: true });
             didNavigate = true;
-        }
+        } */
 
         // Jika tidak ada navigasi yang terjadi, kita siap untuk merender.
         if (!didNavigate) {
