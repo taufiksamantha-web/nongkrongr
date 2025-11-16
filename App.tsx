@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink, useLocation, Navigate, Outlet } from 'react-router-dom';
 import HomePage from './pages/HomePage';
@@ -66,32 +67,22 @@ const Header: React.FC = () => {
   );
 };
 
-const FullScreenLoader: React.FC = () => (
-    <div className="fixed inset-0 bg-soft flex flex-col items-center justify-center z-[2000]">
-        <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-16 w-auto mb-6" />
-        <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-brand"></div>
-        <p className="mt-6 text-muted font-semibold">Memeriksa Sesi...</p>
-    </div>
-);
-
-// NEW: Protected Route Guard Component
+// Protected Route Guard: Renders children only if a user is logged in.
+// The loading check is removed because AuthProvider now guarantees `loading` is false
+// before rendering its children, thus this component will only render post-auth-check.
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { currentUser, loading } = useAuth();
-    if (loading) {
-        return <FullScreenLoader />;
-    }
+    const { currentUser } = useAuth();
     if (!currentUser) {
         return <Navigate to="/login" replace />;
     }
     return <>{children}</>;
 };
 
-// NEW: Guest Route Guard Component (for login page)
+// Guest Route Guard: Renders children only if no user is logged in.
+// Used for pages like Login to prevent logged-in users from accessing it.
+// The loading check is also removed here for the same reason as ProtectedRoute.
 const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { currentUser, loading } = useAuth();
-    if (loading) {
-        return <FullScreenLoader />;
-    }
+    const { currentUser } = useAuth();
     if (currentUser) {
         return <Navigate to="/admin" replace />;
     }
