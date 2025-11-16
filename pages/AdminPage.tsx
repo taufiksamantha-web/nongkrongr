@@ -1,12 +1,10 @@
 
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserDashboard from '../components/admin/UserDashboard';
-import { ThemeContext } from '../App';
-import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
 import FloatingNotification from '../components/common/FloatingNotification';
 
 const LoadingSpinner: React.FC = () => (
@@ -18,10 +16,20 @@ const LoadingSpinner: React.FC = () => (
 
 const AdminPage: React.FC = () => {
     const { currentUser, logout } = useAuth();
-    const { theme, toggleTheme } = useContext(ThemeContext);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const navigate = useNavigate();
+
+    // Force dark mode for admin dashboard, and restore previous theme on unmount
+    useEffect(() => {
+        const wasLight = !document.documentElement.classList.contains('dark');
+        document.documentElement.classList.add('dark');
+        return () => {
+            if (wasLight) {
+                document.documentElement.classList.remove('dark');
+            }
+        };
+    }, []);
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
@@ -54,13 +62,6 @@ const AdminPage: React.FC = () => {
                     <p className="text-gray-500">You are logged in as: <span className="font-semibold">{currentUser.role.toUpperCase()}</span></p>
                 </div>
                 <div className="flex items-center gap-4">
-                    <button 
-                        onClick={toggleTheme} 
-                        className="p-2 rounded-full text-muted bg-card hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300 border border-border"
-                        aria-label="Toggle theme"
-                    >
-                        {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6 text-yellow-400" />}
-                    </button>
                     <button 
                         onClick={handleLogout} 
                         className="flex items-center justify-center gap-2 bg-accent-pink text-white font-bold py-2 px-6 rounded-2xl hover:bg-accent-pink/90 transition-all disabled:opacity-75"

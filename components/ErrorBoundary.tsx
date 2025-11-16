@@ -10,9 +10,9 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Initialize state in the constructor and call super(props).
-  // This resolves errors related to `this.state` and `this.props` being undefined
-  // in class component lifecycle methods and render.
+  // Fix: Added a constructor to initialize state and call super(props).
+  // This resolves errors where `this.state` and `this.props` were considered 
+  // non-existent in a class component.
   constructor(props: Props) {
     super(props);
     this.state = {
@@ -43,8 +43,7 @@ class ErrorBoundary extends React.Component<Props, State> {
     sessionStorage.clear();
     
     // Paksa muat ulang dari server, bukan dari cache browser.
-    // FIX: The boolean argument for reload() is deprecated and causes a TypeScript error.
-    // The modern method takes no arguments.
+    // The boolean argument for reload() is deprecated. The modern method takes no arguments.
     window.location.reload();
   };
 
