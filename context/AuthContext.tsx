@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useState, ReactNode, useContext, useEffect } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -12,6 +13,14 @@ interface AuthContextType {
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const FullScreenLoader: React.FC = () => (
+    <div className="fixed inset-0 bg-soft flex flex-col items-center justify-center z-[2000]">
+        <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-16 w-auto mb-6" />
+        <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-brand"></div>
+        <p className="mt-6 text-muted font-semibold">Memeriksa Sesi...</p>
+    </div>
+);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -96,9 +105,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
     };
 
+    // FIX: Render a full-screen loader while the initial session check is in progress.
+    // This prevents the main application from rendering prematurely in an indeterminate auth state.
+    // Once `loading` becomes false, the provider renders its children, who can then
+    // reliably check the `currentUser` state without needing their own loading checks.
+    if (loading) {
+        return <FullScreenLoader />;
+    }
+
     return (
         <AuthContext.Provider value={value}>
-            {/* Render children only after the initial auth check is complete. */}
             {children}
         </AuthContext.Provider>
     );
