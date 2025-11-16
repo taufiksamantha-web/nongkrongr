@@ -128,10 +128,41 @@ const MainLayout: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
     );
 };
 
+const APP_VERSION = '1.3.0'; // Version for cache-busting logic
 
 const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('nongkrongr_welcome_seen'));
   const [theme, setTheme] = useState<Theme>('dark');
+  
+  useEffect(() => {
+    const storedVersion = localStorage.getItem('nongkrongr_app_version');
+    if (storedVersion !== APP_VERSION) {
+      console.warn(
+        `App version mismatch. Old: ${storedVersion}, New: ${APP_VERSION}. ` +
+        `Clearing session data and forcing a refresh.`
+      );
+
+      // Preserve user favorites and welcome message status across updates
+      const favorites = localStorage.getItem('nongkrongr_favorites');
+      const welcomeSeen = localStorage.getItem('nongkrongr_welcome_seen');
+
+      // Clear everything else
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Restore preserved items
+      if (favorites) {
+        localStorage.setItem('nongkrongr_favorites', favorites);
+      }
+      if (welcomeSeen) {
+        localStorage.setItem('nongkrongr_welcome_seen', welcomeSeen);
+      }
+
+      // Set the new version and reload
+      localStorage.setItem('nongkrongr_app_version', APP_VERSION);
+      window.location.reload();
+    }
+  }, []);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme') as Theme | null;
