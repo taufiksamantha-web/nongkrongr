@@ -27,4 +27,4 @@ export const SOUTH_SUMATRA_CITIES: string[] = [
 
 // Fallback image URLs
 export const DEFAULT_FAVICON_URL = "https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png";
-export const DEFAULT_COVER_URL = "https://res.cloudinary.com/dovouihq8/image/upload/qgubxuffizriweewq9ui.png";
+export const DEFAULT_COVER_URL = "https://res.cloudinary.com/dovouihq8/image/upload/v1722244300/cover-placeholder-1_pqz5kl.jpg";

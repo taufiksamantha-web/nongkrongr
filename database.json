@@ -124,6 +124,18 @@
         { "name": "created_at", "type": "timestamptz", "default": "now()" }
       ],
       "csv_file": "settings.csv"
+    },
+    {
+      "name": "cafe_status_logs",
+      "columns": [
+        { "name": "id", "type": "bigint", "is_primary_key": true, "is_identity": true },
+        { "name": "cafe_id", "type": "text", "references": "cafes(id)", "on_delete": "cascade" },
+        { "name": "old_status", "type": "text" },
+        { "name": "new_status", "type": "text" },
+        { "name": "changed_by", "type": "uuid", "references": "profiles(id)", "on_delete": "set null" },
+        { "name": "changed_at", "type": "timestamptz", "default": "now()" }
+      ],
+      "csv_file": "cafe_status_logs.csv"
     }
   ]
 }

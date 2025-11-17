@@ -9,10 +9,11 @@ import ImageWithFallback from '../common/ImageWithFallback';
 
 interface AdminCafeFormProps {
     cafe?: Cafe | null;
-    onSave: (cafe: any) => Promise<void>;
+    onSave: (cafe: any) => Promise<any>;
     onCancel: () => void;
     userRole: 'admin' | 'user' | 'admin_cafe';
     setNotification: (notification: { message: string, type: 'success' | 'error' } | null) => void;
+    onSuccess: () => void;
 }
 
 const MultiStepProgressBar: React.FC<{ steps: string[], currentStep: number, onStepClick: (step: number) => void }> = ({ steps, currentStep, onStepClick }) => (
@@ -62,22 +63,22 @@ const FormHelperText: React.FC<{ children: React.ReactNode }> = ({ children }) =
 );
 
 // Helper function to safely format a date for the date input's value property
-const getDisplayDate = (date: string | Date | undefined): string => {
+const getDisplayDate = (date: string | Date | undefined | null): string => {
     if (!date) return '';
     try {
-        if (typeof date === 'string') {
-            // Handles both "YYYY-MM-DD" and full ISO strings like "2024-08-01T00:00:00.000Z"
-            return date.split('T')[0];
-        }
-        // Handles Date objects
-        return new Date(date).toISOString().split('T')[0];
+        // Create a date object, but crucially, get the date parts from UTC to avoid timezone shifts.
+        const d = new Date(date);
+        const year = d.getUTCFullYear();
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     } catch (error) {
         console.warn("Could not parse date for display:", date, error);
         return '';
     }
 };
 
-const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, userRole, setNotification }) => {
+const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, userRole, setNotification, onSuccess }) => {
     
     const [step, setStep] = useState(1);
     const isAdmin = userRole === 'admin';
@@ -98,10 +99,10 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
 
     const [formData, setFormData] = useState({
         name: cafe?.name || '', description: cafe?.description || '', address: cafe?.address || '', city: cafe?.city || SOUTH_SUMATRA_CITIES[0], district: cafe?.district || '',
-        priceTier: cafe?.priceTier || PriceTier.STANDARD, logoUrl: cafe?.logoUrl || '', coverUrl: cafe?.coverUrl || '',
+        priceTier: cafe?.priceTier || PriceTier.STANDARD, logoUrl: cafe?.logoUrl || '', coverUrl: cafe?.coverUrl || DEFAULT_COVER_URL,
         openingTime: initialHoursState.openingTime, closingTime: initialHoursState.closingTime, is24Hours: initialHoursState.is24Hours,
         lat: cafe?.coords?.lat?.toString() ?? '', lng: cafe?.coords?.lng?.toString() ?? '',
-        isSponsored: cafe?.isSponsored || false, sponsoredUntil: cafe?.sponsoredUntil ? new Date(cafe.sponsoredUntil).toISOString().split('T')[0] : '',
+        isSponsored: cafe?.isSponsored || false, sponsoredUntil: getDisplayDate(cafe?.sponsoredUntil),
         sponsoredRank: cafe?.sponsoredRank || 0, vibes: cafe?.vibes || [], amenities: cafe?.amenities || [], spots: cafe?.spots || [],
         events: cafe?.events || [],
     });
@@ -279,43 +280,102 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
         setEventFiles(prev => prev.filter((_, i) => i !== index));
     };
 
-    const validateStep = (currentStep: number): boolean => {
-        if (currentStep === 1 && (!formData.name.trim() || !formData.address.trim() || isNaN(parseFloat(String(formData.lat))) || isNaN(parseFloat(String(formData.lng))))) {
-            setNotification({ message: 'Nama Kafe, Alamat, dan Koordinat Peta wajib diisi dengan benar.', type: 'error' });
-            return false;
+    const validateStep = (currentStep: number): { isValid: boolean, message: string | null } => {
+        switch (currentStep) {
+            case 1:
+                if (!formData.name.trim()) return { isValid: false, message: 'Nama Kafe wajib diisi.' };
+                if (!formData.address.trim() || !formData.city.trim() || !formData.district.trim()) return { isValid: false, message: 'Alamat, Kota, dan Kecamatan wajib diisi.' };
+                const lat = parseFloat(String(formData.lat));
+                const lng = parseFloat(String(formData.lng));
+                if (isNaN(lat) || isNaN(lng)) return { isValid: false, message: 'Koordinat Peta tidak valid (misal: -2.976, 104.745).' };
+                break;
+            case 2:
+                if (!coverFile && !formData.coverUrl) return { isValid: false, message: 'Cover Image wajib diunggah.' };
+                break;
+            case 5:
+                if (isAdmin && formData.isSponsored) {
+                    const rank = Number(formData.sponsoredRank);
+                    if (isNaN(rank) || rank < 0) return { isValid: false, message: 'Ranking Sponsor harus berupa angka positif.' };
+                    if (!formData.sponsoredUntil) return { isValid: false, message: 'Tanggal "Sponsor Hingga" wajib diisi.' };
+                }
+                if (!isAdmin) {
+                    for (const event of formData.events) {
+                        if (event.name.trim() && (!event.start_date || !event.end_date)) return { isValid: false, message: `Harap tentukan tanggal mulai dan selesai untuk event "${event.name}".` };
+                        if (new Date(event.end_date) < new Date(event.start_date)) return { isValid: false, message: `Tanggal selesai untuk event "${event.name}" tidak boleh sebelum tanggal mulai.` };
+                    }
+                }
+                break;
+            default:
+                return { isValid: true, message: null };
         }
-        if (currentStep === 2 && !coverFile && !formData.coverUrl) {
-            setNotification({ message: 'Cover Image wajib diunggah.', type: 'error' });
-            return false;
-        }
-        setNotification(null);
-        return true;
+        return { isValid: true, message: null };
     };
     
-    const validateAllSteps = (): boolean => {
-        for (let i = 1; i <= step; i++) {
-            if (!validateStep(i)) {
-                setStep(i);
-                return false;
-            }
+    const nextStep = () => {
+        const { isValid, message } = validateStep(step);
+        if (isValid) {
+            setNotification(null);
+            setStep(s => Math.min(s + 1, formSteps.length));
+        } else {
+            setNotification({ message: message!, type: 'error' });
         }
-        return true;
     };
 
-    const nextStep = () => { if (validateStep(step)) setStep(s => Math.min(s + 1, formSteps.length)); };
+    const handleStepClick = (targetStep: number) => {
+        // Allow navigating to a previous step without validation.
+        if (targetStep < step) {
+            setStep(targetStep);
+            return;
+        }
+        // When trying to navigate to a future step, validate the current step first.
+        // This prevents the user from leaving an incomplete step.
+        if (targetStep > step) {
+            const { isValid, message } = validateStep(step);
+            if (!isValid) {
+                setNotification({
+                    message: `Lengkapi dulu langkah saat ini sebelum melanjutkan: ${message}`,
+                    type: 'error',
+                });
+                return; // Block forward movement from an invalid step.
+            }
+        }
+        
+        // This logic is now too permissive, allowing jumps. We need to validate all steps
+        // leading up to the target step.
+        for (let i = 1; i < targetStep; i++) {
+            const { isValid, message } = validateStep(i);
+            if (!isValid) {
+                setNotification({ message: `Harap lengkapi Langkah ${i} terlebih dahulu: ${message}`, type: 'error' });
+                setStep(i); // Force user to the first invalid step
+                return;
+            }
+        }
+
+        setNotification(null);
+        setStep(targetStep);
+    };
+
     const prevStep = () => setStep(s => Math.max(s - 1, 1));
     const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => { if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement) && step < formSteps.length) { e.preventDefault(); nextStep(); } };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isSaving || !validateAllSteps()) return;
+        if (isSaving) return;
+        
+        // Final validation check across all steps
+        for (let i = 1; i <= formSteps.length; i++) {
+            const { isValid, message } = validateStep(i);
+            if (!isValid) {
+                setNotification({ message: `Masalah di Langkah ${i}: ${message}`, type: 'error' });
+                setStep(i);
+                return;
+            }
+        }
         
         setIsSaving(true);
         setNotification(null);
 
         try {
-            setNotification({ message: 'Mengupload gambar...', type: 'success' });
-
             const logoUploadPromise = logoFile ? fileToBase64(logoFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(formData.logoUrl);
             const coverUploadPromise = coverFile ? fileToBase64(coverFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(formData.coverUrl || DEFAULT_COVER_URL);
             const spotUploadPromises = formData.spots.map((spot, i) => spotFiles[i] ? fileToBase64(spotFiles[i]!).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(spot.photoUrl));
@@ -324,8 +384,6 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
             const [finalLogoUrl, finalCoverUrl, ...restUrls] = await Promise.all([logoUploadPromise, coverUploadPromise, ...spotUploadPromises, ...eventUploadPromises]);
             const finalSpotUrls = restUrls.slice(0, spotUploadPromises.length);
             const finalEventUrls = restUrls.slice(spotUploadPromises.length);
-
-            setNotification({ message: 'Menyusun data...', type: 'success' });
 
             const finalSpots = formData.spots
                 .map((spot, i) => ({ ...spot, photoUrl: finalSpotUrls[i] }))
@@ -360,22 +418,18 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                 spots: finalSpots,
                 events: finalEvents,
                 isSponsored: isAdmin ? formData.isSponsored : (cafe?.isSponsored || false),
-                sponsoredUntil: isAdmin && formData.isSponsored && formData.sponsoredUntil ? new Date(formData.sponsoredUntil) : null,
+                sponsoredUntil: isAdmin && formData.isSponsored && formData.sponsoredUntil ? `${formData.sponsoredUntil}T12:00:00.000Z` : null,
                 sponsoredRank: isAdmin && formData.isSponsored ? Number(formData.sponsoredRank) : 0,
             };
 
             if (!payload.logoUrl) delete (payload as any).logoUrl;
-
-            setNotification({ message: 'Menyimpan ke database...', type: 'success' });
+            
             await onSave(payload);
+            onSuccess();
 
         } catch (error: any) {
-            // Error is now handled by the onSave function in the parent component (CafeManagementPanel).
-            // This catch block will now only handle errors from image uploads or data processing before the save.
             console.error("Form Submission Error:", error);
-            if (!String(error.message).includes('Gagal menyimpan')) { // Avoid double notifications
-                 setNotification({ message: `Terjadi kesalahan sebelum menyimpan: ${error.message}`, type: 'error' });
-            }
+            setNotification({ message: `Gagal menyimpan data: ${error.message}`, type: 'error' });
         } finally {
             setIsSaving(false);
         }
@@ -389,7 +443,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in-up" onClick={onCancel}>
             <div className="bg-card rounded-3xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                <div className="p-4 sm:p-8 border-b border-border"><h2 className="text-2xl font-bold font-jakarta text-primary text-center mb-4">{cafe ? 'Edit Cafe' : 'Tambah Cafe Baru'}</h2><MultiStepProgressBar steps={formSteps} currentStep={step} onStepClick={setStep} /></div>
+                <div className="p-4 sm:p-8 border-b border-border"><h2 className="text-2xl font-bold font-jakarta text-primary text-center mb-4">{cafe ? 'Edit Cafe' : 'Tambah Cafe Baru'}</h2><MultiStepProgressBar steps={formSteps} currentStep={step} onStepClick={handleStepClick} /></div>
                 <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-4 sm:p-8 space-y-6 overflow-y-auto">
                     {step === 1 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 1: Informasi Dasar</h3> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Identitas Kafe</legend> <FormGroup><FormLabel htmlFor="name">Nama Cafe</FormLabel><input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Contoh: Kopi Senja" className={inputClass} required /></FormGroup> <FormGroup><FormLabel htmlFor="description">Deskripsi</FormLabel><textarea id="description" name="description" value={formData.description} onChange={handleChange} placeholder="Jelaskan keunikan dari cafe ini..." className={`${inputClass} h-24`} /><FormHelperText>Tulis deskripsi singkat tentang kafe ini.</FormHelperText></FormGroup> </fieldset> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Lokasi</legend> <div className="flex bg-soft dark:bg-gray-700/50 p-1 rounded-xl mb-4"> <button type="button" onClick={() => setLocationInputType('coords')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'coords' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Koordinat Peta</button> <button type="button" onClick={() => setLocationInputType('plusCode')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'plusCode' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Plus Code</button> </div> {locationInputType === 'coords' ? ( <FormGroup> <FormLabel htmlFor="coords">Koordinat Peta</FormLabel> <input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /> <FormHelperText>Salin & tempel koordinat dari Google Maps. Alamat akan terisi otomatis.</FormHelperText> </FormGroup> ) : ( <FormGroup> <FormLabel htmlFor="plusCode">Google Maps Plus Code</FormLabel> <div className="relative"> <input id="plusCode" name="plusCode" type="text" value={plusCodeInput} onChange={handlePlusCodeInputChange} placeholder="Contoh: 6P5G2QG8+R8" className={`${inputClass} pr-10`} /> {isConvertingPlusCode && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>} </div> <FormHelperText>Masukkan Plus Code, maka koordinat & alamat akan terisi otomatis via AI.</FormHelperText> </FormGroup> )} <FormGroup><FormLabel htmlFor="address">Alamat (Otomatis)</FormLabel><div className="relative"><input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Menunggu koordinat..." className={`${inputClass} pr-10`} required />{isGeocoding && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>}</div></FormGroup> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="city">Kota/Kabupaten</FormLabel><input id="city" name="city" value={formData.city} onChange={handleChange} placeholder="e.g., Palembang" className={inputClass} /></FormGroup><FormGroup><FormLabel htmlFor="district">Kecamatan</FormLabel><input id="district" name="district" value={formData.district} onChange={handleChange} placeholder="e.g., Ilir Barat I" className={inputClass} /></FormGroup></div> </fieldset> </div> )}
                     {step === 2 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 2: Detail Operasional</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Jam Operasional</legend><div className="flex items-center gap-4"><input type="checkbox" id="is24Hours" name="is24Hours" checked={formData.is24Hours} onChange={handleChange} className="h-5 w-5 rounded text-brand focus:ring-brand" /><label htmlFor="is24Hours" className="font-medium text-primary">Buka 24 Jam</label></div>{!formData.is24Hours && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="openingTime">Jam Buka</FormLabel><input id="openingTime" name="openingTime" type="time" value={formData.openingTime} onChange={handleChange} className={inputClass} required={!formData.is24Hours} /></FormGroup><FormGroup><FormLabel htmlFor="closingTime">Jam Tutup</FormLabel><input id="closingTime" name="closingTime" type="time" value={formData.closingTime} onChange={handleChange} className={inputClass} required={!formData.is24Hours} /></FormGroup></div>)}</fieldset> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Detail Lainnya</legend><FormGroup><FormLabel htmlFor="priceTier">Kisaran Harga</FormLabel><select id="priceTier" name="priceTier" value={formData.priceTier} onChange={handleChange} className={inputClass}><option value={PriceTier.BUDGET}>Budget ($)</option><option value={PriceTier.STANDARD}>Standard ($$)</option><option value={PriceTier.PREMIUM}>Premium ($$$)</option><option value={PriceTier.LUXURY}>Luxury ($$$$)</option></select></FormGroup></fieldset> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Gambar</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormGroup><FormLabel htmlFor="logo">Logo (Opsional)</FormLabel><ImageWithFallback src={logoPreview || formData.logoUrl} alt="Logo" className="w-24 h-24 object-contain rounded-xl mb-2 bg-soft border" fallbackText="Logo"/><input id="logo" type="file" accept="image/*" onChange={(e) => e.target.files && setLogoFile(e.target.files[0])} className={fileInputClass} /></FormGroup><FormGroup><FormLabel htmlFor="cover">Cover Image (Wajib)</FormLabel><ImageWithFallback src={coverPreview || formData.coverUrl} defaultSrc={DEFAULT_COVER_URL} alt="Cover" className="w-full h-24 object-cover rounded-xl mb-2" /><input id="cover" type="file" accept="image/*" onChange={(e) => e.target.files && setCoverFile(e.target.files[0])} className={fileInputClass} /></FormGroup></div></fieldset> </div> )}

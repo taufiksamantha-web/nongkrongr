@@ -141,30 +141,12 @@ const CafeManagementPanel: React.FC = () => {
     
     const totalPages = Math.ceil(sortedAndFilteredCafes.length / ITEMS_PER_PAGE);
     const paginatedCafes = sortedAndFilteredCafes.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-    const handleSave = async (data: Partial<Cafe>) => {
-        try {
-            if (editingCafe) {
-                const finalData = { ...editingCafe, ...data };
-                await updateCafe(editingCafe.id, finalData);
-                setNotification({ message: 'Kafe berhasil diperbarui!', type: 'success' });
-            } else {
-                await addCafe(data);
-                const successMessage = currentUser?.role === 'admin'
-                    ? 'Kafe baru berhasil ditambahkan!'
-                    : 'Kafe baru berhasil ditambahkan dan sedang menunggu persetujuan admin!';
-                setNotification({ message: successMessage, type: 'success' });
-            }
-            setIsFormOpen(false);
-            setEditingCafe(null);
-        } catch (error: any) {
-            // Error is now handled here. The form will get the notification via props
-            // and `isSaving` will be set to false in its `finally` block. Since we are
-            // re-throwing, the form's own catch block will execute, but it's empty now.
-            // The most important thing is that the form doesn't close on failure.
-            setNotification({ message: `Gagal menyimpan: ${error.message}`, type: 'error' });
-            throw error; // Rethrow to signal failure to the form
+    
+    const handleSave = (data: Partial<Cafe>): Promise<any> => {
+        if (editingCafe) {
+            return updateCafe(editingCafe.id, data);
         }
+        return addCafe(data);
     };
 
     const handleConfirmDeleteCafe = async () => {
@@ -240,10 +222,10 @@ const CafeManagementPanel: React.FC = () => {
                 <div className="text-center py-10 bg-soft dark:bg-gray-700/50 rounded-2xl border border-border"><InboxIcon className="mx-auto h-12 w-12 text-muted" /><p className="mt-4 text-xl font-bold font-jakarta text-primary dark:text-gray-200">{searchQuery ? 'Kafe Tidak Ditemukan' : 'Belum Ada Kafe'}</p><p className="text-muted mt-2 max-w-xs mx-auto">{searchQuery ? `Tidak ada hasil yang cocok untuk "${searchQuery}".` : 'Klik tombol "+ Tambah Cafe" untuk memulai.'}</p></div>
             ) : (
                 <div className="space-y-4">
-                    <div className="hidden lg:grid grid-cols-[auto_6rem_minmax(0,3fr)_1fr_1fr_1.5fr_minmax(0,1.5fr)] items-center gap-4 px-4 py-2 border-b-2 border-border">
+                    <div className={`hidden lg:grid ${currentUser?.role === 'admin' ? 'grid-cols-[auto_6rem_1fr_auto_auto_auto]' : 'grid-cols-[6rem_1fr_auto_auto_auto]'} items-center gap-3 px-4 py-3 border-b-2 border-border`}>
                         {currentUser?.role === 'admin' && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition" onChange={handleSelectAllOnPage} checked={paginatedCafes.length > 0 && paginatedCafes.every(c => selectedCafeIds.includes(c.id))} aria-label="Pilih semua cafe di halaman ini"/>}
                         <span className="text-sm font-bold text-muted uppercase tracking-wider pl-2">Image</span>
-                        <SortableHeader columnKey="name" title="Nama Kafe" className={currentUser?.role !== 'admin' ? 'lg:col-start-2' : ''} />
+                        <SortableHeader columnKey="name" title="Nama Kafe" />
                         <SortableHeader columnKey="status" title="Status" />
                         <span className="text-sm font-bold text-muted uppercase tracking-wider">Sponsored</span>
                         <span className="text-sm font-bold text-muted uppercase tracking-wider text-right">Aksi</span>
@@ -275,7 +257,7 @@ const CafeManagementPanel: React.FC = () => {
                                 </div>
                             </div>
                            
-                            <div className={`hidden lg:grid ${currentUser?.role === 'admin' ? 'grid-cols-[auto_6rem_minmax(0,3fr)_1fr_1fr_1.5fr_minmax(0,1.5fr)]' : 'grid-cols-[6rem_minmax(0,3fr)_1fr_1fr_1.5fr_minmax(0,1.5fr)]'} items-center gap-4 p-4`}>
+                            <div className={`hidden lg:grid ${currentUser?.role === 'admin' ? 'grid-cols-[auto_6rem_1fr_auto_auto_auto]' : 'grid-cols-[6rem_1fr_auto_auto_auto]'} items-center gap-3 px-4 py-3`}>
                                  {currentUser?.role === 'admin' && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition" checked={selectedCafeIds.includes(cafe.id)} onChange={() => handleSelectOne(cafe.id)} aria-label={`Pilih ${cafe.name}`}/>}
                                  <ImageWithFallback src={cafe.coverUrl} alt={cafe.name} className="w-20 h-14 object-cover rounded-lg" width={150} height={100} />
                                 <div className="min-w-0 flex items-center gap-2">
@@ -289,10 +271,10 @@ const CafeManagementPanel: React.FC = () => {
                                     </button>
                                 </div>
                                 <div className="truncate"><StatusBadge status={cafe.status} /></div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-center gap-2">
                                     {currentUser?.role === 'admin' ? <SponsorToggle cafe={cafe} onToggle={handleToggleSponsor} disabled={isSaving} /> : (cafe.isSponsored ? <CheckCircleIcon className="h-6 w-6 text-green-500"/> : <XCircleIcon className="h-6 w-6 text-red-500"/>)}
                                 </div>
-                                <div className="text-right space-x-4">
+                                <div className="text-right space-x-3">
                                     <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 font-bold hover:underline">Statistik</button>
                                     {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
                                 </div>
@@ -310,7 +292,23 @@ const CafeManagementPanel: React.FC = () => {
                 </div>
             )}
 
-            {isFormOpen && <AdminCafeForm cafe={editingCafe} userRole={currentUser!.role} onSave={handleSave} onCancel={() => { setIsFormOpen(false); setEditingCafe(null); }} setNotification={setNotification} />}
+            {isFormOpen && <AdminCafeForm 
+                cafe={editingCafe} 
+                userRole={currentUser!.role} 
+                onSave={handleSave} 
+                onCancel={() => { setIsFormOpen(false); setEditingCafe(null); }} 
+                setNotification={setNotification}
+                onSuccess={() => {
+                    setIsFormOpen(false);
+                    setEditingCafe(null);
+                    const successMessage = editingCafe 
+                        ? 'Kafe berhasil diperbarui!' 
+                        : (currentUser?.role === 'admin'
+                            ? 'Kafe baru berhasil ditambahkan!'
+                            : 'Kafe baru berhasil ditambahkan dan sedang menunggu persetujuan admin!');
+                    setNotification({ message: successMessage, type: 'success' });
+                }}
+            />}
             {isStatsModalOpen && statsCafe && <CafeStatisticsModal cafe={statsCafe} onClose={() => setIsStatsModalOpen(false)} />}
             {cafeToDelete && userCanManage(cafeToDelete) && <ConfirmationModal title="Hapus Cafe" message={`Yakin ingin menghapus "${cafeToDelete.name}"? Ini akan menghapus semua data terkait. Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmDeleteCafe} onCancel={() => setCafeToDelete(null)} isConfirming={isSaving}/>}
             {isConfirmingMultiDelete && currentUser?.role === 'admin' && <ConfirmationModal title={`Hapus ${selectedCafeIds.length} Kafe`} message={`Yakin ingin menghapus ${selectedCafeIds.length} kafe yang dipilih? Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmMultiDelete} onCancel={() => setIsConfirmingMultiDelete(false)} confirmText={`Ya, Hapus (${selectedCafeIds.length})`} isConfirming={isSaving}/>}

@@ -19,7 +19,7 @@ const FloatingNotification: React.FC<FloatingNotificationProps> = ({ message, ty
     }, [onClose]);
 
     return (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm sm:max-w-md z-[100] animate-fade-in-down">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-auto max-w-[calc(100%-3rem)] sm:left-6 sm:translate-x-0 sm:max-w-md z-[2000] animate-fade-in-up">
              <div className={`flex items-center p-4 rounded-2xl shadow-lg ${bgColor} ${textColor}`}>
                 <div className="flex-shrink-0">{icon}</div>
                 <div className="ml-3 text-sm font-semibold">{message}</div>
