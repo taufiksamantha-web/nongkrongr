@@ -25,44 +25,50 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const processSession = useCallback(async (session: Session | null) => {
+        // If there's no session, we're done. No user, no loading.
+        if (!session) {
+            setCurrentUser(null);
+            setLoading(false);
+            return;
+        }
+
+        // There is a session, let's try to get the profile.
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+        // If there's an error getting the profile, or the profile doesn't exist,
+        // we treat this as a "not logged in" state and clean up.
+        if (error || !profile) {
+            console.error("Auth state error: User session exists but profile is missing. Forcing sign out.", error);
+            // Sign out to clear the inconsistent state from Supabase Auth.
+            await supabase.auth.signOut();
+            // And crucially, update our app's state immediately to unblock the UI.
+            setCurrentUser(null);
+            setLoading(false);
+        } else {
+            // Success case: we have a session and a profile.
+            setCurrentUser(profile as User);
+            setLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
-        // The listener is the single source of truth for the user's auth state.
-        // It fires once on initial load, and again whenever the auth state changes.
+        // onAuthStateChange is the single source of truth. It's called upon initialization
+        // and whenever the user signs in, out, or the token is refreshed.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (_event, session) => {
-                // If there's no session, the user is logged out.
-                if (!session) {
-                    setCurrentUser(null);
-                    setLoading(false); // We are done loading.
-                    return;
-                }
-
-                // If a session exists, we must validate it by fetching the user's profile.
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
-
-                if (error || !profile) {
-                    // CRITICAL: The user has a session, but no profile. This is an invalid state.
-                    // Force a sign-out to clear the invalid session. The listener will be triggered
-                    // again with a null session, which will then correctly set the loading state to false.
-                    console.error("Auth state error: User session exists but profile is missing. Forcing sign out.", error);
-                    await supabase.auth.signOut();
-                } else {
-                    // Session and profile are valid. Set the user and stop loading.
-                    setCurrentUser(profile as User);
-                    setLoading(false);
-                }
+                await processSession(session);
             }
         );
 
         return () => {
-            // Cleanup subscription on unmount
             subscription?.unsubscribe();
         };
-    }, []);
+    }, [processSession]);
 
     const login = async (email: string, password: string) => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });

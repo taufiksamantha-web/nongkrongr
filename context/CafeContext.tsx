@@ -1,9 +1,31 @@
-import React, { createContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { Cafe, Review, Spot, Vibe, Amenity, Event } from '../types';
+import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { Cafe, Review } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from './AuthContext';
 
-// Helper function to calculate averages client-side
+// --- Cache Management ---
+const CACHE_KEY = 'nongkrongr_cached_cafes';
+
+const getCachedCafes = (): Cafe[] | null => {
+    try {
+        const cachedData = sessionStorage.getItem(CACHE_KEY);
+        if (cachedData) return JSON.parse(cachedData);
+    } catch (error) {
+        console.error("Failed to read cafe cache:", error);
+        sessionStorage.removeItem(CACHE_KEY);
+    }
+    return null;
+};
+
+const setCachedCafes = (cafes: Cafe[]) => {
+    try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(cafes));
+    } catch (error) {
+        console.error("Failed to write to cafe cache:", error);
+    }
+};
+
+// --- Client-Side Data Processing ---
 const calculateAverages = (cafe: Cafe): Cafe => {
     const approvedReviews = cafe.reviews?.filter(r => r.status === 'approved') || [];
     if (approvedReviews.length === 0) {
@@ -32,268 +54,297 @@ const calculateAverages = (cafe: Cafe): Cafe => {
     };
 };
 
-const prepareCafeRecord = (data: Partial<Cafe>) => {
+// --- Supabase Data Helpers ---
+const prepareCafeRecordForSupabase = (data: Partial<Cafe>) => {
     const record = {
-        name: data.name,
-        description: data.description,
-        address: data.address,
-        city: data.city,
-        district: data.district,
-        openingHours: data.openingHours,
-        priceTier: data.priceTier,
-        lat: data.coords?.lat,
-        lng: data.coords?.lng,
-        isSponsored: data.isSponsored,
-        sponsoredUntil: data.sponsoredUntil,
-        sponsoredRank: data.sponsoredRank,
-        logoUrl: data.logoUrl,
-        coverUrl: data.coverUrl,
-        manager_id: data.manager_id,
-        status: data.status,
+        id: data.id, // FIX: Ensure the ID is included in the record for insertion.
+        name: data.name, slug: data.slug, description: data.description, address: data.address,
+        city: data.city, district: data.district, openingHours: data.openingHours, priceTier: data.priceTier,
+        lat: data.coords?.lat, lng: data.coords?.lng, isSponsored: data.isSponsored, sponsoredUntil: data.sponsoredUntil,
+        sponsoredRank: data.sponsoredRank, logoUrl: data.logoUrl, coverUrl: data.coverUrl, manager_id: data.manager_id, status: data.status,
     };
-    // Remove any keys that are undefined to avoid issues with Supabase client
     Object.keys(record).forEach(key => (record as any)[key] === undefined && delete (record as any)[key]);
     return record;
 };
 
+const updateCafeRelationsInSupabase = async (cafeId: string, relations: Partial<Cafe>) => {
+    // FIX: Only update relations if they are explicitly provided in the `relations` object.
+    // This prevents accidental deletion when updating other non-relational fields (like 'isSponsored').
+    if (relations.vibes !== undefined) {
+        await supabase.from('cafe_vibes').delete().eq('cafe_id', cafeId);
+        if (relations.vibes.length > 0) {
+            const { error } = await supabase.from('cafe_vibes').insert(relations.vibes.map(v => ({ cafe_id: cafeId, vibe_id: v.id })));
+            if (error) throw error;
+        }
+    }
 
+    if (relations.amenities !== undefined) {
+        await supabase.from('cafe_amenities').delete().eq('cafe_id', cafeId);
+        if (relations.amenities.length > 0) {
+            const { error } = await supabase.from('cafe_amenities').insert(relations.amenities.map(a => ({ cafe_id: cafeId, amenity_id: a.id })));
+            if (error) throw error;
+        }
+    }
+
+    if (relations.spots !== undefined) {
+        await supabase.from('spots').delete().eq('cafe_id', cafeId);
+        if (relations.spots.length > 0) {
+            const { error } = await supabase.from('spots').insert(relations.spots.map(s => ({ ...s, cafe_id: cafeId })));
+            if (error) throw error;
+        }
+    }
+    
+    if (relations.events !== undefined) {
+        await supabase.from('events').delete().eq('cafe_id', cafeId);
+        if (relations.events.length > 0) {
+            const { error } = await supabase.from('events').insert(relations.events.map(e => ({ ...e, cafe_id: cafeId })));
+            if (error) throw error;
+        }
+    }
+};
+
+// --- Context Definition ---
 interface CafeContextType {
     cafes: Cafe[];
     loading: boolean;
     error: string | null;
     fetchCafes: (force?: boolean) => Promise<void>;
-    addCafe: (cafeData: Partial<Cafe>) => Promise<any>;
-    updateCafe: (id: string, updatedData: Partial<Cafe>) => Promise<any>;
-    deleteCafe: (id: string) => Promise<any>;
-    deleteMultipleCafes: (ids: string[]) => Promise<void>;
-    addReview: (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => Promise<any>;
-    updateReviewStatus: (reviewId: string, status: Review['status']) => Promise<any>;
-    deleteReview: (reviewId: string) => Promise<void>;
+    addCafe: (cafeData: Partial<Cafe>) => Promise<{ data: any, error: any }>;
+    updateCafe: (id: string, updatedData: Partial<Cafe>) => Promise<{ data: any, error: any }>;
+    deleteCafe: (id: string) => Promise<{ error: any }>;
+    deleteMultipleCafes: (ids: string[]) => Promise<{ error: any }>;
+    addReview: (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => Promise<{ data: any, error: any }>;
+    updateReviewStatus: (reviewId: string, status: Review['status']) => Promise<{ error: any }>;
+    deleteReview: (reviewId: string) => Promise<{ error: any }>;
     incrementHelpfulCount: (reviewId: string) => Promise<void>;
     getPendingReviews: () => (Review & { cafeName: string; cafeId: string })[];
     getAllReviews: () => (Review & { cafeName: string; cafeId: string })[];
     getPendingCafes: () => Cafe[];
-    updateCafeStatus: (cafeId: string, status: Cafe['status']) => Promise<void>;
+    updateCafeStatus: (cafeId: string, status: Cafe['status']) => Promise<{ error: any }>;
 }
 
 export const CafeContext = createContext<CafeContextType | undefined>(undefined);
 
+// --- Provider Component ---
 export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [cafes, setCafes] = useState<Cafe[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [cafes, setCafes] = useState<Cafe[]>(() => getCachedCafes() || []);
+    const [loading, setLoading] = useState<boolean>(() => !getCachedCafes());
     const [error, setError] = useState<string | null>(null);
     const { currentUser, loading: authLoading } = useAuth();
-    const mutationChain = useRef(Promise.resolve());
 
-    const fetchCafes = useCallback(async (force = false) => {
-        if (force || cafes.length === 0) setLoading(true);
+    const fetchCafes = useCallback(async (showLoader = false) => {
+        if (showLoader) setLoading(true);
         setError(null);
         try {
-            let query = supabase
-                .from('cafes')
-                .select(`
-                    *,
-                    vibes:cafe_vibes(*, vibes(*)),
-                    amenities:cafe_amenities(*, amenities(*)),
-                    spots(*),
-                    reviews(*),
-                    events(*)
-                `);
-
-            const { data, error: fetchError } = await query;
-
+            const { data, error: fetchError } = await supabase.from('cafes').select(`*,vibes:cafe_vibes(*, vibes(*)),amenities:cafe_amenities(*, amenities(*)),spots(*),reviews(*),events(*)`);
             if (fetchError) throw fetchError;
-
-            const formattedData = data.map(cafe => {
-                const { lat, lng, ...rest } = cafe;
-                const parsedReviews = (cafe.reviews || []).map((review: any) => ({
-                    ...review,
-                    photos: Array.isArray(review.photos) 
-                        ? review.photos.filter((p: any): p is string => typeof p === 'string' && p.trim() !== '') 
-                        : [],
-                    helpful_count: review.helpful_count || 0,
-                }));
-            
-                return {
-                    ...rest,
-                    coords: { lat: lat ?? 0, lng: lng ?? 0 },
-                    vibes: cafe.vibes.map((v: any) => v.vibes).filter(Boolean),
-                    amenities: cafe.amenities.map((a: any) => a.amenities).filter(Boolean),
-                    spots: cafe.spots || [],
-                    reviews: parsedReviews,
-                    events: cafe.events || [],
-                } as Cafe;
-            });
-            
+            const formattedData = data.map(cafe => ({
+                ...cafe, coords: { lat: cafe.lat ?? 0, lng: cafe.lng ?? 0 },
+                vibes: cafe.vibes.map((v: any) => v.vibes).filter(Boolean),
+                amenities: cafe.amenities.map((a: any) => a.amenities).filter(Boolean),
+                spots: cafe.spots || [], events: cafe.events || [],
+                reviews: (cafe.reviews || []).map((r: any) => ({ ...r, photos: Array.isArray(r.photos) ? r.photos.filter(Boolean) : [], helpful_count: r.helpful_count || 0 })),
+            } as Cafe));
             const cafesWithAverages = formattedData.map(calculateAverages);
             setCafes(cafesWithAverages);
+            setCachedCafes(cafesWithAverages);
         } catch (err: any) {
             console.error("Error fetching cafes:", err);
             setError(err.message);
         } finally {
-            setLoading(false);
+            if (showLoader) setLoading(false);
         }
-    }, [cafes.length]);
+    }, []);
 
     useEffect(() => {
         if (authLoading) return;
-        fetchCafes();
+
+        // Initial fetch when provider mounts or auth status changes
+        fetchCafes(!getCachedCafes());
+        
+        // Setup real-time subscription
+        const channel = supabase.channel('nongkrongr-db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+                console.log('Real-time change detected, refetching all cafes.', payload);
+                fetchCafes(false);
+            })
+            .subscribe((status, err) => {
+                // This callback is critical for monitoring the health of the real-time connection.
+                if (status === 'SUBSCRIBED') {
+                    console.log('Successfully connected to real-time database channel.');
+                    // If there was a previous connection error, we can clear it now.
+                    setError(null);
+                }
+
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+                    console.error('Database subscription error:', { status, err });
+                    setError(
+                        'Koneksi real-time ke database terputus. Perubahan mungkin tidak akan tampil otomatis. Coba muat ulang halaman.'
+                    );
+                }
+            });
+
+        // Cleanup function to remove the channel subscription when the component unmounts.
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [authLoading, fetchCafes]);
 
-    const performMutation = (mutationFn: () => Promise<any>, operationName: string) => {
-        const chainedPromise = mutationChain.current.finally(async () => {
-            try {
-                const result = await mutationFn();
-                await fetchCafes(true);
-                return result;
-            } catch (err: any) {
-                console.error(`[CafeContext] Failed to perform operation "${operationName}":`, err);
-                throw err;
-            }
-        });
-        mutationChain.current = chainedPromise;
-        return chainedPromise;
-    };
-
-    // Helper to manage relational data for a cafe
-    const updateRelations = async (cafeId: string, relations: Partial<Cafe>) => {
-        const { vibes, amenities, spots, events } = relations;
-        // Delete all existing relations first for simplicity and atomicity
-        await Promise.all([
-            supabase.from('cafe_vibes').delete().eq('cafe_id', cafeId),
-            supabase.from('cafe_amenities').delete().eq('cafe_id', cafeId),
-            supabase.from('spots').delete().eq('cafe_id', cafeId),
-            supabase.from('events').delete().eq('cafe_id', cafeId),
-        ]);
-
-        const insertPromises = [];
-        if (vibes?.length) insertPromises.push(supabase.from('cafe_vibes').insert(vibes.map(v => ({ cafe_id: cafeId, vibe_id: v.id }))));
-        if (amenities?.length) insertPromises.push(supabase.from('cafe_amenities').insert(amenities.map(a => ({ cafe_id: cafeId, amenity_id: a.id }))));
-        if (spots?.length) insertPromises.push(supabase.from('spots').insert(spots.map(s => ({ ...s, cafe_id: cafeId }))));
-        if (events?.length) insertPromises.push(supabase.from('events').insert(events.map(e => ({ ...e, cafe_id: cafeId, imageUrl: e.imageUrl || null }))));
-        
-        const results = await Promise.all(insertPromises);
-        const errors = results.map(r => r.error).filter(Boolean);
-        if (errors.length > 0) throw new Error(`Gagal menyimpan data relasi: ${errors.map(e => e.message).join(', ')}`);
-    };
-
     const addCafe = async (cafeData: Partial<Cafe>) => {
-        return performMutation(async () => {
-            const cafeId = `cafe-${crypto.randomUUID()}`;
-            const generateSlug = (name?: string): string => {
-                const baseSlug = (name || 'cafe').toLowerCase().replace(/&/g, 'and').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
-                const uniquePart = crypto.randomUUID().substring(0, 8);
-                return `${baseSlug}-${uniquePart}`;
-            };
-            
-            const status: 'approved' | 'pending' = currentUser?.role === 'admin' ? 'approved' : 'pending';
-            const fullCafeData = {
-                ...cafeData,
-                id: cafeId,
-                slug: generateSlug(cafeData.name),
-                manager_id: currentUser?.role === 'admin_cafe' ? currentUser.id : null,
-                status,
-            };
+        const tempId = `temp-${Date.now()}`;
+        const newId = `cafe-${crypto.randomUUID()}`; // FIX: Generate a permanent, unique ID for the new cafe.
+        const slug = `${cafeData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${Math.random().toString(36).substring(2, 6)}`;
+        const newCafeOptimistic: Cafe = {
+            id: tempId, slug, status: currentUser?.role === 'admin' ? 'approved' : 'pending', ...cafeData,
+            reviews: [], spots: [], events: [], amenities: cafeData.amenities || [], vibes: cafeData.vibes || [],
+            avgAestheticScore: 0, avgWorkScore: 0, avgCrowdMorning: 0, avgCrowdAfternoon: 0, avgCrowdEvening: 0
+        } as Cafe;
+        setCafes(prev => [newCafeOptimistic, ...prev]);
 
-            const cafeRecord = {
-                ...prepareCafeRecord(fullCafeData),
-                id: fullCafeData.id,
-                slug: fullCafeData.slug
-            };
-
-            const { error: cafeError } = await supabase.from('cafes').insert(cafeRecord);
-            if (cafeError) throw new Error(`Gagal menyimpan data kafe: ${cafeError.message}. (Hint: Pastikan 'slug' unik).`);
+        try {
+            const { vibes, amenities, spots, events, ...mainData } = cafeData;
             
-            await updateRelations(cafeId, cafeData);
-            return cafeRecord;
-        }, 'addCafe');
+            const manager_id = (currentUser?.role === 'admin_cafe') 
+                ? currentUser.id 
+                : (cafeData.manager_id || null);
+            
+            const record = prepareCafeRecordForSupabase({ 
+                ...mainData, 
+                id: newId, // FIX: Pass the newly generated ID to the record for insertion.
+                slug, 
+                status: newCafeOptimistic.status,
+                manager_id 
+            });
+            const { data: newCafeDb, error: mainError } = await supabase.from('cafes').insert(record).select().single();
+            if (mainError) throw mainError;
+            await updateCafeRelationsInSupabase(newCafeDb.id, { vibes, amenities, spots, events });
+            fetchCafes(false); // Refresh for consistency
+            return { data: newCafeDb, error: null };
+        } catch (err: any) {
+            setCafes(prev => prev.filter(c => c.id !== tempId));
+            return { data: null, error: err };
+        }
+    };
+
+    const updateCafe = async (id: string, updatedData: Partial<Cafe>) => {
+        const originalCafes = [...cafes];
+        const cafeToUpdate = originalCafes.find(c => c.id === id);
+        if (!cafeToUpdate) return { data: null, error: { message: "Cafe not found" } };
+        const updatedCafeOptimistic = calculateAverages({ ...cafeToUpdate, ...updatedData });
+        setCafes(prev => prev.map(c => c.id === id ? updatedCafeOptimistic : c));
+
+        try {
+            const { vibes, amenities, spots, events, ...mainData } = updatedData;
+            const record = prepareCafeRecordForSupabase(mainData);
+            if (Object.keys(record).length > 1 || record.id === undefined) { // Check if there's more than just the ID (if it exists)
+                const { error: mainError } = await supabase.from('cafes').update(record).eq('id', id);
+                if (mainError) throw mainError;
+            }
+            await updateCafeRelationsInSupabase(id, { vibes, amenities, spots, events });
+            fetchCafes(false);
+            return { data: { id }, error: null };
+        } catch (err: any) {
+            setCafes(originalCafes);
+            return { data: null, error: err };
+        }
+    };
+
+    const deleteCafe = async (id: string) => {
+        const originalCafes = [...cafes];
+        setCafes(prev => prev.filter(c => c.id !== id));
+        try {
+            const { error } = await supabase.from('cafes').delete().eq('id', id);
+            if (error) throw error;
+            return { error: null };
+        } catch (err: any) {
+            setCafes(originalCafes);
+            return { error: err };
+        }
     };
     
-    const updateCafe = async (id: string, updatedData: Partial<Cafe>) => {
-        return performMutation(async () => {
-            const cafeRecord = prepareCafeRecord(updatedData);
-            if (Object.keys(cafeRecord).length > 0) {
-                 const { error: cafeError } = await supabase.from('cafes').update(cafeRecord).eq('id', id);
-                 if (cafeError) throw new Error(`Gagal update data utama: ${cafeError.message}`);
-            }
-            await updateRelations(id, updatedData);
-        }, 'updateCafe');
-    };
-
-    const deleteCafe = (id: string) => deleteMultipleCafes([id]);
-
     const deleteMultipleCafes = async (ids: string[]) => {
-        return performMutation(async () => {
-            if (!ids || ids.length === 0) return;
-            // Delete from child tables first to respect foreign key constraints
-            const relationsToDelete = [
-                supabase.from('cafe_vibes').delete().in('cafe_id', ids),
-                supabase.from('cafe_amenities').delete().in('cafe_id', ids),
-                supabase.from('spots').delete().in('cafe_id', ids),
-                supabase.from('reviews').delete().in('cafe_id', ids),
-                supabase.from('events').delete().in('cafe_id', ids),
-                supabase.from('cafe_status_logs').delete().in('cafe_id', ids),
-            ];
-            await Promise.all(relationsToDelete);
-            
-            // Then delete from the parent table
-            const { error: cafeError } = await supabase.from('cafes').delete().in('id', ids);
-            if (cafeError) throw cafeError;
-        }, 'deleteMultipleCafes');
+        const originalCafes = [...cafes];
+        setCafes(prev => prev.filter(c => !ids.includes(c.id)));
+        try {
+            const { error } = await supabase.from('cafes').delete().in('id', ids);
+            if (error) throw error;
+            return { error: null };
+        } catch (err: any) {
+            setCafes(originalCafes);
+            return { error: err };
+        }
     };
 
     const addReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => {
-        return performMutation(async () => {
-            const reviewData = { ...review, id: `rev-${crypto.randomUUID()}`, status: 'pending' as const, helpful_count: 0 };
-            const { error } = await supabase.from('reviews').insert(reviewData);
-            if (error) throw error;
-        }, 'addReview');
+        const newReview = { ...review, status: 'pending' as const, createdAt: new Date().toISOString(), helpful_count: 0 };
+        const { data, error } = await supabase.from('reviews').insert(newReview);
+        if (error) return { data: null, error };
+        fetchCafes(false);
+        return { data, error: null };
     };
 
     const updateReviewStatus = async (reviewId: string, status: Review['status']) => {
-        return performMutation(async () => {
-            const { data, error } = await supabase.from('reviews').update({ status }).eq('id', reviewId).select();
+        const originalCafes = [...cafes];
+        const optimisticCafes = originalCafes.map(c => ({...c, reviews: c.reviews.map(r => r.id === reviewId ? {...r, status} : r)}));
+        setCafes(optimisticCafes.map(calculateAverages));
+        try {
+            const { error } = await supabase.from('reviews').update({ status }).eq('id', reviewId);
             if (error) throw error;
-            if (!data || data.length === 0) throw new Error('Gagal memperbarui review. Tidak ditemukan.');
-        }, 'updateReviewStatus');
-    };
-
-    const updateCafeStatus = async (cafeId: string, status: Cafe['status']) => {
-        return performMutation(async () => {
-            const currentCafe = cafes.find(c => c.id === cafeId);
-            const oldStatus = currentCafe ? currentCafe.status : 'unknown';
-            const { error: updateError } = await supabase.from('cafes').update({ status }).eq('id', cafeId);
-            if (updateError) throw updateError;
-            if (currentUser && currentUser.role === 'admin' && oldStatus !== status) {
-                const logEntry = { cafe_id: cafeId, old_status: oldStatus, new_status: status, changed_by: currentUser.id };
-                const { error: logError } = await supabase.from('cafe_status_logs').insert(logEntry);
-                if (logError) console.error("Critical: Cafe status updated but failed to write to audit log.", logError);
-            }
-        }, 'updateCafeStatus');
+            fetchCafes(false);
+            return { error: null };
+        } catch (err: any) {
+            setCafes(originalCafes);
+            return { error: err };
+        }
     };
 
     const deleteReview = async (reviewId: string) => {
-        return performMutation(async () => {
+        const originalCafes = [...cafes];
+        const optimisticCafes = originalCafes.map(c => ({...c, reviews: c.reviews.filter(r => r.id !== reviewId)}));
+        setCafes(optimisticCafes.map(calculateAverages));
+        try {
             const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
             if (error) throw error;
-        }, 'deleteReview');
-    };
-    
-    const incrementHelpfulCount = async (reviewId: string) => {
-        return performMutation(async () => {
-            const { error } = await supabase.rpc('increment_helpful_count', { review_id_text: reviewId });
-            if (error) throw error;
-        }, 'incrementHelpfulCount');
+            fetchCafes(false);
+            return { error: null };
+        } catch (err: any) {
+            setCafes(originalCafes);
+            return { error: err };
+        }
     };
 
-    const getPendingReviews = () => cafes.flatMap(cafe => cafe.reviews.filter(r => r.status === 'pending').map(review => ({ ...review, cafeName: cafe.name, cafeId: cafe.id })));
-    const getAllReviews = () => cafes.flatMap(cafe => cafe.reviews.map(review => ({ ...review, cafeName: cafe.name, cafeId: cafe.id }))).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const incrementHelpfulCount = async (reviewId: string) => {
+        setCafes(prev => prev.map(c => ({...c, reviews: c.reviews.map(r => r.id === reviewId ? {...r, helpful_count: (r.helpful_count || 0) + 1} : r)})));
+        const { error } = await supabase.rpc('increment_helpful_count', { review_id_param: reviewId });
+        if (error) {
+            console.error("Failed to increment helpful count:", error);
+            // Non-critical, no rollback needed, but maybe refresh to be safe
+            fetchCafes(false);
+        }
+    };
+
+    const updateCafeStatus = async (cafeId: string, status: Cafe['status']) => {
+        const originalCafes = [...cafes];
+        setCafes(prev => prev.map(c => c.id === cafeId ? { ...c, status } : c));
+        try {
+            const { error } = await supabase.from('cafes').update({ status }).eq('id', cafeId);
+            if (error) throw error;
+            return { error: null };
+        } catch (err: any) {
+            setCafes(originalCafes);
+            return { error: err };
+        }
+    };
+
+    const getPendingReviews = () => cafes.flatMap(c => c.reviews.filter(r => r.status === 'pending').map(r => ({ ...r, cafeName: c.name, cafeId: c.id })));
+    const getAllReviews = () => cafes.flatMap(c => c.reviews.map(r => ({ ...r, cafeName: c.name, cafeId: c.id }))).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const getPendingCafes = () => cafes.filter(c => c.status === 'pending');
 
     return (
         <CafeContext.Provider value={{
-            cafes, loading, error, fetchCafes, addCafe, updateCafe, deleteCafe, deleteMultipleCafes, addReview,
-            updateReviewStatus, deleteReview, incrementHelpfulCount, getPendingReviews, getAllReviews, getPendingCafes, updateCafeStatus
+            cafes, loading, error, fetchCafes, addCafe, updateCafe, deleteCafe, deleteMultipleCafes,
+            addReview, updateReviewStatus, deleteReview, incrementHelpfulCount, getPendingReviews,
+            getAllReviews, getPendingCafes, updateCafeStatus
         }}>
             {children}
         </CafeContext.Provider>

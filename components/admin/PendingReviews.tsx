@@ -45,15 +45,13 @@ const ReviewManagement: React.FC = () => {
 
     const handleUpdateStatus = async (reviewId: string, status: Review['status']) => {
         setLoadingReviewId(reviewId);
-        try {
-            await updateReviewStatus(reviewId, status);
-            setNotification({ message: `Status review berhasil diubah menjadi ${status}.`, type: 'success' });
-        } catch (error) {
-            console.error("Failed to update review status:", error);
+        const { error } = await updateReviewStatus(reviewId, status);
+        if (error) {
             setNotification({ message: 'Gagal memperbarui status review.', type: 'error' });
-        } finally {
-            setLoadingReviewId(null);
+        } else {
+            setNotification({ message: `Status review berhasil diubah menjadi ${status}.`, type: 'success' });
         }
+        setLoadingReviewId(null);
     };
 
     const handleDeleteClick = (review: ManagedReview) => {
@@ -64,19 +62,17 @@ const ReviewManagement: React.FC = () => {
         if (!reviewToDelete) return;
 
         setLoadingReviewId(reviewToDelete.id);
-        try {
-            await deleteReview(reviewToDelete.id);
+        const { error } = await deleteReview(reviewToDelete.id);
+        if (error) {
+            setNotification({ message: 'Gagal menghapus review.', type: 'error' });
+        } else {
             setNotification({ message: 'Review berhasil dihapus secara permanen.', type: 'success' });
             if (paginatedReviews.length === 1 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }
-        } catch (error) {
-            console.error("Failed to delete review:", error);
-            setNotification({ message: 'Gagal menghapus review.', type: 'error' });
-        } finally {
-            setLoadingReviewId(null);
-            setReviewToDelete(null);
         }
+        setLoadingReviewId(null);
+        setReviewToDelete(null);
     };
     
     const TabButton: React.FC<{ status: ReviewStatus, label: string, count: number }> = ({ status, label, count }) => (

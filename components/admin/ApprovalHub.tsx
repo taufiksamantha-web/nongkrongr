@@ -49,15 +49,12 @@ const ApprovalHub: React.FC = () => {
     const handleCafeApproval = async (cafeId: string, isApproved: boolean) => {
         setProcessingId(cafeId);
         const newStatus = isApproved ? 'approved' : 'rejected';
-        try {
-            await updateCafeStatus(cafeId, newStatus);
-            // The context will auto-refresh, so we can just refetch data locally.
-            await fetchPendingData();
-        } catch (err: any) {
-             setError(`Gagal memperbarui status kafe: ${err.message}`);
-        } finally {
-             setProcessingId(null);
+        const { error } = await updateCafeStatus(cafeId, newStatus);
+        if (error) {
+            setError(`Gagal memperbarui status kafe: ${error.message}`);
         }
+        // No need to manually refetch or update state, optimistic update and real-time handle it.
+        setProcessingId(null);
     };
 
     const TabButton: React.FC<{ type: 'users' | 'cafes'; icon: React.ReactNode; label: string; count: number }> = ({ type, icon, label, count }) => (

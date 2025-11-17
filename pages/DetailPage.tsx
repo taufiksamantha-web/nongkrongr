@@ -127,15 +127,14 @@ const DetailPage: React.FC = () => {
 
     const handleAddReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => {
         setIsSubmitting(true);
-        try {
-            await addReview(review);
-            setNotification("Review kamu telah dikirim dan sedang menunggu moderasi. Terima kasih!");
-        } catch (error: any) {
+        const { error } = await addReview(review);
+        if (error) {
             console.error("Failed to add review:", error);
             alert(`Gagal mengirim review: ${error.message}`);
-        } finally {
-            setIsSubmitting(false);
+        } else {
+            setNotification("Review kamu telah dikirim dan sedang menunggu moderasi. Terima kasih!");
         }
+        setIsSubmitting(false);
     };
 
     if (error) return <DatabaseConnectionError />;

@@ -1,5 +1,6 @@
 import React, { ErrorInfo, ReactNode } from 'react';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { supabase } from '../lib/supabaseClient';
 
 interface Props {
   children: ReactNode;
@@ -10,26 +11,34 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Replaced the constructor with class property syntax for state initialization.
-  // This is a more modern, concise, and standard approach that resolves the type errors
-  // related to `this.state` and `this.props` not being recognized on the class instance.
-  public state: State = { hasError: false };
+  // FIX: Switched to constructor for state initialization to ensure wider compatibility
+  // with different build tools, which may resolve issues with `this.props` typings.
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
-  public static getDerivedStateFromError(_error: Error): State {
+  static getDerivedStateFromError(_error: Error): State {
     return { hasError: true };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
   
-  private handleClearCacheAndReload = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.reload();
+  private handleClearCacheAndReload = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("Error during sign out in error boundary:", e);
+    } finally {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.reload();
+    }
   };
 
-  public render(): ReactNode {
+  render() {
     if (this.state.hasError) {
        return (
         <div className="flex items-center justify-center min-h-screen bg-soft p-6">

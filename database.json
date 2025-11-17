@@ -24,7 +24,7 @@
       "name": "profiles",
       "columns": [
         { "name": "id", "type": "uuid", "is_primary_key": true, "references": "auth.users(id)" },
-        { "name": "username", "type": "text" },
+        { "name": "username", "type": "text", "is_unique": true },
         { "name": "role", "type": "text", "default": "user" },
         { "name": "status", "type": "text", "default": "active" }
       ],
@@ -45,11 +45,11 @@
         { "name": "lat", "type": "float8" },
         { "name": "lng", "type": "float8" },
         { "name": "isSponsored", "type": "boolean", "default": false },
-        { "name": "sponsoredUntil", "type": "timestamptz" },
-        { "name": "sponsoredRank", "type": "integer" },
-        { "name": "logoUrl", "type": "text" },
+        { "name": "sponsoredUntil", "type": "timestamptz", "is_nullable": true },
+        { "name": "sponsoredRank", "type": "integer", "is_nullable": true },
+        { "name": "logoUrl", "type": "text", "is_nullable": true },
         { "name": "coverUrl", "type": "text" },
-        { "name": "manager_id", "type": "uuid", "references": "profiles(id)", "is_nullable": true },
+        { "name": "manager_id", "type": "uuid", "references": "profiles(id)", "on_delete": "set null", "is_nullable": true },
         { "name": "created_at", "type": "timestamptz", "default": "now()" },
         { "name": "status", "type": "text", "default": "pending" }
       ],
@@ -59,7 +59,7 @@
       "name": "reviews",
       "columns": [
         { "name": "id", "type": "text", "is_primary_key": true },
-        { "name": "cafe_id", "type": "text", "references": "cafes(id)" },
+        { "name": "cafe_id", "type": "text", "references": "cafes(id)", "on_delete": "cascade" },
         { "name": "author", "type": "text" },
         { "name": "ratingAesthetic", "type": "smallint" },
         { "name": "ratingWork", "type": "smallint" },
@@ -79,7 +79,7 @@
       "name": "spots",
       "columns": [
         { "name": "id", "type": "text", "is_primary_key": true },
-        { "name": "cafe_id", "type": "text", "references": "cafes(id)" },
+        { "name": "cafe_id", "type": "text", "references": "cafes(id)", "on_delete": "cascade" },
         { "name": "title", "type": "text" },
         { "name": "tip", "type": "text" },
         { "name": "photoUrl", "type": "text" },
@@ -91,28 +91,28 @@
       "name": "events",
       "columns": [
         { "name": "id", "type": "text", "is_primary_key": true },
-        { "name": "cafe_id", "type": "text", "references": "cafes(id)" },
+        { "name": "cafe_id", "type": "text", "references": "cafes(id)", "on_delete": "cascade" },
         { "name": "name", "type": "text" },
         { "name": "description", "type": "text" },
         { "name": "start_date", "type": "timestamptz" },
         { "name": "end_date", "type": "timestamptz" },
-        { "name": "imageUrl", "type": "text" },
+        { "name": "imageUrl", "type": "text", "is_nullable": true },
         { "name": "created_at", "type": "timestamptz", "default": "now()" }
       ]
     },
     {
       "name": "cafe_vibes",
       "columns": [
-        { "name": "cafe_id", "type": "text", "is_primary_key": true, "references": "cafes(id)" },
-        { "name": "vibe_id", "type": "text", "is_primary_key": true, "references": "vibes(id)" }
+        { "name": "cafe_id", "type": "text", "is_primary_key": true, "references": "cafes(id)", "on_delete": "cascade" },
+        { "name": "vibe_id", "type": "text", "is_primary_key": true, "references": "vibes(id)", "on_delete": "cascade" }
       ],
       "csv_file": "cafe_vibes.csv"
     },
     {
       "name": "cafe_amenities",
       "columns": [
-        { "name": "cafe_id", "type": "text", "is_primary_key": true, "references": "cafes(id)" },
-        { "name": "amenity_id", "type": "text", "is_primary_key": true, "references": "amenities(id)" }
+        { "name": "cafe_id", "type": "text", "is_primary_key": true, "references": "cafes(id)", "on_delete": "cascade" },
+        { "name": "amenity_id", "type": "text", "is_primary_key": true, "references": "amenities(id)", "on_delete": "cascade" }
       ],
       "csv_file": "cafe_amenities.csv"
     },
@@ -132,7 +132,7 @@
         { "name": "cafe_id", "type": "text", "references": "cafes(id)", "on_delete": "cascade" },
         { "name": "old_status", "type": "text" },
         { "name": "new_status", "type": "text" },
-        { "name": "changed_by", "type": "uuid", "references": "profiles(id)", "on_delete": "set null" },
+        { "name": "changed_by", "type": "uuid", "references": "profiles(id)", "on_delete": "set null", "is_nullable": true },
         { "name": "changed_at", "type": "timestamptz", "default": "now()" }
       ],
       "csv_file": "cafe_status_logs.csv"

@@ -1,5 +1,5 @@
 {
-  "name": "Nongkrongr: South Sumatra Cafe Finder",
+  "name": "Copy of Nongkrongr: South Sumatra Cafe Finder",
   "description": "A vibrant web application for Gen Z to discover aesthetic cafes in South Sumatra, perfect for hanging out, photo hunting, and studying. Features include trending spots, advanced filters, detailed cafe profiles with user reviews, and an admin dashboard.",
   "requestFramePermissions": [
     "geolocation"

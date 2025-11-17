@@ -6,10 +6,11 @@ import { AMENITIES, VIBES, SOUTH_SUMATRA_CITIES, DEFAULT_COVER_URL } from '../..
 import { PriceTier } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import ImageWithFallback from '../common/ImageWithFallback';
+import { SparklesIcon } from '@heroicons/react/24/solid';
 
 interface AdminCafeFormProps {
     cafe?: Cafe | null;
-    onSave: (cafe: any) => Promise<any>;
+    onSave: (cafe: any) => Promise<{ data: any, error: any }>;
     onCancel: () => void;
     userRole: 'admin' | 'user' | 'admin_cafe';
     setNotification: (notification: { message: string, type: 'success' | 'error' } | null) => void;
@@ -82,9 +83,14 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
     
     const [step, setStep] = useState(1);
     const isAdmin = userRole === 'admin';
-    const formSteps = isAdmin 
-        ? ['Info Dasar', 'Operasional', 'Vibes & Fasilitas', 'Spot Foto', 'Sponsor'] 
-        : ['Info Dasar', 'Operasional', 'Vibes & Fasilitas', 'Spot Foto', 'Events'];
+    const isEditMode = !!cafe;
+
+    const formSteps = isEditMode 
+        ? (isAdmin 
+            ? ['Info & Vibe', 'Operasional', 'Gambar & Fasilitas', 'Spot Foto', 'Sponsor'] 
+            : ['Info & Vibe', 'Operasional', 'Gambar & Fasilitas', 'Spot Foto', 'Events'])
+        : ['Info & Vibe', 'Operasional', 'Gambar & Fasilitas'];
+
 
     const parseOpeningHours = (hoursString?: string) => {
         const defaults = { openingTime: '09:00', closingTime: '22:00', is24Hours: false };
@@ -118,6 +124,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
     const [eventPreviews, setEventPreviews] = useState<(string | null)[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
+    const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
     const geocodeTimeoutRef = useRef<number | null>(null);
 
     // New states for Plus Code functionality
@@ -224,6 +231,23 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
         handlePlusCodeConversion(value.trim());
     };
 
+    const handleGenerateDescription = async () => {
+        if (!formData.name) {
+            setNotification({ message: 'Harap isi Nama Kafe terlebih dahulu.', type: 'error' });
+            return;
+        }
+        setIsGeneratingDesc(true);
+        setNotification(null);
+        try {
+            const description = await geminiService.generateCafeDescription(formData.name, formData.vibes);
+            setFormData(prev => ({ ...prev, description }));
+            setNotification({ message: 'Deskripsi berhasil dibuat oleh AI!', type: 'success' });
+        } catch (error: any) {
+            setNotification({ message: `Gagal membuat deskripsi: ${error.message}`, type: 'error' });
+        } finally {
+            setIsGeneratingDesc(false);
+        }
+    };
 
     const handleMultiSelectChange = (field: 'vibes' | 'amenities', item: Vibe | Amenity) => {
         setFormData(prev => ({...prev, [field]: (prev[field] as any[]).some(i => i.id === item.id) ? (prev[field] as any[]).filter(i => i.id !== item.id) : [...prev[field], item]}));
@@ -289,7 +313,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                 const lng = parseFloat(String(formData.lng));
                 if (isNaN(lat) || isNaN(lng)) return { isValid: false, message: 'Koordinat Peta tidak valid (misal: -2.976, 104.745).' };
                 break;
-            case 2:
+            case 3:
                 if (!coverFile && !formData.coverUrl) return { isValid: false, message: 'Cover Image wajib diunggah.' };
                 break;
             case 5:
@@ -322,35 +346,18 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
     };
 
     const handleStepClick = (targetStep: number) => {
-        // Allow navigating to a previous step without validation.
         if (targetStep < step) {
             setStep(targetStep);
             return;
         }
-        // When trying to navigate to a future step, validate the current step first.
-        // This prevents the user from leaving an incomplete step.
-        if (targetStep > step) {
-            const { isValid, message } = validateStep(step);
-            if (!isValid) {
-                setNotification({
-                    message: `Lengkapi dulu langkah saat ini sebelum melanjutkan: ${message}`,
-                    type: 'error',
-                });
-                return; // Block forward movement from an invalid step.
-            }
-        }
-        
-        // This logic is now too permissive, allowing jumps. We need to validate all steps
-        // leading up to the target step.
         for (let i = 1; i < targetStep; i++) {
             const { isValid, message } = validateStep(i);
             if (!isValid) {
                 setNotification({ message: `Harap lengkapi Langkah ${i} terlebih dahulu: ${message}`, type: 'error' });
-                setStep(i); // Force user to the first invalid step
+                setStep(i);
                 return;
             }
         }
-
         setNotification(null);
         setStep(targetStep);
     };
@@ -362,7 +369,6 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
         e.preventDefault();
         if (isSaving) return;
         
-        // Final validation check across all steps
         for (let i = 1; i <= formSteps.length; i++) {
             const { isValid, message } = validateStep(i);
             if (!isValid) {
@@ -424,7 +430,8 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
 
             if (!payload.logoUrl) delete (payload as any).logoUrl;
             
-            await onSave(payload);
+            const { error } = await onSave(payload);
+            if (error) throw error;
             onSuccess();
 
         } catch (error: any) {
@@ -445,9 +452,9 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
             <div className="bg-card rounded-3xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <div className="p-4 sm:p-8 border-b border-border"><h2 className="text-2xl font-bold font-jakarta text-primary text-center mb-4">{cafe ? 'Edit Cafe' : 'Tambah Cafe Baru'}</h2><MultiStepProgressBar steps={formSteps} currentStep={step} onStepClick={handleStepClick} /></div>
                 <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-4 sm:p-8 space-y-6 overflow-y-auto">
-                    {step === 1 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 1: Informasi Dasar</h3> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Identitas Kafe</legend> <FormGroup><FormLabel htmlFor="name">Nama Cafe</FormLabel><input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Contoh: Kopi Senja" className={inputClass} required /></FormGroup> <FormGroup><FormLabel htmlFor="description">Deskripsi</FormLabel><textarea id="description" name="description" value={formData.description} onChange={handleChange} placeholder="Jelaskan keunikan dari cafe ini..." className={`${inputClass} h-24`} /><FormHelperText>Tulis deskripsi singkat tentang kafe ini.</FormHelperText></FormGroup> </fieldset> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Lokasi</legend> <div className="flex bg-soft dark:bg-gray-700/50 p-1 rounded-xl mb-4"> <button type="button" onClick={() => setLocationInputType('coords')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'coords' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Koordinat Peta</button> <button type="button" onClick={() => setLocationInputType('plusCode')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'plusCode' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Plus Code</button> </div> {locationInputType === 'coords' ? ( <FormGroup> <FormLabel htmlFor="coords">Koordinat Peta</FormLabel> <input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /> <FormHelperText>Salin & tempel koordinat dari Google Maps. Alamat akan terisi otomatis.</FormHelperText> </FormGroup> ) : ( <FormGroup> <FormLabel htmlFor="plusCode">Google Maps Plus Code</FormLabel> <div className="relative"> <input id="plusCode" name="plusCode" type="text" value={plusCodeInput} onChange={handlePlusCodeInputChange} placeholder="Contoh: 6P5G2QG8+R8" className={`${inputClass} pr-10`} /> {isConvertingPlusCode && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>} </div> <FormHelperText>Masukkan Plus Code, maka koordinat & alamat akan terisi otomatis via AI.</FormHelperText> </FormGroup> )} <FormGroup><FormLabel htmlFor="address">Alamat (Otomatis)</FormLabel><div className="relative"><input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Menunggu koordinat..." className={`${inputClass} pr-10`} required />{isGeocoding && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>}</div></FormGroup> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="city">Kota/Kabupaten</FormLabel><input id="city" name="city" value={formData.city} onChange={handleChange} placeholder="e.g., Palembang" className={inputClass} /></FormGroup><FormGroup><FormLabel htmlFor="district">Kecamatan</FormLabel><input id="district" name="district" value={formData.district} onChange={handleChange} placeholder="e.g., Ilir Barat I" className={inputClass} /></FormGroup></div> </fieldset> </div> )}
-                    {step === 2 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 2: Detail Operasional</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Jam Operasional</legend><div className="flex items-center gap-4"><input type="checkbox" id="is24Hours" name="is24Hours" checked={formData.is24Hours} onChange={handleChange} className="h-5 w-5 rounded text-brand focus:ring-brand" /><label htmlFor="is24Hours" className="font-medium text-primary">Buka 24 Jam</label></div>{!formData.is24Hours && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="openingTime">Jam Buka</FormLabel><input id="openingTime" name="openingTime" type="time" value={formData.openingTime} onChange={handleChange} className={inputClass} required={!formData.is24Hours} /></FormGroup><FormGroup><FormLabel htmlFor="closingTime">Jam Tutup</FormLabel><input id="closingTime" name="closingTime" type="time" value={formData.closingTime} onChange={handleChange} className={inputClass} required={!formData.is24Hours} /></FormGroup></div>)}</fieldset> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Detail Lainnya</legend><FormGroup><FormLabel htmlFor="priceTier">Kisaran Harga</FormLabel><select id="priceTier" name="priceTier" value={formData.priceTier} onChange={handleChange} className={inputClass}><option value={PriceTier.BUDGET}>Budget ($)</option><option value={PriceTier.STANDARD}>Standard ($$)</option><option value={PriceTier.PREMIUM}>Premium ($$$)</option><option value={PriceTier.LUXURY}>Luxury ($$$$)</option></select></FormGroup></fieldset> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Gambar</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormGroup><FormLabel htmlFor="logo">Logo (Opsional)</FormLabel><ImageWithFallback src={logoPreview || formData.logoUrl} alt="Logo" className="w-24 h-24 object-contain rounded-xl mb-2 bg-soft border" fallbackText="Logo"/><input id="logo" type="file" accept="image/*" onChange={(e) => e.target.files && setLogoFile(e.target.files[0])} className={fileInputClass} /></FormGroup><FormGroup><FormLabel htmlFor="cover">Cover Image (Wajib)</FormLabel><ImageWithFallback src={coverPreview || formData.coverUrl} defaultSrc={DEFAULT_COVER_URL} alt="Cover" className="w-full h-24 object-cover rounded-xl mb-2" /><input id="cover" type="file" accept="image/*" onChange={(e) => e.target.files && setCoverFile(e.target.files[0])} className={fileInputClass} /></FormGroup></div></fieldset> </div> )}
-                    {step === 3 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 3: Vibe & Fasilitas</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Pilih Vibe</legend><div className="flex flex-wrap gap-3">{VIBES.map(v => <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v)} className={`px-4 py-2 rounded-full border-2 font-semibold ${formData.vibes.some(fv => fv.id === v.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>{v.name}</button>)}</div></fieldset> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Pilih Fasilitas</legend><div className="flex flex-wrap gap-3">{AMENITIES.map(a => <button type="button" key={a.id} onClick={() => handleMultiSelectChange('amenities', a)} className={`px-4 py-2 rounded-full border-2 font-semibold ${formData.amenities.some(fa => fa.id === a.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>{a.icon} {a.name}</button>)}</div></fieldset> </div> )}
+                    {step === 1 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 1: Info & Vibe</h3> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Identitas Kafe</legend> <FormGroup><FormLabel htmlFor="name">Nama Cafe</FormLabel><input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Contoh: Kopi Senja" className={inputClass} required /></FormGroup> <FormGroup> <FormLabel htmlFor="description">Deskripsi</FormLabel> <div className="relative"> <textarea id="description" name="description" value={formData.description} onChange={handleChange} placeholder="Jelaskan keunikan dari cafe ini..." className={`${inputClass} h-24 pr-12`} /> <button type="button" onClick={handleGenerateDescription} disabled={isGeneratingDesc} className="absolute top-2 right-2 p-2 rounded-full bg-brand/10 hover:bg-brand/20 text-brand disabled:opacity-50 disabled:cursor-wait" title="Buat deskripsi dengan AI"> {isGeneratingDesc ? <div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-current"></div> : <SparklesIcon className="h-5 w-5" />} </button> </div> <FormHelperText>Pilih vibe di bawah, lalu klik ikon ✨ untuk membuat deskripsi otomatis.</FormHelperText> </FormGroup> <FormGroup><FormLabel htmlFor="vibes">Vibe Kafe</FormLabel><div className="flex flex-wrap gap-3">{VIBES.map(v => <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v)} className={`px-4 py-2 rounded-full border-2 font-semibold ${formData.vibes.some(fv => fv.id === v.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>{v.name}</button>)}</div></FormGroup> </fieldset> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Lokasi</legend> <div className="flex bg-soft dark:bg-gray-700/50 p-1 rounded-xl mb-4"> <button type="button" onClick={() => setLocationInputType('coords')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'coords' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Koordinat Peta</button> <button type="button" onClick={() => setLocationInputType('plusCode')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'plusCode' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Plus Code</button> </div> {locationInputType === 'coords' ? ( <FormGroup> <FormLabel htmlFor="coords">Koordinat Peta</FormLabel> <input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /> <FormHelperText>Salin & tempel koordinat dari Google Maps. Alamat akan terisi otomatis.</FormHelperText> </FormGroup> ) : ( <FormGroup> <FormLabel htmlFor="plusCode">Google Maps Plus Code</FormLabel> <div className="relative"> <input id="plusCode" name="plusCode" type="text" value={plusCodeInput} onChange={handlePlusCodeInputChange} placeholder="Contoh: 6P5G2QG8+R8" className={`${inputClass} pr-10`} /> {isConvertingPlusCode && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>} </div> <FormHelperText>Masukkan Plus Code, maka koordinat & alamat akan terisi otomatis via AI.</FormHelperText> </FormGroup> )} <FormGroup><FormLabel htmlFor="address">Alamat (Otomatis)</FormLabel><div className="relative"><input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Menunggu koordinat..." className={`${inputClass} pr-10`} required />{isGeocoding && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>}</div></FormGroup> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="city">Kota/Kabupaten</FormLabel><input id="city" name="city" value={formData.city} onChange={handleChange} placeholder="e.g., Palembang" className={inputClass} /></FormGroup><FormGroup><FormLabel htmlFor="district">Kecamatan</FormLabel><input id="district" name="district" value={formData.district} onChange={handleChange} placeholder="e.g., Ilir Barat I" className={inputClass} /></FormGroup></div> </fieldset> </div> )}
+                    {step === 2 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 2: Detail Operasional</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Jam Operasional</legend><div className="flex items-center gap-4"><input type="checkbox" id="is24Hours" name="is24Hours" checked={formData.is24Hours} onChange={handleChange} className="h-5 w-5 rounded text-brand focus:ring-brand" /><label htmlFor="is24Hours" className="font-medium text-primary">Buka 24 Jam</label></div>{!formData.is24Hours && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="openingTime">Jam Buka</FormLabel><input id="openingTime" name="openingTime" type="time" value={formData.openingTime} onChange={handleChange} className={inputClass} required={!formData.is24Hours} /></FormGroup><FormGroup><FormLabel htmlFor="closingTime">Jam Tutup</FormLabel><input id="closingTime" name="closingTime" type="time" value={formData.closingTime} onChange={handleChange} className={inputClass} required={!formData.is24Hours} /></FormGroup></div>)}</fieldset> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Detail Lainnya</legend><FormGroup><FormLabel htmlFor="priceTier">Kisaran Harga</FormLabel><select id="priceTier" name="priceTier" value={formData.priceTier} onChange={handleChange} className={inputClass}><option value={PriceTier.BUDGET}>Budget ($)</option><option value={PriceTier.STANDARD}>Standard ($$)</option><option value={PriceTier.PREMIUM}>Premium ($$$)</option><option value={PriceTier.LUXURY}>Luxury ($$$$)</option></select></FormGroup></fieldset> </div> )}
+                    {step === 3 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 3: Gambar & Fasilitas</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Gambar</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><FormGroup><FormLabel htmlFor="logo">Logo (Opsional)</FormLabel><ImageWithFallback src={logoPreview || formData.logoUrl} alt="Logo" className="w-24 h-24 object-contain rounded-xl mb-2 bg-soft border" fallbackText="Logo"/><input id="logo" type="file" accept="image/*" onChange={(e) => e.target.files && setLogoFile(e.target.files[0])} className={fileInputClass} /></FormGroup><FormGroup><FormLabel htmlFor="cover">Cover Image (Wajib)</FormLabel><ImageWithFallback src={coverPreview || formData.coverUrl} defaultSrc={DEFAULT_COVER_URL} alt="Cover" className="w-full h-24 object-cover rounded-xl mb-2" /><input id="cover" type="file" accept="image/*" onChange={(e) => e.target.files && setCoverFile(e.target.files[0])} className={fileInputClass} /></FormGroup></div></fieldset> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Pilih Fasilitas</legend><div className="flex flex-wrap gap-3">{AMENITIES.map(a => <button type="button" key={a.id} onClick={() => handleMultiSelectChange('amenities', a)} className={`px-4 py-2 rounded-full border-2 font-semibold ${formData.amenities.some(fa => fa.id === a.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>{a.icon} {a.name}</button>)}</div></fieldset> </div> )}
                     {step === 4 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 4: Spot Foto</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Galeri Spot Foto</legend><div className="space-y-4 max-h-80 overflow-y-auto pr-2">{formData.spots.map((spot, index) => (<div key={spot.id} className="border p-4 rounded-lg bg-soft dark:bg-gray-900/50 relative"><button type="button" onClick={() => handleRemoveSpot(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 dark:bg-red-500/20 rounded-full h-7 w-7 flex items-center justify-center font-bold text-xl hover:bg-red-500 hover:text-white">&times;</button><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor={`spot-photo-${index}`}>Foto Spot</FormLabel><ImageWithFallback src={spotPreviews[index] || spot.photoUrl} alt="Spot" className="w-full h-32 object-cover rounded-md mb-2" /><input id={`spot-photo-${index}`} type="file" accept="image/*" onChange={e => handleSpotFileChange(index, e)} className={fileInputClass} /></FormGroup><div className="space-y-3"><FormGroup><FormLabel htmlFor={`spot-title-${index}`}>Judul Spot</FormLabel><input id={`spot-title-${index}`} name="title" value={spot.title} onChange={e => handleSpotChange(index, e)} placeholder="Cth: Sudut Jendela Senja" className={inputClass} /></FormGroup><FormGroup><FormLabel htmlFor={`spot-tip-${index}`}>Tips Foto</FormLabel><input id={`spot-tip-${index}`} name="tip" value={spot.tip} onChange={e => handleSpotChange(index, e)} placeholder="Cth: Ambil foto saat sore hari" className={inputClass} /></FormGroup></div></div></div>))}{formData.spots.length === 0 && <p className="text-muted text-center py-4">Belum ada spot foto. Klik tombol di bawah untuk menambahkan.</p>}</div><button type="button" onClick={handleAddSpot} className="mt-4 w-full bg-gray-100 dark:bg-gray-700 text-primary hover:bg-gray-200 font-semibold py-2 rounded-lg">+ Tambah Spot Foto</button></fieldset> </div> )}
                     {step === 5 && !isAdmin && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 5: Events & Promo</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Manajemen Event</legend><div className="space-y-4 max-h-80 overflow-y-auto pr-2">{formData.events.map((event, index) => (<div key={event.id} className="border p-4 rounded-lg bg-soft dark:bg-gray-900/50 relative"><button type="button" onClick={() => handleRemoveEvent(index)} className="absolute top-2 right-2 bg-red-100 text-red-600 dark:bg-red-500/20 rounded-full h-7 w-7 flex items-center justify-center font-bold text-xl hover:bg-red-500 hover:text-white">&times;</button><div className="flex flex-col lg:flex-row gap-6"><div className="lg:w-1/3 flex-shrink-0"><FormGroup><FormLabel htmlFor={`event-photo-${index}`}>Gambar (Opsional)</FormLabel><ImageWithFallback src={eventPreviews[index] || event.imageUrl} alt="Event" className="w-full aspect-video object-cover rounded-md mb-2" /><input id={`event-photo-${index}`} type="file" accept="image/*" onChange={e => handleEventFileChange(index, e)} className={fileInputClass} /></FormGroup></div><div className="flex-1 space-y-4"><FormGroup><FormLabel htmlFor={`event-name-${index}`}>Nama Event</FormLabel><input id={`event-name-${index}`} name="name" value={event.name} onChange={e => handleEventChange(index, e)} placeholder="Cth: Live Music Akustik" className={inputClass} required/></FormGroup><FormGroup><FormLabel htmlFor={`event-desc-${index}`}>Deskripsi</FormLabel><textarea id={`event-desc-${index}`} name="description" value={event.description} onChange={e => handleEventChange(index, e)} placeholder="Detail event" className={`${inputClass} h-20`}></textarea></FormGroup><div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor={`event-start-${index}`}>Tgl Mulai</FormLabel><input id={`event-start-${index}`} name="start_date" type="date" value={getDisplayDate(event.start_date)} onChange={e => handleEventChange(index, e)} className={inputClass} required/></FormGroup><FormGroup><FormLabel htmlFor={`event-end-${index}`}>Tgl Selesai</FormLabel><input id={`event-end-${index}`} name="end_date" type="date" value={getDisplayDate(event.end_date)} onChange={e => handleEventChange(index, e)} className={inputClass} required/></FormGroup></div></div></div></div>))}{formData.events.length === 0 && <p className="text-muted text-center py-4">Belum ada event. Klik tombol di bawah untuk menambahkan.</p>}</div><button type="button" onClick={handleAddEvent} className="mt-4 w-full bg-gray-100 dark:bg-gray-700 text-primary hover:bg-gray-200 font-semibold py-2 rounded-lg">+ Tambah Event</button></fieldset> </div> )}
                     {step === 5 && isAdmin && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2">Langkah 5: Sponsorship</h3> <fieldset className={fieldsetStyles}><legend className={legendStyles}>Detail Sponsorship (Admin Only)</legend><div className="flex items-center gap-4"><input type="checkbox" id="isSponsored" name="isSponsored" checked={formData.isSponsored} onChange={handleChange} className="h-5 w-5 rounded text-brand focus:ring-brand" /><label htmlFor="isSponsored" className="font-medium text-primary">Aktifkan Sponsorship</label></div>{formData.isSponsored && (<div className="grid grid-cols-1 sm:grid-cols-2 gap-4"><FormGroup><FormLabel htmlFor="sponsoredRank">Ranking Sponsor</FormLabel><input id="sponsoredRank" name="sponsoredRank" type="number" value={formData.sponsoredRank} onChange={handleChange} placeholder="Urutan (cth: 1)" className={inputClass} /><FormHelperText>Angka lebih kecil tampil lebih dulu.</FormHelperText></FormGroup><FormGroup><FormLabel htmlFor="sponsoredUntil">Sponsor Hingga</FormLabel><input id="sponsoredUntil" name="sponsoredUntil" type="date" value={formData.sponsoredUntil} onChange={handleChange} className={inputClass} /></FormGroup></div>)}</fieldset> </div> )}

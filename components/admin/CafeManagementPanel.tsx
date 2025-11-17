@@ -120,14 +120,13 @@ const CafeManagementPanel: React.FC = () => {
 
     const handleToggleSponsor = async (cafe: Cafe) => {
         setIsSaving(true);
-        try {
-            await updateCafe(cafe.id, { isSponsored: !cafe.isSponsored });
-            setNotification({ message: `Status sponsor "${cafe.name}" diperbarui.`, type: 'success' });
-        } catch (error: any) {
+        const { error } = await updateCafe(cafe.id, { isSponsored: !cafe.isSponsored });
+        if (error) {
             setNotification({ message: `Gagal update: ${error.message}`, type: 'error' });
-        } finally {
-            setIsSaving(false);
+        } else {
+            setNotification({ message: `Status sponsor "${cafe.name}" diperbarui.`, type: 'success' });
         }
+        setIsSaving(false);
     };
 
     useEffect(() => {
@@ -142,26 +141,25 @@ const CafeManagementPanel: React.FC = () => {
     const totalPages = Math.ceil(sortedAndFilteredCafes.length / ITEMS_PER_PAGE);
     const paginatedCafes = sortedAndFilteredCafes.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
     
-    const handleSave = (data: Partial<Cafe>): Promise<any> => {
+    const handleSave = async (data: Partial<Cafe>) => {
         if (editingCafe) {
-            return updateCafe(editingCafe.id, data);
+            return await updateCafe(editingCafe.id, data);
         }
-        return addCafe(data);
+        return await addCafe(data);
     };
 
     const handleConfirmDeleteCafe = async () => {
         if (cafeToDelete) {
             setIsSaving(true);
-            try {
-                await deleteCafe(cafeToDelete.id);
+            const { error } = await deleteCafe(cafeToDelete.id);
+            if (error) {
+                setNotification({ message: `Error: ${error.message}`, type: 'error' });
+            } else {
                 setNotification({ message: `"${cafeToDelete.name}" berhasil dihapus.`, type: 'success' });
                 if (paginatedCafes.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
-            } catch (error: any) {
-                setNotification({ message: `Error: ${error.message}`, type: 'error' });
-            } finally {
-                setCafeToDelete(null);
-                setIsSaving(false);
             }
+            setCafeToDelete(null);
+            setIsSaving(false);
         }
     };
 
@@ -173,20 +171,18 @@ const CafeManagementPanel: React.FC = () => {
     };
     const handleConfirmMultiDelete = async () => {
         setIsSaving(true);
-        try {
-            await deleteMultipleCafes(selectedCafeIds);
-            const successes = selectedCafeIds.length;
-            setNotification({ message: `${successes} kafe berhasil dihapus.`, type: 'success' });
-            if (paginatedCafes.length - successes <= 0 && currentPage > 1) {
+        const { error } = await deleteMultipleCafes(selectedCafeIds);
+        if (error) {
+            setNotification({ message: `Terjadi error: ${error.message}`, type: 'error' });
+        } else {
+            setNotification({ message: `${selectedCafeIds.length} kafe berhasil dihapus.`, type: 'success' });
+            if (paginatedCafes.length - selectedCafeIds.length <= 0 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }
             setSelectedCafeIds([]);
-        } catch (error: any) {
-            setNotification({ message: `Terjadi error: ${error.message}`, type: 'error' });
-        } finally {
-            setIsSaving(false);
-            setIsConfirmingMultiDelete(false);
         }
+        setIsSaving(false);
+        setIsConfirmingMultiDelete(false);
     };
 
     const SortableHeader: React.FC<{ columnKey: SortableKeys; title: string; className?: string }> = ({ columnKey, title, className }) => (
