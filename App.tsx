@@ -13,9 +13,10 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { CafeProvider } from './context/CafeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
-import { SunIcon, MoonIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
+import { SunIcon, MoonIcon, MagnifyingGlassIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/solid';
 import ScrollToTopOnNavigate from './components/ScrollToTopOnNavigate';
 import ScrollToTopButton from './components/ScrollToTopButton';
+import ConfirmationModal from './components/common/ConfirmationModal';
 
 type Theme = 'light' | 'dark';
 
@@ -31,43 +32,85 @@ export const ThemeContext = createContext<ThemeContextType>({
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
+  const { currentUser, logout } = useAuth();
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
   const activeLinkClass = "bg-brand text-white";
   const inactiveLinkClass = "hover:bg-brand/10 dark:hover:bg-brand/20";
   const linkClass = "px-4 py-2 rounded-2xl font-bold transition-all duration-300";
 
-  return (
-    <header className="bg-card/80 backdrop-blur-lg sticky top-0 z-50 border-b border-border">
-      <nav className="container mx-auto px-4 py-2 flex items-center justify-between relative">
-        {/* Left: Logo */}
-        <Link to="/" className="flex items-center py-2">
-          <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
-        </Link>
-        
-        {/* Center (Desktop): Nav Links */}
-        <div className="hidden lg:flex items-center space-x-4 absolute left-1/2 -translate-x-1/2">
-          <NavLink to="/" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
-          <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
-          <NavLink to="/about" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Tentang Kami</NavLink>
-        </div>
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    const { error } = await logout();
+    if (error) {
+        console.error("Logout failed:", error.message);
+        // Notify user about the failure and reset the UI state
+        alert(`Gagal untuk logout: ${error.message}`);
+        setIsLogoutModalOpen(false);
+        setIsLoggingOut(false);
+    }
+    // On successful logout, the onAuthStateChange listener in AuthContext
+    // will update the state, causing a re-render where this component
+    // shows the "Login" button, so we don't need to manually reset state here.
+  };
 
-        {/* Right: Theme Toggle */}
-        <div className="flex items-center">
-          <button 
-            onClick={toggleTheme} 
-            className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6 text-yellow-400" />}
-          </button>
-        </div>
-      </nav>
-    </header>
+  return (
+    <>
+      <header className="bg-card/80 backdrop-blur-lg sticky top-0 z-50 border-b border-border">
+        <nav className="container mx-auto px-4 py-2 flex items-center justify-between relative">
+          <Link to="/" className="flex items-center py-2">
+            <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
+          </Link>
+          
+          <div className="hidden lg:flex items-center space-x-4 absolute left-1/2 -translate-x-1/2">
+            <NavLink to="/" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
+            <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
+            <NavLink to="/about" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Tentang Kami</NavLink>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={toggleTheme} 
+              className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6 text-yellow-400" />}
+            </button>
+            {currentUser ? (
+              <div className="flex items-center gap-2">
+                  <Link to="/admin" className="hidden sm:flex items-center gap-2 font-semibold text-primary dark:text-white p-2 rounded-xl hover:bg-soft dark:hover:bg-gray-700 transition-colors">
+                      <UserCircleIcon className="h-6 w-6 text-brand" />
+                      <span>{currentUser.username}</span>
+                  </Link>
+                  <button onClick={() => setIsLogoutModalOpen(true)} className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Logout">
+                      <ArrowRightOnRectangleIcon className="h-6 w-6" />
+                  </button>
+              </div>
+            ) : (
+               <Link to="/login" className="bg-brand text-white font-bold py-2 px-5 rounded-xl hover:bg-brand/90 transition-all">
+                  Login
+              </Link>
+            )}
+          </div>
+        </nav>
+      </header>
+
+      {isLogoutModalOpen && (
+        <ConfirmationModal
+          title="Konfirmasi Logout"
+          message="Apakah Anda yakin ingin keluar dari sesi ini?"
+          confirmText="Ya, Logout"
+          cancelText="Batal"
+          onConfirm={handleLogout}
+          onCancel={() => setIsLogoutModalOpen(false)}
+          isConfirming={isLoggingOut}
+        />
+      )}
+    </>
   );
 };
 
-// Protected Route Guard: Renders children only if a user is logged in.
-// The loading check is removed because AuthProvider now guarantees `loading` is false
-// before rendering its children, thus this component will only render post-auth-check.
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { currentUser } = useAuth();
     if (!currentUser) {
@@ -76,9 +119,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <>{children}</>;
 };
 
-// Guest Route Guard: Renders children only if no user is logged in.
-// Used for pages like Login to prevent logged-in users from accessing it.
-// The loading check is also removed here for the same reason as ProtectedRoute.
 const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { currentUser } = useAuth();
     if (currentUser) {
@@ -87,7 +127,6 @@ const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <>{children}</>;
 };
 
-// NEW: Main Layout for all Public Pages
 const MainLayout: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }> = ({ showWelcome, onCloseWelcome }) => {
     const location = useLocation();
     const isHomePage = location.pathname === '/';
@@ -97,10 +136,9 @@ const MainLayout: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
             {showWelcome && isHomePage && <WelcomeModal onClose={onCloseWelcome} />}
             <Header />
             <main className="flex-grow">
-                <Outlet /> {/* Renders the matched child route component (HomePage, ExplorePage, etc.) */}
+                <Outlet />
             </main>
             
-            {/* Mobile Explore Button */}
             <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
                 <Link 
                     to="/explore"
@@ -117,42 +155,10 @@ const MainLayout: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
     );
 };
 
-const APP_VERSION = '1.3.0'; // Version for cache-busting logic
-
 const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('nongkrongr_welcome_seen'));
   const [theme, setTheme] = useState<Theme>('dark');
   
-  useEffect(() => {
-    const storedVersion = localStorage.getItem('nongkrongr_app_version');
-    if (storedVersion !== APP_VERSION) {
-      console.warn(
-        `App version mismatch. Old: ${storedVersion}, New: ${APP_VERSION}. ` +
-        `Clearing session data and forcing a refresh.`
-      );
-
-      // Preserve user favorites and welcome message status across updates
-      const favorites = localStorage.getItem('nongkrongr_favorites');
-      const welcomeSeen = localStorage.getItem('nongkrongr_welcome_seen');
-
-      // Clear everything else
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // Restore preserved items
-      if (favorites) {
-        localStorage.setItem('nongkrongr_favorites', favorites);
-      }
-      if (welcomeSeen) {
-        localStorage.setItem('nongkrongr_welcome_seen', welcomeSeen);
-      }
-
-      // Set the new version and reload
-      localStorage.setItem('nongkrongr_app_version', APP_VERSION);
-      window.location.reload();
-    }
-  }, []);
-
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme') as Theme | null;
     if (storedTheme) {
@@ -190,7 +196,6 @@ const App: React.FC = () => {
               <HashRouter>
                   <ScrollToTopOnNavigate />
                   <Routes>
-                    {/* Public pages are wrapped in the MainLayout */}
                     <Route element={<MainLayout showWelcome={showWelcome} onCloseWelcome={handleCloseWelcome} />}>
                         <Route path="/" element={<HomePage />} />
                         <Route path="/explore" element={<ExplorePage />} />
@@ -199,14 +204,12 @@ const App: React.FC = () => {
                         <Route path="/leaderboard" element={<LeaderboardPage />} />
                     </Route>
                     
-                    {/* A guest-only route for the login page */}
                     <Route path="/login" element={
                         <GuestRoute>
                             <LoginPage />
                         </GuestRoute>
                     } />
                     
-                    {/* A protected route for the admin/user dashboard */}
                     <Route path="/admin" element={
                         <ProtectedRoute>
                             <AdminPage />

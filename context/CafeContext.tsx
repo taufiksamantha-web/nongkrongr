@@ -32,13 +32,6 @@ const calculateAverages = (cafe: Cafe): Cafe => {
     };
 };
 
-/**
- * [FIX] Creates a clean data object containing only the fields that directly map to the 'cafes' table columns.
- * This prevents sending extraneous client-side data (like calculated averages, full review objects, etc.)
- * during insert or update operations, which can cause silent failures.
- * @param data The raw cafe data object, likely from a form.
- * @returns A sanitized object ready for Supabase insert/update.
- */
 const prepareCafeRecord = (data: Partial<Cafe>) => {
     const record = {
         id: data.id,
@@ -58,6 +51,7 @@ const prepareCafeRecord = (data: Partial<Cafe>) => {
         logoUrl: data.logoUrl,
         coverUrl: data.coverUrl,
         manager_id: data.manager_id,
+        status: data.status,
     };
     // Remove any keys that are undefined to avoid issues with Supabase client
     Object.keys(record).forEach(key => (record as any)[key] === undefined && delete (record as any)[key]);
@@ -73,12 +67,15 @@ interface CafeContextType {
     addCafe: (cafeData: Partial<Cafe>) => Promise<any>;
     updateCafe: (id: string, updatedData: Partial<Cafe>) => Promise<any>;
     deleteCafe: (id: string) => Promise<any>;
-    addReview: (review: Omit<Review, 'id' | 'createdAt' | 'status'> & { cafe_id: string }) => Promise<any>;
+    deleteMultipleCafes: (ids: string[]) => Promise<void>;
+    addReview: (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => Promise<any>;
     updateReviewStatus: (reviewId: string, status: Review['status']) => Promise<any>;
     deleteReview: (reviewId: string) => Promise<void>;
     incrementHelpfulCount: (reviewId: string) => Promise<void>;
     getPendingReviews: () => (Review & { cafeName: string; cafeId: string })[];
     getAllReviews: () => (Review & { cafeName: string; cafeId: string })[];
+    getPendingCafes: () => Cafe[];
+    updateCafeStatus: (cafeId: string, status: Cafe['status']) => Promise<void>;
 }
 
 export const CafeContext = createContext<CafeContextType | undefined>(undefined);
@@ -88,7 +85,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const { currentUser, loading: authLoading } = useAuth();
-    const isMutating = useRef(false); // Ref to lock background fetches during mutations
+    const isMutating = useRef(false);
 
     const fetchCafes = useCallback(async (force = false) => {
         if (isMutating.current && !force) {
@@ -96,10 +93,10 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        if (force || cafes.length === 0) setLoading(true); // Only show full loading on initial/manual fetch
+        if (force || cafes.length === 0) setLoading(true);
         setError(null);
         try {
-            const { data, error: fetchError } = await supabase
+            let query = supabase
                 .from('cafes')
                 .select(`
                     *,
@@ -110,13 +107,12 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     events(*)
                 `);
 
+            const { data, error: fetchError } = await query;
+
             if (fetchError) throw fetchError;
 
             const formattedData = data.map(cafe => {
                 const { lat, lng, ...rest } = cafe;
-
-                // STABILITY UPGRADE: Safely parse review photos.
-                // This prevents the entire app from crashing if one review has malformed photo data.
                 const parsedReviews = (cafe.reviews || []).map((review: any) => {
                     let photosArray: string[] = [];
                     try {
@@ -150,9 +146,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
             
             const cafesWithAverages = formattedData.map(calculateAverages);
-
             setCafes(cafesWithAverages);
-
         } catch (err: any) {
             console.error("Error fetching cafes:", err);
             setError(err.message);
@@ -162,32 +156,13 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [cafes.length]);
 
     useEffect(() => {
+        // This effect runs once when the provider mounts (after auth is resolved)
+        // to perform the initial data fetch. Subsequent updates are handled by
+        // mutations calling `fetchCafes(true)`.
         if (authLoading) return;
-        
         fetchCafes();
-        
-        if (window.location.hash.startsWith('#/admin')) {
-            return;
-        }
+    }, [authLoading, fetchCafes]);
 
-        const intervalId = setInterval(() => fetchCafes(false), 300000);
-        const handleVisibilityChange = () => { if (document.visibilityState === 'visible') fetchCafes(false); };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            clearInterval(intervalId);
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, [currentUser, authLoading, fetchCafes]);
-
-    /**
-     * STABILITY UPGRADE: A robust wrapper for all database mutation operations (CUD).
-     * - Prevents concurrent mutations to avoid race conditions.
-     * - Centralizes state locking, logging, and error handling.
-     * - Differentiates between a mutation error and a subsequent fetch error for better user feedback.
-     * @param mutationFn The async function that performs the database operation.
-     * @param operationName A string name for the operation for logging purposes.
-     */
     const performMutation = async (mutationFn: () => Promise<any>, operationName: string) => {
         if (isMutating.current) {
             const message = `Mutation already in progress. Skipping "${operationName}".`;
@@ -199,7 +174,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const result = await mutationFn();
             console.log(`[CafeContext] Operation "${operationName}" successful.`);
             try {
-                await fetchCafes(true); // Force refresh to sync state
+                await fetchCafes(true);
                 console.log(`[CafeContext] State refreshed successfully after "${operationName}".`);
             } catch (fetchErr) {
                 console.error(`[CafeContext] CRITICAL: Data was mutated by "${operationName}" but failed to refresh. The UI might be out of sync. Please manually refresh.`, fetchErr);
@@ -214,11 +189,8 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
     
-    // [REFACTOR] Centralized logic for updating relations
     const updateRelations = async (cafeId: string, relations: Partial<Cafe>) => {
         const { vibes, amenities, spots, events } = relations;
-        
-        // Delete existing relations first
         await Promise.all([
             supabase.from('cafe_vibes').delete().eq('cafe_id', cafeId),
             supabase.from('cafe_amenities').delete().eq('cafe_id', cafeId),
@@ -226,26 +198,15 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             supabase.from('events').delete().eq('cafe_id', cafeId),
         ]);
 
-        // Prepare insert promises
         const insertPromises = [];
-        if (vibes && (vibes as Vibe[]).length > 0) {
-            insertPromises.push(supabase.from('cafe_vibes').insert((vibes as Vibe[]).map(v => ({ cafe_id: cafeId, vibe_id: v.id }))));
-        }
-        if (amenities && (amenities as Amenity[]).length > 0) {
-            insertPromises.push(supabase.from('cafe_amenities').insert((amenities as Amenity[]).map(a => ({ cafe_id: cafeId, amenity_id: a.id }))));
-        }
-        if (spots && (spots as Spot[]).length > 0) {
-            insertPromises.push(supabase.from('spots').insert((spots as Spot[]).map(s => ({ ...s, cafe_id: cafeId }))));
-        }
-        if (events && (events as Event[]).length > 0) {
-            insertPromises.push(supabase.from('events').insert((events as Event[]).map(e => ({ ...e, cafe_id: cafeId }))));
-        }
+        if (vibes && (vibes as Vibe[]).length > 0) insertPromises.push(supabase.from('cafe_vibes').insert((vibes as Vibe[]).map(v => ({ cafe_id: cafeId, vibe_id: v.id }))));
+        if (amenities && (amenities as Amenity[]).length > 0) insertPromises.push(supabase.from('cafe_amenities').insert((amenities as Amenity[]).map(a => ({ cafe_id: cafeId, amenity_id: a.id }))));
+        if (spots && (spots as Spot[]).length > 0) insertPromises.push(supabase.from('spots').insert((spots as Spot[]).map(s => ({ id: s.id, cafe_id: cafeId, title: s.title, tip: s.tip, photoUrl: s.photoUrl }))));
+        if (events && (events as Event[]).length > 0) insertPromises.push(supabase.from('events').insert((events as Event[]).map(e => ({ id: e.id, cafe_id: cafeId, name: e.name, description: e.description, start_date: e.start_date, end_date: e.end_date, imageUrl: e.imageUrl || null }))));
         
         const results = await Promise.all(insertPromises);
         const errors = results.map(r => r.error).filter(Boolean);
-        if (errors.length > 0) {
-            throw new Error(`Gagal menyimpan data relasi: ${errors.map(e => e.message).join(', ')}`);
-        }
+        if (errors.length > 0) throw new Error(`Gagal menyimpan data relasi: ${errors.map(e => e.message).join(', ')}`);
     };
 
     const addCafe = async (cafeData: Partial<Cafe>) => {
@@ -257,47 +218,43 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 return `${baseSlug}-${uniquePart}`;
             };
             
+            // FIX: Explicitly type `status` to prevent type widening to `string`.
+            // The `status` property of a Cafe must be one of the literal types
+            // 'approved', 'pending', or 'rejected'.
+            const status: 'approved' | 'pending' = currentUser?.role === 'admin' ? 'approved' : 'pending';
+
             const fullCafeData = {
                 ...cafeData,
                 id: cafeId,
                 slug: cafeData.slug || generateSlug(cafeData.name, cafeId),
                 manager_id: currentUser?.role === 'admin_cafe' ? currentUser.id : null,
+                status,
             };
 
             const cafeRecord = prepareCafeRecord(fullCafeData);
-
-            // Step 1: Insert main cafe record.
             const { error: cafeError } = await supabase.from('cafes').insert([cafeRecord]);
             if (cafeError) {
                 console.error("Supabase Insert Error Details:", cafeError);
                 throw new Error(`Gagal menyimpan data kafe: ${cafeError.message}. (Hint: Pastikan 'slug' unik).`);
             }
-
-            // Step 2: Insert relations.
             await updateRelations(cafeId, cafeData);
-            
             return cafeRecord;
         }, 'addCafe');
     };
     
     const updateCafe = async (id: string, updatedData: Partial<Cafe>) => {
         return performMutation(async () => {
-             // Step 1: Sanitize and update the main cafe data.
             const cafeRecord = prepareCafeRecord(updatedData);
-            if (Object.keys(cafeRecord).length > 1) { // Check if there's more than just the ID
+            if (Object.keys(cafeRecord).length > 1) {
                  const { error: cafeError } = await supabase.from('cafes').update(cafeRecord).eq('id', id);
                  if (cafeError) throw new Error(`Gagal update data utama: ${cafeError.message}`);
             }
-
-            // Step 2: Update relations using a "delete-then-insert" strategy.
             await updateRelations(id, updatedData);
-
         }, 'updateCafe');
     };
 
     const deleteCafe = async (id: string) => {
         return performMutation(async () => {
-            // IMPORTANT: Delete from referencing tables first to avoid foreign key constraint violations.
             const relationsToDelete = [
                 supabase.from('cafe_vibes').delete().eq('cafe_id', id),
                 supabase.from('cafe_amenities').delete().eq('cafe_id', id),
@@ -312,6 +269,25 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const { error: cafeError } = await supabase.from('cafes').delete().eq('id', id);
             if (cafeError) throw cafeError;
         }, 'deleteCafe');
+    };
+
+    const deleteMultipleCafes = async (ids: string[]) => {
+        return performMutation(async () => {
+            if (!ids || ids.length === 0) return;
+            const relationsToDelete = [
+                supabase.from('cafe_vibes').delete().in('cafe_id', ids),
+                supabase.from('cafe_amenities').delete().in('cafe_id', ids),
+                supabase.from('spots').delete().in('cafe_id', ids),
+                supabase.from('reviews').delete().in('cafe_id', ids),
+                supabase.from('events').delete().in('cafe_id', ids),
+            ];
+            const results = await Promise.all(relationsToDelete);
+            const errors = results.map(r => r.error).filter(Boolean);
+            if (errors.length > 0) throw new Error(`Gagal menghapus data terkait: ${errors.map(e => e.message).join(', ')}`);
+            
+            const { error: cafeError } = await supabase.from('cafes').delete().in('id', ids);
+            if (cafeError) throw cafeError;
+        }, 'deleteMultipleCafes');
     };
 
     const addReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => {
@@ -330,6 +306,13 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }, 'updateReviewStatus');
     };
 
+    const updateCafeStatus = async (cafeId: string, status: Cafe['status']) => {
+        return performMutation(async () => {
+            const { error } = await supabase.from('cafes').update({ status }).eq('id', cafeId);
+            if (error) throw error;
+        }, 'updateCafeStatus');
+    };
+
     const deleteReview = async (reviewId: string) => {
         return performMutation(async () => {
             const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
@@ -338,8 +321,6 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     const incrementHelpfulCount = async (reviewId: string) => {
-        // This is a special case that doesn't need a full state refresh,
-        // but we wrap it for consistency and locking.
         return performMutation(async () => {
             const { error } = await supabase.rpc('increment_helpful_count', { review_id_text: reviewId });
             if (error) {
@@ -364,11 +345,15 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         return all;
     };
+    
+    const getPendingCafes = () => {
+        return cafes.filter(c => c.status === 'pending');
+    };
 
     return (
         <CafeContext.Provider value={{
-            cafes, loading, error, fetchCafes, addCafe, updateCafe, deleteCafe, addReview,
-            updateReviewStatus, deleteReview, incrementHelpfulCount, getPendingReviews, getAllReviews,
+            cafes, loading, error, fetchCafes, addCafe, updateCafe, deleteCafe, deleteMultipleCafes, addReview,
+            updateReviewStatus, deleteReview, incrementHelpfulCount, getPendingReviews, getAllReviews, getPendingCafes, updateCafeStatus
         }}>
             {children}
         </CafeContext.Provider>

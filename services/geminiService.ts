@@ -6,7 +6,7 @@ import { Vibe } from '../types';
 // Lingkungan AI Studio tidak selalu menyediakan `process.env.API_KEY` sebelum interaksi pengguna.
 // Kunci ini adalah fallback untuk tujuan pengembangan dan pratinjau.
 //
-// JANGAN GUNAKAN POLA INI DI LINGKUNGAN PRODUKSI.
+// JANGAN GUNAKAN POLA INI DI LINGKungan PRODUKSI.
 // Di produksi, kunci API harus dikelola dengan aman melalui environment variables.
 const FALLBACK_GEMINI_API_KEY = 'AIzaSyCjwAYRJkg4Yv0ApSahCecsX7KYc-COhlQ';
 // --------------------------------------------------------------------
@@ -152,6 +152,55 @@ export const geminiService = {
     } catch (error) {
       console.error("Error getting cafe recommendations from Gemini:", error);
       throw error; // Melempar error asli untuk ditangani oleh komponen
+    }
+  },
+
+  /**
+   * Converts a Google Maps Plus Code into latitude and longitude coordinates.
+   * @param plusCode The Plus Code string (e.g., "6P5G2QG8+R8").
+   * @returns A promise that resolves to an object with lat and lng coordinates.
+   */
+  convertPlusCodeToCoords: async (plusCode: string): Promise<{ lat: number; lng: number }> => {
+    const ai = getAiClient();
+    const systemInstruction = `You are a highly accurate geocoding assistant. Your task is to convert a Google Maps Plus Code into precise latitude and longitude coordinates. You must only respond with a JSON object matching the defined schema. Do not add any extra text or explanations.`;
+    
+    const responseSchema = {
+        type: Type.OBJECT,
+        properties: {
+            lat: {
+                type: Type.NUMBER,
+                description: "The latitude coordinate.",
+            },
+            lng: {
+                type: Type.NUMBER,
+                description: "The longitude coordinate.",
+            },
+        },
+        required: ['lat', 'lng']
+    };
+    
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Convert this Plus Code to coordinates: ${plusCode}`,
+            config: {
+                systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: responseSchema,
+            },
+        });
+
+        const jsonString = response.text.trim();
+        const parsedJson = JSON.parse(jsonString);
+
+        if (typeof parsedJson.lat !== 'number' || typeof parsedJson.lng !== 'number') {
+            throw new Error("Invalid coordinate format received from AI.");
+        }
+
+        return parsedJson as { lat: number; lng: number };
+    } catch (error) {
+        console.error("Error converting Plus Code with Gemini:", error);
+        throw new Error("Gagal mengonversi Plus Code. Pastikan kode valid dan coba lagi.");
     }
   },
 };

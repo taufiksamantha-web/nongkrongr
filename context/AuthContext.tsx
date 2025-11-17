@@ -1,6 +1,4 @@
-
-
-import React, { createContext, useState, ReactNode, useContext, useEffect } from 'react';
+import React, { createContext, useState, ReactNode, useContext, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { AuthError, Session } from '@supabase/supabase-js';
@@ -9,6 +7,7 @@ interface AuthContextType {
     currentUser: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+    signup: (username: string, email: string, password: string, isCafeAdmin?: boolean) => Promise<{ error: AuthError | null }>;
     logout: () => Promise<{ error: AuthError | null }>;
 }
 
@@ -26,74 +25,80 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Centralized function to validate a session and set the user state.
-    const validateAndSetUser = async (session: Session | null) => {
-        if (session?.user) {
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-            
-            // If the profile doesn't exist or there's an error, the session is invalid.
-            if (error || !profile) {
-                console.error("Invalid session: Profile not found or error fetching. Forcing logout.", error);
-                // Force sign out to clear the corrupted session from storage.
-                // This will trigger onAuthStateChange again with a SIGNED_OUT event.
-                await supabase.auth.signOut();
-                setCurrentUser(null);
-            } else {
-                setCurrentUser(profile as User);
-            }
-        } else {
-            // No session, so no user.
-            setCurrentUser(null);
-        }
-    };
-
     useEffect(() => {
-        setLoading(true);
-
-        // 1. Perform an explicit session check on initial application load.
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            // Validate whatever session we found (or didn't find).
-            validateAndSetUser(session).finally(() => {
-                // IMPORTANT: Ensure loading is set to false only after the initial check is complete.
-                // This prevents race conditions where the app might render before the user profile is fetched.
-                setLoading(false);
-            });
-        });
-
-        // 2. Set up a listener for any subsequent auth events (login, logout, token refresh).
-        // CATATAN: Listener ini sangat penting untuk keamanan.
-        // Ketika token sesi pengguna kedaluwarsa, Supabase akan mencoba memperbaruinya di latar belakang.
-        // Jika pembaruan gagal (misalnya karena masalah jaringan, atau sesi pengguna dicabut di server),
-        // Supabase akan memicu event 'SIGNED_OUT'. Listener ini menangkap event tersebut,
-        // memanggil validateAndSetUser(null), yang akan mengatur currentUser menjadi null.
-        // Ini secara otomatis dan aman mengeluarkan pengguna dari sistem, memenuhi permintaan untuk
-        // "menampilkan kembali panel login setelah terlalu lama tidak aktif". Ini adalah perilaku yang diharapkan.
+        // The listener is the single source of truth for the user's auth state.
+        // It fires once on initial load, and again whenever the auth state changes.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (_event, session) => {
-                // Re-validate the user whenever the auth state changes.
-                // We don't manage the `loading` state here to avoid screen flashes during
-                // background token refreshes. The initial `loading` screen handles the first-load experience.
-                await validateAndSetUser(session);
+                // If there's no session, the user is logged out.
+                if (!session) {
+                    setCurrentUser(null);
+                    setLoading(false); // We are done loading.
+                    return;
+                }
+
+                // If a session exists, we must validate it by fetching the user's profile.
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (error || !profile) {
+                    // CRITICAL: The user has a session, but no profile. This is an invalid state.
+                    // Force a sign-out to clear the invalid session. The listener will be triggered
+                    // again with a null session, which will then correctly set the loading state to false.
+                    console.error("Auth state error: User session exists but profile is missing. Forcing sign out.", error);
+                    await supabase.auth.signOut();
+                } else {
+                    // Session and profile are valid. Set the user and stop loading.
+                    setCurrentUser(profile as User);
+                    setLoading(false);
+                }
             }
         );
 
-        // Cleanup the subscription when the component unmounts.
         return () => {
+            // Cleanup subscription on unmount
             subscription?.unsubscribe();
         };
     }, []);
-
 
     const login = async (email: string, password: string) => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         return { error };
     };
 
+    const signup = async (username: string, email: string, password: string, isCafeAdmin: boolean = false) => {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+        });
+
+        if (signUpError) {
+            return { error: signUpError };
+        }
+        if (!signUpData.user) {
+             return { error: new AuthError("Sign up successful, but no user data returned.") };
+        }
+        
+        const role = isCafeAdmin ? 'admin_cafe' : 'user';
+        const status = isCafeAdmin ? 'pending_approval' : 'active';
+
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({ id: signUpData.user.id, username, role, status });
+        
+        if (profileError) {
+            console.error("Critical: Failed to create user profile after signup.", profileError);
+            return { error: new AuthError(profileError.message) };
+        }
+        
+        return { error: null };
+    };
+
     const logout = async () => {
+        // Simply sign out. The onAuthStateChange listener will handle the state update.
         const { error } = await supabase.auth.signOut();
         return { error };
     };
@@ -102,13 +107,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         currentUser,
         loading,
         login,
+        signup,
         logout,
     };
 
-    // FIX: Render a full-screen loader while the initial session check is in progress.
-    // This prevents the main application from rendering prematurely in an indeterminate auth state.
-    // Once `loading` becomes false, the provider renders its children, who can then
-    // reliably check the `currentUser` state without needing their own loading checks.
+    // Render the loader until the initial auth check is complete.
+    // The onAuthStateChange listener guarantees to set loading to false.
     if (loading) {
         return <FullScreenLoader />;
     }

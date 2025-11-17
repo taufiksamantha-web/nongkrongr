@@ -49,6 +49,16 @@
                   transform: 'translateY(0) scale(1)'
                 },
               },
+              'fade-in-down': {
+                '0%': {
+                  opacity: '0',
+                  transform: 'translateY(-15px) scale(0.98)'
+                },
+                '100%': {
+                  opacity: '1',
+                  transform: 'translateY(0) scale(1)'
+                },
+              },
               'subtle-bounce': {
                 '0%, 100%': {
                   transform: 'translateY(0)',
@@ -68,6 +78,7 @@
             },
             animation: {
               'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
+              'fade-in-down': 'fade-in-down 0.5s ease-out forwards',
               'subtle-bounce': 'subtle-bounce 2.5s ease-in-out infinite',
               'ken-burns': 'ken-burns 15s ease-out forwards',
             }
@@ -77,14 +88,14 @@
     </script>
     <style>
       :root {
-        /* New brand-infused light theme */
-        --soft: 260 100% 98%; /* bg-soft: Very light, almost lavender white */
-        --card: 0 0% 100%;     /* bg-card: Pure white for high contrast */
-        --border: 260 30% 90%; /* border-subtle: Light lavender-grey */
-        --brand: 262 85% 60%;  /* brand: A slightly deeper, richer violet */
-        --brand-light: 262 90% 75%; /* brand-light: A softer violet */
-        --foreground: 260 25% 15%; /* text-primary: Very dark desaturated violet */
-        --muted: 260 15% 45%;   /* text-muted: Muted violet-grey */
+        /* Brand-infused light theme */
+        --soft: 260 100% 98%;    /* bg-soft: Sangat terang, putih lavender */
+        --card: 0 0% 100%;        /* bg-card: Putih bersih untuk kontras tinggi */
+        --border: 260 30% 90%;    /* border: Abu-abu lavender muda */
+        --brand: 262 85% 60%;     /* brand: Ungu yang lebih dalam dan kaya */
+        --brand-light: 262 90% 75%; /* brand-light: Ungu yang lebih lembut */
+        --foreground: 260 25% 15%; /* text-primary: Ungu desaturasi sangat gelap */
+        --muted: 260 15% 45%;      /* text-muted: Abu-abu ungu yang lembut */
         --accent-pink: 340 90% 60%;
         --accent-amber: 45 100% 62%;
         --accent-cyan: 187 100% 50%;

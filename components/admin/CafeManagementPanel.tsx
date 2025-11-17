@@ -8,10 +8,10 @@ import FloatingNotification from '../common/FloatingNotification';
 import AdminCafeForm from './AdminCafeForm';
 import CafeStatisticsModal from './CafeStatisticsModal';
 import ImageWithFallback from '../common/ImageWithFallback';
-import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, ArrowUpIcon, ArrowDownIcon, TrophyIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, ArrowUpIcon, ArrowDownIcon, TrophyIcon, ClockIcon } from '@heroicons/react/24/solid';
 
 const ITEMS_PER_PAGE = 5;
-type SortableKeys = 'name' | 'district' | 'created_at';
+type SortableKeys = 'name' | 'district' | 'created_at' | 'status';
 
 const SponsorToggle: React.FC<{ cafe: Cafe, onToggle: (cafe: Cafe) => void, disabled: boolean }> = ({ cafe, onToggle, disabled }) => {
     const isSponsored = cafe.isSponsored;
@@ -26,9 +26,29 @@ const SponsorToggle: React.FC<{ cafe: Cafe, onToggle: (cafe: Cafe) => void, disa
     );
 };
 
+const StatusBadge: React.FC<{ status: Cafe['status'] }> = ({ status }) => {
+    const styles = {
+        pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-300',
+        approved: 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300',
+        rejected: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300',
+    };
+    const icons = {
+        pending: <ClockIcon className="h-4 w-4" />,
+        approved: <CheckCircleIcon className="h-4 w-4" />,
+        rejected: <XCircleIcon className="h-4 w-4" />,
+    };
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${styles[status]}`}>
+            {icons[status]}
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+        </span>
+    );
+};
+
+
 const CafeManagementPanel: React.FC = () => {
     const { currentUser } = useAuth();
-    const { cafes, loading, addCafe, updateCafe, deleteCafe } = useContext(CafeContext)!;
+    const { cafes, loading, addCafe, updateCafe, deleteCafe, deleteMultipleCafes } = useContext(CafeContext)!;
     
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
@@ -68,7 +88,6 @@ const CafeManagementPanel: React.FC = () => {
 
     const sortedAndFilteredCafes = useMemo(() => {
         let cafesToDisplay = cafes;
-        // Filter cafes for cafe admins
         if (currentUser?.role === 'admin_cafe') {
             cafesToDisplay = cafes.filter(c => c.manager_id === currentUser.id);
         }
@@ -123,22 +142,28 @@ const CafeManagementPanel: React.FC = () => {
     const totalPages = Math.ceil(sortedAndFilteredCafes.length / ITEMS_PER_PAGE);
     const paginatedCafes = sortedAndFilteredCafes.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-    const handleSave = async (data: any) => {
-        // This function will be called from AdminCafeForm
-        // We re-throw the error so the form can catch it and display a specific message.
+    const handleSave = async (data: Partial<Cafe>) => {
         try {
             if (editingCafe) {
-                await updateCafe(editingCafe.id, data);
+                const finalData = { ...editingCafe, ...data };
+                await updateCafe(editingCafe.id, finalData);
                 setNotification({ message: 'Kafe berhasil diperbarui!', type: 'success' });
             } else {
                 await addCafe(data);
-                setNotification({ message: 'Kafe baru berhasil ditambahkan!', type: 'success' });
+                const successMessage = currentUser?.role === 'admin'
+                    ? 'Kafe baru berhasil ditambahkan!'
+                    : 'Kafe baru berhasil ditambahkan dan sedang menunggu persetujuan admin!';
+                setNotification({ message: successMessage, type: 'success' });
             }
             setIsFormOpen(false);
             setEditingCafe(null);
         } catch (error: any) {
-            // Re-throw the error to be caught by the form's handleSubmit
-            throw error;
+            // Error is now handled here. The form will get the notification via props
+            // and `isSaving` will be set to false in its `finally` block. Since we are
+            // re-throwing, the form's own catch block will execute, but it's empty now.
+            // The most important thing is that the form doesn't close on failure.
+            setNotification({ message: `Gagal menyimpan: ${error.message}`, type: 'error' });
+            throw error; // Rethrow to signal failure to the form
         }
     };
 
@@ -167,10 +192,12 @@ const CafeManagementPanel: React.FC = () => {
     const handleConfirmMultiDelete = async () => {
         setIsSaving(true);
         try {
-            const results = await Promise.allSettled(selectedCafeIds.map(id => deleteCafe(id)));
-            const successes = results.filter(r => r.status === 'fulfilled').length;
-            if (successes > 0) setNotification({ message: `${successes} kafe berhasil dihapus.`, type: 'success' });
-            if (paginatedCafes.length - successes <= 0 && currentPage > 1) setCurrentPage(currentPage - 1);
+            await deleteMultipleCafes(selectedCafeIds);
+            const successes = selectedCafeIds.length;
+            setNotification({ message: `${successes} kafe berhasil dihapus.`, type: 'success' });
+            if (paginatedCafes.length - successes <= 0 && currentPage > 1) {
+                setCurrentPage(currentPage - 1);
+            }
             setSelectedCafeIds([]);
         } catch (error: any) {
             setNotification({ message: `Terjadi error: ${error.message}`, type: 'error' });
@@ -188,6 +215,8 @@ const CafeManagementPanel: React.FC = () => {
             </span>
         </button>
     );
+
+    const userCanManage = (cafe: Cafe) => currentUser?.role === 'admin' || currentUser?.id === cafe.manager_id;
 
     return (
          <>
@@ -215,8 +244,7 @@ const CafeManagementPanel: React.FC = () => {
                         {currentUser?.role === 'admin' && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition" onChange={handleSelectAllOnPage} checked={paginatedCafes.length > 0 && paginatedCafes.every(c => selectedCafeIds.includes(c.id))} aria-label="Pilih semua cafe di halaman ini"/>}
                         <span className="text-sm font-bold text-muted uppercase tracking-wider pl-2">Image</span>
                         <SortableHeader columnKey="name" title="Nama Kafe" className={currentUser?.role !== 'admin' ? 'lg:col-start-2' : ''} />
-                        <SortableHeader columnKey="district" title="Kecamatan" />
-                        <span className="text-sm font-bold text-muted uppercase tracking-wider">Reviews</span>
+                        <SortableHeader columnKey="status" title="Status" />
                         <span className="text-sm font-bold text-muted uppercase tracking-wider">Sponsored</span>
                         <span className="text-sm font-bold text-muted uppercase tracking-wider text-right">Aksi</span>
                     </div>
@@ -225,24 +253,24 @@ const CafeManagementPanel: React.FC = () => {
                         <div key={cafe.id} className="bg-card dark:bg-gray-800/50 rounded-2xl border border-border transition-shadow hover:shadow-lg">
                            <div className="p-4 lg:hidden">
                                 <div className="flex items-start gap-4 flex-grow min-w-0">
-                                    {currentUser?.role === 'admin' && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition mt-1" checked={selectedCafeIds.includes(cafe.id)} onChange={() => handleSelectOne(cafe.id)} aria-label={`Pilih ${cafe.name}`}/>}
+                                    {userCanManage(cafe) && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition mt-1" checked={selectedCafeIds.includes(cafe.id)} onChange={() => handleSelectOne(cafe.id)} aria-label={`Pilih ${cafe.name}`}/>}
                                     <ImageWithFallback src={cafe.coverUrl} alt={cafe.name} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" width={100} height={100} />
                                     <div className="min-w-0">
-                                        <button onClick={() => { setEditingCafe(cafe); setIsFormOpen(true); }} className="text-left w-full group">
+                                        <button onClick={() => { if (userCanManage(cafe)) { setEditingCafe(cafe); setIsFormOpen(true); }}} className="text-left w-full group disabled:cursor-default" disabled={!userCanManage(cafe)}>
                                             <p className="font-bold text-lg text-primary dark:text-white truncate group-hover:underline">{cafe.name}</p>
                                         </button>
                                         <p className="text-sm text-muted">{cafe.district}</p>
-                                        <div className="mt-2 flex items-center gap-2">
-                                            <span className="text-sm font-semibold">Sponsored:</span>
-                                            {currentUser?.role === 'admin' ? <SponsorToggle cafe={cafe} onToggle={handleToggleSponsor} disabled={isSaving} /> : (cafe.isSponsored ? <CheckCircleIcon className="h-5 w-5 text-green-500"/> : <XCircleIcon className="h-5 w-5 text-red-500"/>)}
-                                        </div>
+                                        <div className="mt-2"><StatusBadge status={cafe.status} /></div>
                                     </div>
                                 </div>
                                 <div className="mt-4 pt-4 border-t border-border flex justify-between items-center">
-                                    <p className="text-sm text-muted"><strong>Reviews:</strong> {cafe.reviews.length}</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-semibold">Sponsored:</span>
+                                        {currentUser?.role === 'admin' ? <SponsorToggle cafe={cafe} onToggle={handleToggleSponsor} disabled={isSaving} /> : (cafe.isSponsored ? <CheckCircleIcon className="h-5 w-5 text-green-500"/> : <XCircleIcon className="h-5 w-5 text-red-500"/>)}
+                                    </div>
                                     <div className="flex gap-4">
                                         <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 font-bold hover:underline">Statistik</button>
-                                        {(currentUser?.role === 'admin' || currentUser?.id === cafe.manager_id) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
+                                        {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
                                     </div>
                                 </div>
                             </div>
@@ -252,22 +280,21 @@ const CafeManagementPanel: React.FC = () => {
                                  <ImageWithFallback src={cafe.coverUrl} alt={cafe.name} className="w-20 h-14 object-cover rounded-lg" width={150} height={100} />
                                 <div className="min-w-0 flex items-center gap-2">
                                      {currentUser?.role === 'admin' && (
-                                        <button onClick={() => handleSetCafeOfTheWeek(cafe.id)} disabled={isSaving} title="Set as Cafe of the Week" className={`p-1 rounded-full transition-colors disabled:opacity-50 ${cafeOfTheWeekId === cafe.id ? 'text-accent-amber' : 'text-muted hover:text-accent-amber'}`}>
+                                        <button onClick={() => handleSetCafeOfTheWeek(cafe.id)} disabled={isSaving || cafe.status !== 'approved'} title={cafe.status !== 'approved' ? 'Hanya kafe yang disetujui bisa jadi Cafe of the Week' : 'Set as Cafe of the Week'} className={`p-1 rounded-full transition-colors disabled:opacity-50 ${cafeOfTheWeekId === cafe.id ? 'text-accent-amber' : 'text-muted hover:text-accent-amber'}`}>
                                             <TrophyIcon className="h-5 w-5" />
                                         </button>
                                      )}
-                                    <button onClick={() => { setEditingCafe(cafe); setIsFormOpen(true); }} className="text-left w-full group">
+                                    <button onClick={() => { if(userCanManage(cafe)) { setEditingCafe(cafe); setIsFormOpen(true); }}} className="text-left w-full group disabled:cursor-default" disabled={!userCanManage(cafe)}>
                                         <p className="font-semibold text-primary dark:text-gray-200 truncate group-hover:underline">{cafe.name}</p>
                                     </button>
                                 </div>
-                                <p className="text-muted truncate">{cafe.district}</p>
-                                <p className="text-muted text-center">{cafe.reviews.length}</p>
+                                <div className="truncate"><StatusBadge status={cafe.status} /></div>
                                 <div className="flex items-center gap-2">
                                     {currentUser?.role === 'admin' ? <SponsorToggle cafe={cafe} onToggle={handleToggleSponsor} disabled={isSaving} /> : (cafe.isSponsored ? <CheckCircleIcon className="h-6 w-6 text-green-500"/> : <XCircleIcon className="h-6 w-6 text-red-500"/>)}
                                 </div>
                                 <div className="text-right space-x-4">
                                     <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 font-bold hover:underline">Statistik</button>
-                                    {(currentUser?.role === 'admin' || currentUser?.id === cafe.manager_id) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
+                                    {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
                                 </div>
                             </div>
                         </div>
@@ -285,7 +312,7 @@ const CafeManagementPanel: React.FC = () => {
 
             {isFormOpen && <AdminCafeForm cafe={editingCafe} userRole={currentUser!.role} onSave={handleSave} onCancel={() => { setIsFormOpen(false); setEditingCafe(null); }} setNotification={setNotification} />}
             {isStatsModalOpen && statsCafe && <CafeStatisticsModal cafe={statsCafe} onClose={() => setIsStatsModalOpen(false)} />}
-            {cafeToDelete && (currentUser?.role === 'admin' || currentUser?.id === cafeToDelete.manager_id) && <ConfirmationModal title="Hapus Cafe" message={`Yakin ingin menghapus "${cafeToDelete.name}"? Ini akan menghapus semua data terkait. Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmDeleteCafe} onCancel={() => setCafeToDelete(null)} isConfirming={isSaving}/>}
+            {cafeToDelete && userCanManage(cafeToDelete) && <ConfirmationModal title="Hapus Cafe" message={`Yakin ingin menghapus "${cafeToDelete.name}"? Ini akan menghapus semua data terkait. Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmDeleteCafe} onCancel={() => setCafeToDelete(null)} isConfirming={isSaving}/>}
             {isConfirmingMultiDelete && currentUser?.role === 'admin' && <ConfirmationModal title={`Hapus ${selectedCafeIds.length} Kafe`} message={`Yakin ingin menghapus ${selectedCafeIds.length} kafe yang dipilih? Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmMultiDelete} onCancel={() => setIsConfirmingMultiDelete(false)} confirmText={`Ya, Hapus (${selectedCafeIds.length})`} isConfirming={isSaving}/>}
         </>
     )

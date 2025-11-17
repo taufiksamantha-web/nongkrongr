@@ -1,18 +1,98 @@
-import React from 'react';
-import CafeManagementPanel from './CafeManagementPanel';
+
+import React, { useContext } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { CafeContext } from '../../context/CafeContext';
+import { useFavorites } from '../../context/FavoriteContext';
+import CafeCard from '../CafeCard';
+import ReviewCard from '../ReviewCard';
+import { HeartIcon, ChatBubbleBottomCenterTextIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
+import SkeletonCard from '../SkeletonCard';
+import SkeletonReviewCard from '../SkeletonReviewCard';
 
 const UserDashboard: React.FC = () => {
+    const { currentUser } = useAuth();
+    const { cafes, loading } = useContext(CafeContext)!;
+    const { favoriteIds } = useFavorites();
+
+    if (!currentUser) return null;
+
+    const favoriteCafes = cafes.filter(cafe => favoriteIds.includes(cafe.id));
+    
+    // Find reviews by the current user.
+    // The author field in reviews is just a string, so we match it with username.
+    const userReviews = cafes.flatMap(cafe => 
+        cafe.reviews
+            .filter(review => review.author === currentUser.username && review.status === 'approved')
+            .map(review => ({ ...review, cafeName: cafe.name, cafeSlug: cafe.slug }))
+    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by most recent
+
     return (
-        <div>
-            <h1 className="text-4xl font-bold font-jakarta mb-6">Manajemen Cafe</h1>
-            <p className="mb-6 text-muted">
-                Di sini kamu bisa menambahkan cafe baru atau mengedit informasi cafe yang sudah ada untuk membantu sesama penikmat kopi.
-            </p>
-            <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
-                <CafeManagementPanel />
-            </div>
+        <div className="space-y-8">
+            <Section icon={<HeartIcon className="h-8 w-8 text-accent-pink" />} title="Kafe Favoritmu">
+                {loading ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
+                    </div>
+                ) : favoriteCafes.length > 0 ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {favoriteCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />)}
+                    </div>
+                ) : (
+                    <EmptyState 
+                        title="Kamu Belum Punya Favorit"
+                        message="Tandai kafe yang kamu suka dengan ikon hati untuk menyimpannya di sini."
+                        ctaLink="/explore"
+                        ctaText="Jelajahi Kafe"
+                    />
+                )}
+            </Section>
+            
+            <Section icon={<ChatBubbleBottomCenterTextIcon className="h-8 w-8 text-brand" />} title="Review Terakhirmu">
+                {loading ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {[...Array(3)].map((_, i) => <SkeletonReviewCard key={i} />)}
+                    </div>
+                ) : userReviews.length > 0 ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {userReviews.slice(0, 3).map((review, i) => <ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />)}
+                    </div>
+                ) : (
+                     <EmptyState 
+                        title="Kamu Belum Memberi Review"
+                        message="Bagikan pengalamanmu di kafe favorit untuk membantu komunitas."
+                        ctaLink="/explore"
+                        ctaText="Cari Kafe untuk Direview"
+                    />
+                )}
+            </Section>
         </div>
     );
 };
 
+const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
+    <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
+        <div className="flex items-center gap-3 mb-4">
+            {icon}
+            <h2 className="text-2xl font-bold font-jakarta">{title}</h2>
+        </div>
+        {children}
+    </div>
+);
+
+const EmptyState: React.FC<{ title: string; message: string; ctaLink: string; ctaText: string; }> = ({ title, message, ctaLink, ctaText }) => (
+    <div className="text-center py-8">
+        <p className="text-xl font-bold font-jakarta mb-2">{title}</p>
+        <p className="text-muted mb-6">{message}</p>
+        <Link 
+            to={ctaLink}
+            className="inline-flex items-center gap-2 bg-brand text-white font-bold py-2 px-5 rounded-xl hover:bg-brand/90 transition-all"
+        >
+            <MagnifyingGlassIcon className="h-5 w-5" />
+            {ctaText}
+        </Link>
+    </div>
+);
+
+// FIX: Added default export for UserDashboard component
 export default UserDashboard;

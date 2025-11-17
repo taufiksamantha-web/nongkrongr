@@ -1,73 +1,155 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
+type FormMode = 'login' | 'signup';
+
 const LoginForm: React.FC = () => {
-    const { login } = useAuth();
+    const { login, signup } = useAuth();
+    const [mode, setMode] = useState<FormMode>('login');
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isCafeAdmin, setIsCafeAdmin] = useState(false);
     const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const emailInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        // Otomatis fokus ke input email saat komponen dimuat
         emailInputRef.current?.focus();
-    }, []);
+        setError('');
+        setSuccessMessage('');
+    }, [mode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setSuccessMessage('');
         setLoading(true);
-        const { error: authError } = await login(email, password);
-        if (authError) {
-            setError(authError.message || 'Email atau password salah.');
+
+        if (mode === 'signup') {
+            if (username.length < 3) {
+                setError("Username minimal 3 karakter.");
+                setLoading(false);
+                return;
+            }
+            const { error: authError } = await signup(username, email, password, isCafeAdmin);
+            if (authError) {
+                 setError(authError.message || 'Gagal mendaftar. Email mungkin sudah digunakan.');
+            } else {
+                if (isCafeAdmin) {
+                    setSuccessMessage('Pendaftaran sebagai pengelola berhasil! Akun Anda akan aktif setelah disetujui oleh admin.');
+                } else {
+                    setSuccessMessage('Pendaftaran berhasil! Silakan login untuk melanjutkan.');
+                }
+                setMode('login');
+                // Reset form fields for login
+                setUsername('');
+                setPassword('');
+                setIsCafeAdmin(false);
+            }
+        } else {
+            const { error: authError } = await login(email, password);
+            if (authError) {
+                setError(authError.message || 'Email atau password salah.');
+            }
         }
         setLoading(false);
     };
 
     return (
-        <div className="max-w-md mx-auto mt-12 md:mt-20 px-4">
+        <div className="max-w-md mx-auto mt-12 md:mt-20 px-4 w-full">
             <Link to="/" className="flex justify-center mb-8">
                 <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-12 w-auto" />
             </Link>
-            <form onSubmit={handleSubmit} className="bg-card p-8 rounded-3xl shadow-lg space-y-6 border border-border">
-                <h1 className="text-3xl font-bold font-jakarta text-center">Dashboard Login</h1>
-                <p className="text-center text-muted">Gunakan email & password akun Supabase Anda.</p>
-                {error && <p className="bg-red-100 text-red-700 p-3 rounded-xl text-center">{error}</p>}
-                <div>
-                    <label className="font-semibold">Email</label>
-                    <input
-                        ref={emailInputRef}
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
-                        required
-                        placeholder="e.g., admin@example.com"
-                    />
+            <div className="bg-card p-8 rounded-3xl shadow-lg border border-border">
+                <div className="flex bg-soft dark:bg-gray-700/50 p-1 rounded-xl mb-6">
+                    <button 
+                        onClick={() => setMode('login')}
+                        className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${mode === 'login' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                    >
+                        Login
+                    </button>
+                    <button 
+                        onClick={() => setMode('signup')}
+                        className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${mode === 'signup' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                    >
+                        Daftar
+                    </button>
                 </div>
-                <div>
-                    <label className="font-semibold">Password</label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
-                        required
-                        placeholder="••••••••"
-                    />
-                </div>
-                <button type="submit" className="w-full bg-brand text-white font-bold py-3 rounded-2xl text-lg hover:bg-brand/90 transition-all disabled:bg-brand/50" disabled={loading}>
-                    {loading ? 'Logging in...' : 'Login'}
-                </button>
-                <div className="text-center pt-2">
-                    <Link to="/" className="text-sm text-muted hover:text-brand transition-colors duration-300">
-                        &larr; Kembali ke Home
-                    </Link>
-                </div>
-            </form>
+                
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <h1 className="text-3xl font-bold font-jakarta text-center">
+                        {mode === 'login' ? 'Selamat Datang Kembali' : 'Buat Akun Baru'}
+                    </h1>
+                    {error && <p className="bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 p-3 rounded-xl text-center text-sm font-semibold">{error}</p>}
+                    {successMessage && <p className="bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300 p-3 rounded-xl text-center text-sm font-semibold">{successMessage}</p>}
+                    
+                    {mode === 'signup' && (
+                         <div>
+                            <label htmlFor="username" className="font-semibold">Username</label>
+                            <input
+                                id="username"
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
+                                required
+                                placeholder="e.g., kopilover"
+                            />
+                        </div>
+                    )}
+                    <div>
+                        <label htmlFor="email" className="font-semibold">Email</label>
+                        <input
+                            id="email"
+                            ref={emailInputRef}
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
+                            required
+                            placeholder="e.g., admin@example.com"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="password" className="font-semibold">Password</label>
+                        <input
+                            id="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
+                            required
+                            placeholder="••••••••"
+                        />
+                    </div>
+
+                    {mode === 'signup' && (
+                        <div className="flex items-center gap-3 p-3 bg-soft dark:bg-gray-700/50 rounded-xl border border-border">
+                            <input
+                                id="isCafeAdmin"
+                                type="checkbox"
+                                checked={isCafeAdmin}
+                                onChange={(e) => setIsCafeAdmin(e.target.checked)}
+                                className="h-5 w-5 rounded text-brand focus:ring-brand border-gray-400"
+                            />
+                            <label htmlFor="isCafeAdmin" className="font-semibold text-primary cursor-pointer">Daftar sebagai Pengelola Kafe</label>
+                        </div>
+                    )}
+
+
+                    <button type="submit" className="w-full bg-brand text-white font-bold py-3 rounded-2xl text-lg hover:bg-brand/90 transition-all disabled:bg-brand/50" disabled={loading}>
+                        {loading ? 'Memproses...' : (mode === 'login' ? 'Login' : 'Daftar')}
+                    </button>
+                    <div className="text-center pt-2">
+                        <Link to="/" className="text-sm text-muted hover:text-brand transition-colors duration-300">
+                            &larr; Kembali ke Home
+                        </Link>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 };

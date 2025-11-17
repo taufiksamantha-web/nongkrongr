@@ -6,7 +6,10 @@ import { fileToBase64 } from '../utils/fileUtils';
 import { PhotoIcon, SparklesIcon, BriefcaseIcon, SunIcon, MoonIcon, UserGroupIcon, CurrencyDollarIcon, XCircleIcon } from '@heroicons/react/24/solid';
 
 interface ReviewFormProps {
-    onSubmit: (review: Omit<Review, 'id' | 'createdAt' | 'status'> & { cafe_id: string }) => Promise<void>;
+    // FIX: The `onSubmit` prop type was expecting `helpful_count`, but the form
+    // itself doesn't (and shouldn't) set this value. The type now correctly omits it,
+    // aligning with the data flow where `helpful_count` is initialized in the context.
+    onSubmit: (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => Promise<void>;
     isSubmitting: boolean;
     cafeId: string;
 }

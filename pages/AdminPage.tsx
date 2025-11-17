@@ -5,11 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserDashboard from '../components/admin/UserDashboard';
-import AdminCafeDashboard from '../components/admin/AdminCafeDashboard'; // Import new dashboard
+import AdminCafeDashboard from '../components/admin/AdminCafeDashboard';
 import FloatingNotification from '../components/common/FloatingNotification';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 import { ThemeContext } from '../App';
-import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
-
+import { SunIcon, MoonIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 
 const LoadingSpinner: React.FC = () => (
     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -18,28 +18,35 @@ const LoadingSpinner: React.FC = () => (
     </svg>
 );
 
+const PendingApprovalScreen: React.FC = () => (
+    <div className="bg-card p-8 rounded-3xl shadow-sm border border-border text-center mt-8 animate-fade-in-up">
+        <InformationCircleIcon className="h-16 w-16 mx-auto text-brand mb-4" />
+        <h1 className="text-3xl font-bold font-jakarta mb-2">Akun Anda Sedang Ditinjau</h1>
+        <p className="text-muted max-w-md mx-auto">
+            Terima kasih telah mendaftar sebagai Pengelola Kafe. Akun Anda akan aktif setelah disetujui oleh Administrator.
+            Silakan cek kembali nanti.
+        </p>
+    </div>
+);
+
 const AdminPage: React.FC = () => {
     const { currentUser, logout } = useAuth();
     const { theme, toggleTheme } = useContext(ThemeContext);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
         const { error } = await logout();
         if (error) {
             console.error('Logout error:', error.message);
-            setNotification({ message: `Gagal logout: ${error.message}. Coba lagi.`, type: 'error'});
+            setNotification({ message: `Gagal menyelesaikan logout di server: ${error.message}.`, type: 'error'});
             setIsLoggingOut(false);
         }
-        // Navigasi akan ditangani secara otomatis oleh ProtectedRoute 
-        // saat currentUser menjadi null. Tidak perlu navigasi manual di sini untuk
-        // menghindari race condition dan memastikan alur yang lebih stabil.
     };
     
-    // currentUser dijamin ada karena halaman ini dilindungi oleh ProtectedRoute
     if (!currentUser) {
-        // Tampilan ini seharusnya tidak pernah muncul, tapi sebagai fallback
         return null;
     }
 
@@ -58,6 +65,17 @@ const AdminPage: React.FC = () => {
 
     return (
         <div className="bg-soft min-h-screen text-primary dark:text-gray-200">
+            {isLogoutModalOpen && (
+                <ConfirmationModal
+                    title="Konfirmasi Logout"
+                    message="Apakah Anda yakin ingin keluar dari sesi ini?"
+                    confirmText="Ya, Logout"
+                    cancelText="Batal"
+                    onConfirm={handleLogout}
+                    onCancel={() => setIsLogoutModalOpen(false)}
+                    isConfirming={isLoggingOut}
+                />
+            )}
             <div className="container mx-auto px-6 py-8">
                 {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
                 <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
@@ -74,17 +92,16 @@ const AdminPage: React.FC = () => {
                             {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6 text-yellow-400" />}
                         </button>
                         <button 
-                            onClick={handleLogout} 
-                            className="flex items-center justify-center gap-2 bg-accent-pink text-white font-bold py-2 px-6 rounded-2xl hover:bg-accent-pink/90 transition-all disabled:opacity-75"
-                            disabled={isLoggingOut}
+                            onClick={() => setIsLogoutModalOpen(true)} 
+                            className="flex items-center justify-center bg-accent-pink text-white font-bold py-2 px-6 rounded-2xl hover:bg-accent-pink/90 transition-all"
                         >
-                            {isLoggingOut && <LoadingSpinner />}
-                            {isLoggingOut ? 'Logging out...' : 'Logout'}
+                            Logout
                         </button>
                     </div>
                 </div>
                 
-                {renderDashboardByRole()}
+                {currentUser.status === 'pending_approval' ? <PendingApprovalScreen /> : renderDashboardByRole()}
+
             </div>
         </div>
     );
