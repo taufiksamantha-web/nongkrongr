@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useMemo, useEffect } from 'react';
 import { Cafe, User } from '../../types';
 import { CafeContext } from '../../context/CafeContext';
@@ -269,10 +270,12 @@ const CafeManagementPanel: React.FC = () => {
                                         <button onClick={() => { if (userCanManage(cafe)) { setEditingCafe(cafe); setIsFormOpen(true); }}} className="text-left w-full group disabled:cursor-default" disabled={!userCanManage(cafe)}>
                                             <p className="font-bold text-lg text-primary dark:text-white truncate group-hover:underline">{cafe.name}</p>
                                         </button>
-                                        <div className="text-xs text-muted mt-1 space-y-0.5">
-                                            <p>Owner: <span className="font-semibold">{findUserName(cafe.manager_id)}</span></p>
-                                            <p>Dibuat oleh: <span className="font-semibold">{findUserName(cafe.created_by)}</span></p>
-                                        </div>
+                                        {currentUser?.role === 'admin' && (
+                                            <div className="text-xs text-muted mt-1 space-y-0.5">
+                                                <p>Owner: <span className="font-semibold">{findUserName(cafe.manager_id)}</span></p>
+                                                <p>Dibuat oleh: <span className="font-semibold">{findUserName(cafe.created_by)}</span></p>
+                                            </div>
+                                        )}
                                         <div className="mt-2"><StatusBadge status={cafe.status} /></div>
                                     </div>
                                 </div>
@@ -303,14 +306,14 @@ const CafeManagementPanel: React.FC = () => {
                                         <p className="font-semibold text-primary dark:text-gray-200 truncate group-hover:underline">{cafe.name}</p>
                                     </button>
                                     </div>
-                                    <div className="text-xs text-muted mt-1">
-                                        Owner: <span className="font-semibold">{findUserName(cafe.manager_id)}</span>
-                                        {currentUser?.role === 'admin' && 
+                                    {currentUser?.role === 'admin' && (
+                                        <div className="text-xs text-muted mt-1">
+                                            Owner: <span className="font-semibold">{findUserName(cafe.manager_id)}</span>
                                             <button onClick={() => handleOpenChangeOwner(cafe)} className="ml-2 text-blue-500 hover:underline text-xs font-bold">[Ubah]</button>
-                                        }
-                                        <br />
-                                        Dibuat oleh: <span className="font-semibold">{findUserName(cafe.created_by)}</span>
-                                    </div>
+                                            <br />
+                                            Dibuat oleh: <span className="font-semibold">{findUserName(cafe.created_by)}</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="truncate"><StatusBadge status={cafe.status} /></div>
                                 <div className="flex items-center justify-center gap-2">

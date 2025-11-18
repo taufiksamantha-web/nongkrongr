@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Cafe, Amenity, Vibe, Spot, Event } from '../../types';
 import { cloudinaryService } from '../../services/cloudinaryService';
@@ -183,9 +184,8 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
 
                 if (!city || !district) {
                     setNotification({ message: "Alamat ditemukan, namun Kota/Kecamatan tidak terdeteksi. Harap isi manual.", type: 'error' });
-                } else {
-                    setNotification({ message: "Alamat, Kota, dan Kecamatan berhasil diisi otomatis!", type: 'success' });
                 }
+                // Success notification removed to keep UI clean, only showing final success message.
             } catch (error) {
                 console.error("Reverse geocoding error:", error);
                 setNotification({ message: "Gagal mendapatkan alamat dari koordinat.", type: 'error' });
@@ -213,7 +213,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                 const coords = await geminiService.convertPlusCodeToCoords(code);
                 setCoordsInput(`${coords.lat}, ${coords.lng}`);
                 setFormData(prev => ({ ...prev, lat: String(coords.lat), lng: String(coords.lng) }));
-                setNotification({ message: "Plus Code berhasil dikonversi!", type: 'success' });
+                // Success notification removed to keep UI clean.
             } catch (error: any) {
                 setNotification({ message: error.message || "Gagal mengonversi Plus Code.", type: 'error' });
             } finally {
