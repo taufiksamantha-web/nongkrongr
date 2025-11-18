@@ -31,6 +31,16 @@
       "csv_file": "profiles.csv"
     },
     {
+      "name": "tags",
+      "columns": [
+        { "name": "id", "type": "text", "is_primary_key": true },
+        { "name": "name", "type": "text", "is_unique": true },
+        { "name": "created_by", "type": "uuid", "references": "profiles(id)", "on_delete": "set null", "is_nullable": true },
+        { "name": "created_at", "type": "timestamptz", "default": "now()" }
+      ],
+      "csv_file": "tags.csv"
+    },
+    {
       "name": "cafes",
       "columns": [
         { "name": "id", "type": "text", "is_primary_key": true },
@@ -115,6 +125,14 @@
         { "name": "amenity_id", "type": "text", "is_primary_key": true, "references": "amenities(id)", "on_delete": "cascade" }
       ],
       "csv_file": "cafe_amenities.csv"
+    },
+     {
+      "name": "cafe_tags",
+      "columns": [
+        { "name": "cafe_id", "type": "text", "is_primary_key": true, "references": "cafes(id)", "on_delete": "cascade" },
+        { "name": "tag_id", "type": "text", "is_primary_key": true, "references": "tags(id)", "on_delete": "cascade" }
+      ],
+      "csv_file": "cafe_tags.csv"
     },
     {
       "name": "settings",

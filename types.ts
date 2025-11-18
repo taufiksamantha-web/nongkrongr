@@ -18,6 +18,12 @@ export interface Vibe {
   created_at?: string;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  created_by?: string;
+}
+
 export interface Spot {
   id: string;
   cafe_id?: string;
@@ -76,6 +82,7 @@ export interface Cafe {
   coverUrl: string;
   vibes: Vibe[];
   amenities: Amenity[];
+  tags: Tag[];
   spots: Spot[];
   reviews: Review[];
   events: Event[];

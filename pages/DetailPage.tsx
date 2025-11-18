@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
+import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoriteContext';
-import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon } from '@heroicons/react/24/solid';
+import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon, TagIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
@@ -14,6 +15,7 @@ import InteractiveMap from '../components/InteractiveMap';
 import ShareButton from '../components/ShareButton';
 import EventCard from '../components/EventCard';
 import ReviewCard from '../components/ReviewCard';
+import TagManager from '../components/TagManager';
 import { DEFAULT_COVER_URL } from '../constants';
 
 const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color: string }> = ({ label, score, max, color }) => {
@@ -93,11 +95,12 @@ const DetailPage: React.FC = () => {
     const cafeContext = useContext(CafeContext);
     const { cafes, loading, addReview, error } = cafeContext!;
     const { theme } = useContext(ThemeContext);
+    const { currentUser } = useAuth();
     const { isFavorite, addFavorite, removeFavorite } = useFavorites();
     
     const [cafe, setCafe] = useState<Cafe | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [notification, setNotification] = useState<string | null>(null);
+    const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
     const [reviewsExpanded, setReviewsExpanded] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -130,9 +133,9 @@ const DetailPage: React.FC = () => {
         const { error } = await addReview(review);
         if (error) {
             console.error("Failed to add review:", error);
-            alert(`Gagal mengirim review: ${error.message}`);
+            setNotification({message: `Gagal mengirim review: ${error.message}`, type: 'error'});
         } else {
-            setNotification("Review kamu telah dikirim dan sedang menunggu moderasi. Terima kasih!");
+            setNotification({message: "Review kamu telah dikirim dan sedang menunggu moderasi. Terima kasih!", type: 'success'});
         }
         setIsSubmitting(false);
     };
@@ -141,6 +144,24 @@ const DetailPage: React.FC = () => {
     if (loading && !cafe) return <div className="text-center py-20">Loading...</div>;
     if (!cafe) return <div className="text-center py-20">Cafe tidak ditemukan.</div>;
     
+    const canViewPendingOrRejected = currentUser && (currentUser.role === 'admin' || currentUser.id === cafe.manager_id);
+
+    if (cafe.status !== 'approved' && !canViewPendingOrRejected) {
+        return (
+            <div className="container mx-auto px-6 py-20 text-center">
+                <div className="bg-yellow-50 dark:bg-yellow-500/10 p-8 rounded-2xl max-w-2xl mx-auto">
+                    <ExclamationTriangleIcon className="h-12 w-12 mx-auto text-yellow-500 mb-4" />
+                    <h2 className="text-2xl font-bold font-jakarta text-yellow-800 dark:text-yellow-200">
+                        Kafe Belum Tersedia
+                    </h2>
+                    <p className="mt-2 text-yellow-700 dark:text-yellow-300">
+                        Kafe ini sedang dalam proses peninjauan oleh administrator dan belum dapat ditampilkan untuk publik.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     const favorited = isFavorite(cafe.id);
     const nameWordCount = cafe.name.split(' ').length;
 
@@ -168,7 +189,7 @@ const DetailPage: React.FC = () => {
                 <ArrowLeftIcon className="h-5 w-5 transform group-hover:-translate-x-1 transition-transform" />
                 Kembali
             </button>
-            {notification && <FloatingNotification message={notification} type="success" onClose={() => setNotification(null)} />}
+            {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
             <ImageWithFallback 
                 src={cafe.coverUrl} 
                 defaultSrc={DEFAULT_COVER_URL}
@@ -235,6 +256,15 @@ const DetailPage: React.FC = () => {
                             {cafe.vibes.map(v => <span key={v.id} className="bg-brand/10 text-brand px-3 py-1 rounded-full text-sm font-semibold dark:bg-brand/20">{v.name}</span>)}
                             {cafe.amenities.map(a => <span key={a.id} className="bg-gray-100 dark:bg-gray-700/50 px-3 py-1 rounded-full text-sm">{a.icon} {a.name}</span>)}
                         </div>
+                    </div>
+                    
+                    {/* Tags */}
+                     <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
+                        <div className="flex items-center gap-3 mb-4">
+                           <TagIcon className="h-6 w-6 text-brand" />
+                           <h2 className="text-2xl font-bold font-jakarta">Tag Komunitas</h2>
+                        </div>
+                        <TagManager cafe={cafe} setNotification={setNotification} />
                     </div>
 
                     {/* Interactive Map & Action Button */}

@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import UserFormModal from './UserFormModal';
 import FloatingNotification from '../common/FloatingNotification';
 import ConfirmationModal from '../common/ConfirmationModal';
-import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon } from '@heroicons/react/24/solid';
+import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -139,15 +139,24 @@ const UserManagementPanel: React.FC = () => {
                                 <tr key={user.id} className="border-b border-border last:border-0">
                                     <td className="p-4 font-semibold text-primary dark:text-gray-200">{user.username}</td>
                                     <td className="p-4"><span className={`px-2 py-1 text-xs font-bold rounded-full ${user.role === 'admin' ? 'bg-brand/10 text-brand' : 'bg-gray-200 dark:bg-gray-600 text-muted'}`}>{user.role.toUpperCase()}</span></td>
-                                    <td className="p-4 space-x-4 text-right">
-                                        <button onClick={() => handleOpenEditForm(user)} className="text-brand font-bold hover:underline">Edit</button>
-                                        <button 
-                                            onClick={() => setUserToDelete(user)} 
-                                            className="text-accent-pink font-bold hover:underline disabled:text-gray-400 disabled:cursor-not-allowed disabled:no-underline"
-                                            disabled={user.id === currentUser?.id}
-                                        >
-                                            Delete
-                                        </button>
+                                    <td className="p-4 text-right">
+                                        <div className="inline-flex items-center gap-2">
+                                            <button 
+                                                onClick={() => handleOpenEditForm(user)} 
+                                                className="p-2 text-brand rounded-full hover:bg-brand/10 transition-colors"
+                                                aria-label={`Edit user ${user.username}`}
+                                            >
+                                                <PencilIcon className="h-5 w-5" />
+                                            </button>
+                                            <button 
+                                                onClick={() => setUserToDelete(user)} 
+                                                className="p-2 text-accent-pink rounded-full hover:bg-accent-pink/10 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                                disabled={user.id === currentUser?.id}
+                                                aria-label={`Delete user ${user.username}`}
+                                            >
+                                                <TrashIcon className="h-5 w-5" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))

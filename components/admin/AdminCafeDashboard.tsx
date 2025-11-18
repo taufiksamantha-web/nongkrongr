@@ -1,8 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import CafeManagementPanel from './CafeManagementPanel';
 import { BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 
+const welcomeMessages = [
+    "Selamat datang! Pastikan jam buka dan detail kafe Anda selalu update untuk pengunjung.",
+    "Hari yang cerah untuk bisnis! Cek statistik kafe Anda dan lihat apa yang sedang tren.",
+    "Halo, Pengelola! Tambahkan event atau promo baru untuk menarik lebih banyak pengunjung hari ini.",
+    "Manajemen kafe jadi lebih mudah. Apa yang ingin Anda perbarui hari ini?",
+    "Setiap detail penting. Periksa kembali foto dan fasilitas yang Anda tawarkan.",
+];
+
 const AdminCafeDashboard: React.FC = () => {
+    const [welcomeMessage] = useState(() => welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)]);
+
     return (
         <div>
             <div className="bg-brand/10 dark:bg-brand/20 border-l-4 border-brand text-brand dark:text-brand-light p-6 rounded-2xl mb-8 relative">
@@ -11,7 +21,7 @@ const AdminCafeDashboard: React.FC = () => {
                     <div>
                         <h3 className="font-bold font-jakarta text-xl text-primary dark:text-white">Dashboard Pengelola Kafe</h3>
                         <p className="mt-1 text-muted">
-                            Selamat datang! Di sini Anda dapat menambahkan, mengedit, dan mengelola informasi untuk kafe yang Anda kelola. Pastikan data selalu akurat untuk menarik lebih banyak pengunjung.
+                            {welcomeMessage}
                         </p>
                     </div>
                 </div>

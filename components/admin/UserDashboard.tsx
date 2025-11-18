@@ -1,5 +1,4 @@
-
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { CafeContext } from '../../context/CafeContext';
@@ -10,10 +9,19 @@ import { HeartIcon, ChatBubbleBottomCenterTextIcon, MagnifyingGlassIcon } from '
 import SkeletonCard from '../SkeletonCard';
 import SkeletonReviewCard from '../SkeletonReviewCard';
 
+const welcomeMessages = [
+    "Selamat datang kembali! Mari kita temukan spot nongkrong baru hari ini.",
+    "Hey, penjelajah kafe! Kafe favoritmu sudah menanti.",
+    "Waktunya ngopi! Lihat review terakhirmu atau jelajahi kafe baru.",
+    "Selamat datang! Siap untuk petualangan rasa berikutnya?",
+];
+
 const UserDashboard: React.FC = () => {
     const { currentUser } = useAuth();
     const { cafes, loading } = useContext(CafeContext)!;
     const { favoriteIds } = useFavorites();
+    
+    const [welcomeMessage] = useState(() => welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)]);
 
     if (!currentUser) return null;
 
@@ -29,6 +37,11 @@ const UserDashboard: React.FC = () => {
 
     return (
         <div className="space-y-8">
+             <div className="bg-brand/10 dark:bg-brand/20 border-l-4 border-brand p-6 rounded-2xl animate-fade-in-up">
+                <h3 className="font-bold font-jakarta text-xl text-primary dark:text-white">Halo, {currentUser.username}!</h3>
+                <p className="mt-1 text-muted">{welcomeMessage}</p>
+            </div>
+
             <Section icon={<HeartIcon className="h-8 w-8 text-accent-pink" />} title="Kafe Favoritmu">
                 {loading ? (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">

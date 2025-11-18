@@ -9,7 +9,6 @@ import CafeCard from '../components/CafeCard';
 import FeaturedCafeCard from '../components/FeaturedCafeCard';
 import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
-import AiRecommenderModal from '../components/AiRecommenderModal';
 import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon, MapPinIcon, RocketLaunchIcon, TrophyIcon } from '@heroicons/react/24/solid';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 import SkeletonCard from '../components/SkeletonCard';
@@ -91,7 +90,6 @@ const HomePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Cafe[]>([]);
   const [isResultsVisible, setIsResultsVisible] = useState(false);
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -148,19 +146,21 @@ const HomePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (cafes.length > 0) {
+    const approvedCafes = cafes.filter(c => c.status === 'approved');
+
+    if (approvedCafes.length > 0) {
       // Cafe of the week
       const fetchCafeOfTheWeek = async () => {
           const cafeId = await settingsService.getSetting('cafe_of_the_week_id');
           if (cafeId) {
-              const foundCafe = cafes.find(c => c.id === cafeId);
+              const foundCafe = approvedCafes.find(c => c.id === cafeId);
               setCafeOfTheWeek(foundCafe || null);
           }
       };
       fetchCafeOfTheWeek();
 
       // Trending
-      const sortedByAesthetic = [...cafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
+      const sortedByAesthetic = [...approvedCafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
       setTrendingCafes(sortedByAesthetic.slice(0, 4));
 
       // --- Smart Recommendations ---
@@ -200,9 +200,9 @@ const HomePage: React.FC = () => {
           return score;
       };
 
-      const allUserReviews = currentUser ? cafes.flatMap(c => c.reviews.filter(r => r.author === currentUser.username)) : [];
+      const allUserReviews = currentUser ? approvedCafes.flatMap(c => c.reviews.filter(r => r.author === currentUser.username)) : [];
 
-      const recommended = cafes
+      const recommended = approvedCafes
         .map(cafe => ({ cafe, score: calculateSmartScore(cafe, currentUser, allUserReviews, userLocation) }))
         .sort((a, b) => b.score - a.score)
         .filter(item => item.score > 0)
@@ -212,7 +212,7 @@ const HomePage: React.FC = () => {
 
 
       // Newcomers
-      const sortedByNew = [...cafes].sort((a, b) => {
+      const sortedByNew = [...approvedCafes].sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
@@ -221,7 +221,7 @@ const HomePage: React.FC = () => {
 
       // Nearest Cafes
       if (userLocation) {
-          const cafesWithDistance = cafes.map(cafe => ({
+          const cafesWithDistance = approvedCafes.map(cafe => ({
               ...cafe,
               distance: calculateDistance(userLocation.lat, userLocation.lng, cafe.coords.lat, cafe.coords.lng)
           })).sort((a, b) => a.distance - b.distance);
@@ -229,7 +229,7 @@ const HomePage: React.FC = () => {
       }
 
       // Top Reviews
-      const allApprovedReviews = cafes.flatMap(cafe =>
+      const allApprovedReviews = approvedCafes.flatMap(cafe =>
         cafe.reviews
           .filter(review => review.status === 'approved' && review.text.length > 20)
           .map(review => ({ ...review, cafeName: cafe.name, cafeSlug: cafe.slug }))
@@ -245,7 +245,7 @@ const HomePage: React.FC = () => {
       setTopReviews(allApprovedReviews.slice(0, 4));
       
       // Favorites
-      const userFavorites = cafes.filter(cafe => favoriteIds.includes(cafe.id));
+      const userFavorites = approvedCafes.filter(cafe => favoriteIds.includes(cafe.id));
       setFavoriteCafes(userFavorites);
     } else {
         setTrendingCafes([]);
@@ -275,7 +275,8 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     if (searchQuery.trim().length > 1) {
-      const filtered = cafes.filter(cafe => cafe.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
+      const approvedCafes = cafes.filter(c => c.status === 'approved');
+      const filtered = approvedCafes.filter(cafe => cafe.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
       setSearchResults(filtered);
       setIsResultsVisible(true);
     } else {
@@ -301,7 +302,6 @@ const HomePage: React.FC = () => {
 
   return (
     <div>
-      {isAiModalOpen && <AiRecommenderModal onClose={() => setIsAiModalOpen(false)} />}
       <div className="relative bg-gray-900 overflow-hidden">
         <div 
           className="absolute inset-0 z-0"
@@ -341,12 +341,8 @@ const HomePage: React.FC = () => {
                 </div>
               )}
             </div>
-            <div className="flex items-center justify-center gap-4"><hr className="w-full border-white/20"/><span className="text-gray-300 font-semibold">ATAU</span><hr className="w-full border-white/20"/></div>
-            <div className="text-center">
-              <button onClick={() => setIsAiModalOpen(true)} className="inline-flex items-center gap-3 bg-gradient-to-r from-brand to-accent-pink text-white font-bold py-3 px-6 rounded-2xl text-lg hover:opacity-90 transition-all duration-300 transform hover:scale-105 shadow-lg focus:ring-4 focus:ring-brand/30"><SparklesIcon className="h-6 w-6" />Coba Asisten AI</button>
-            </div>
           </div>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <div className="mt-16 flex flex-wrap justify-center gap-3">
             {VIBES.slice(0, 4).map(vibe => (<Link to={`/explore?vibe=${vibe.id}`} key={vibe.id} className="bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-2xl text-white hover:bg-white/20 transition-all duration-300 font-semibold">{vibe.name}</Link>))}
           </div>
         </div>
@@ -403,7 +399,8 @@ const HomePage: React.FC = () => {
           <SectionHeader icon={<FireIcon className="h-8 w-8"/>} title="Lagi Trending Nih!" subtitle="Cafe dengan skor aesthetic tertinggi pilihan warga Nongkrongr." link="/explore?sort=trending" />
             {loading ? (<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}</div>
             ) : trendingCafes.length > 0 ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{trendingCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}</div>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{trendingCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}
+                </div>
             ) : (<EmptyState title="Belum Ada Cafe" message="Saat ini belum ada data cafe yang bisa ditampilkan. Cek lagi nanti ya!" />)}
         </div>
       </div>

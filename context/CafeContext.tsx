@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Cafe, Review } from '../types';
+import { Cafe, Review, Tag } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from './AuthContext';
 
@@ -121,6 +121,9 @@ interface CafeContextType {
     getAllReviews: () => (Review & { cafeName: string; cafeId: string })[];
     getPendingCafes: () => Cafe[];
     updateCafeStatus: (cafeId: string, status: Cafe['status']) => Promise<{ error: any }>;
+    getAllTags: () => Promise<Tag[]>;
+    addTagToCafe: (cafeId: string, tagName: string) => Promise<{ data: any, error: any }>;
+    removeTagFromCafe: (cafeId: string, tagId: string) => Promise<{ error: any }>;
 }
 
 export const CafeContext = createContext<CafeContextType | undefined>(undefined);
@@ -136,12 +139,13 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (showLoader) setLoading(true);
         setError(null);
         try {
-            const { data, error: fetchError } = await supabase.from('cafes').select(`*,vibes:cafe_vibes(*, vibes(*)),amenities:cafe_amenities(*, amenities(*)),spots(*),reviews(*),events(*)`);
+            const { data, error: fetchError } = await supabase.from('cafes').select(`*,vibes:cafe_vibes(*, vibes(*)),amenities:cafe_amenities(*, amenities(*)),tags:cafe_tags(*, tags(*)),spots(*),reviews(*),events(*)`);
             if (fetchError) throw fetchError;
             const formattedData = data.map(cafe => ({
                 ...cafe, coords: { lat: cafe.lat ?? 0, lng: cafe.lng ?? 0 },
                 vibes: cafe.vibes.map((v: any) => v.vibes).filter(Boolean),
                 amenities: cafe.amenities.map((a: any) => a.amenities).filter(Boolean),
+                tags: cafe.tags.map((t: any) => t.tags).filter(Boolean),
                 spots: cafe.spots || [], events: cafe.events || [],
                 reviews: (cafe.reviews || []).map((r: any) => ({ ...r, photos: Array.isArray(r.photos) ? r.photos.filter(Boolean) : [], helpful_count: r.helpful_count || 0 })),
             } as Cafe));
@@ -196,7 +200,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const slug = `${cafeData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${Math.random().toString(36).substring(2, 6)}`;
         const newCafeOptimistic: Cafe = {
             id: tempId, slug, status: currentUser?.role === 'admin' ? 'approved' : 'pending', ...cafeData,
-            reviews: [], spots: [], events: [], amenities: cafeData.amenities || [], vibes: cafeData.vibes || [],
+            reviews: [], spots: [], events: [], amenities: cafeData.amenities || [], vibes: cafeData.vibes || [], tags: [],
             avgAestheticScore: 0, avgWorkScore: 0, avgCrowdMorning: 0, avgCrowdAfternoon: 0, avgCrowdEvening: 0
         } as Cafe;
         setCafes(prev => [newCafeOptimistic, ...prev]);
@@ -276,7 +280,13 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const addReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => {
-        const newReview = { ...review, status: 'pending' as const, createdAt: new Date().toISOString(), helpful_count: 0 };
+        const newReview = { 
+            id: `review-${crypto.randomUUID()}`,
+            ...review, 
+            status: 'pending' as const, 
+            createdAt: new Date().toISOString(), 
+            helpful_count: 0 
+        };
         const { data, error } = await supabase.from('reviews').insert(newReview);
         if (error) return { data: null, error };
         fetchCafes(false);
@@ -336,6 +346,68 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const getAllTags = async (): Promise<Tag[]> => {
+        const { data, error } = await supabase.from('tags').select('*');
+        if (error) {
+            console.error("Error fetching tags:", error);
+            return [];
+        }
+        return data as Tag[];
+    };
+
+    const addTagToCafe = async (cafeId: string, tagName: string) => {
+        const normalizedTagName = tagName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!normalizedTagName || !currentUser) {
+            return { data: null, error: { message: "Invalid tag name or user not logged in." } };
+        }
+
+        const originalCafes = [...cafes];
+
+        try {
+            // Find or create the tag
+            let { data: existingTag } = await supabase.from('tags').select('id, name').eq('name', normalizedTagName).single();
+            let tag: Tag;
+
+            if (existingTag) {
+                tag = existingTag;
+            } else {
+                const newTagId = `tag-${crypto.randomUUID()}`;
+                const { data: newTag, error: createError } = await supabase.from('tags').insert({ id: newTagId, name: normalizedTagName, created_by: currentUser.id }).select().single();
+                if (createError) throw createError;
+                tag = newTag;
+            }
+
+            // Optimistic update
+            setCafes(prev => prev.map(c => c.id === cafeId ? { ...c, tags: [...c.tags, tag] } : c));
+
+            // Link tag to cafe
+            const { error: linkError } = await supabase.from('cafe_tags').insert({ cafe_id: cafeId, tag_id: tag.id });
+            if (linkError && linkError.code !== '23505') { // 23505 is unique violation, which is fine
+                throw linkError;
+            }
+            
+            return { data: tag, error: null };
+        } catch (err: any) {
+            setCafes(originalCafes); // Rollback
+            return { data: null, error: err };
+        }
+    };
+
+    const removeTagFromCafe = async (cafeId: string, tagId: string) => {
+        const originalCafes = [...cafes];
+        // Optimistic update
+        setCafes(prev => prev.map(c => c.id === cafeId ? { ...c, tags: c.tags.filter(t => t.id !== tagId) } : c));
+
+        try {
+            const { error } = await supabase.from('cafe_tags').delete().match({ cafe_id: cafeId, tag_id: tagId });
+            if (error) throw error;
+            return { error: null };
+        } catch (err: any) {
+            setCafes(originalCafes); // Rollback
+            return { error: err };
+        }
+    };
+    
     const getPendingReviews = () => cafes.flatMap(c => c.reviews.filter(r => r.status === 'pending').map(r => ({ ...r, cafeName: c.name, cafeId: c.id })));
     const getAllReviews = () => cafes.flatMap(c => c.reviews.map(r => ({ ...r, cafeName: c.name, cafeId: c.id }))).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const getPendingCafes = () => cafes.filter(c => c.status === 'pending');
@@ -344,7 +416,8 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         <CafeContext.Provider value={{
             cafes, loading, error, fetchCafes, addCafe, updateCafe, deleteCafe, deleteMultipleCafes,
             addReview, updateReviewStatus, deleteReview, incrementHelpfulCount, getPendingReviews,
-            getAllReviews, getPendingCafes, updateCafeStatus
+            getAllReviews, getPendingCafes, updateCafeStatus,
+            getAllTags, addTagToCafe, removeTagFromCafe
         }}>
             {children}
         </CafeContext.Provider>

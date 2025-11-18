@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Cafe, PriceTier } from '../types';
+import { Cafe, PriceTier, Tag } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { useFavorites } from '../context/FavoriteContext';
@@ -22,25 +22,37 @@ type OpeningStatus = 'all' | 'open_now' | 'open_late' | 'closed';
 const FilterPanelContent: React.FC<{
     filters: any;
     handleFilterChange: (key: string, value: any) => void;
-    toggleMultiSelect: (key: 'vibes' | 'amenities', value: string) => void;
+    toggleMultiSelect: (key: 'vibes' | 'amenities' | 'tags', value: string) => void;
     setOpeningStatus: (status: OpeningStatus) => void;
     sortBy: 'default' | 'distance';
     isLocating: boolean;
     locationError: string | null;
     handleSortByDistance: () => void;
-}> = ({ filters, handleFilterChange, toggleMultiSelect, setOpeningStatus, sortBy, isLocating, locationError, handleSortByDistance }) => {
+    allTags: Tag[];
+}> = ({ filters, handleFilterChange, toggleMultiSelect, setOpeningStatus, sortBy, isLocating, locationError, handleSortByDistance, allTags }) => {
     
     const openingStatusOptions: { value: OpeningStatus; label: string }[] = [
         { value: 'all', label: 'Semua' },
         { value: 'open_now', label: 'Buka Sekarang' },
         { value: 'open_late', label: 'Buka Sampai Malam' },
-        { value: 'closed', label: 'Tertutup' },
+        { value: 'closed', label: 'Tutup' },
     ];
     
     return (
         <>
-            {/* Sort by distance */}
+            {/* City (moved to top, no details) */}
             <div className="py-2">
+                <label className="font-semibold block">Kota/Kabupaten</label>
+                <div className="mt-2">
+                    <select value={filters.city} onChange={e => handleFilterChange('city', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white">
+                        <option value="all">Semua Kota/Kabupaten</option>
+                        {SOUTH_SUMATRA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            {/* Sort by distance */}
+            <div className="py-2 border-t border-border">
                 <label className="font-semibold">Urutkan</label>
                 <button
                     onClick={handleSortByDistance}
@@ -66,22 +78,8 @@ const FilterPanelContent: React.FC<{
                 {locationError && <p className="text-xs text-accent-pink mt-1">{locationError}</p>}
             </div>
 
-            {/* City */}
-            <details className="py-2 border-t border-border group" open>
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
-                    Kota/Kabupaten
-                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
-                </summary>
-                <div className="mt-4">
-                    <select value={filters.city} onChange={e => handleFilterChange('city', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white">
-                        <option value="all">Semua Kota/Kabupaten</option>
-                        {SOUTH_SUMATRA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                </div>
-            </details>
-
-            {/* Opening Status */}
-            <details className="py-2 border-t border-border group" open>
+            {/* Opening Status (collapsed) */}
+            <details className="py-2 border-t border-border group">
                 <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
                     Status Buka
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
@@ -102,53 +100,51 @@ const FilterPanelContent: React.FC<{
                     ))}
                 </div>
             </details>
-
-            {/* Vibes */}
+            
+            {/* Price Tier (collapsed) */}
             <details className="py-2 border-t border-border group">
                 <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
-                    Vibes
+                    Harga
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
-                <div className="mt-4 flex flex-wrap gap-2">
-                    {VIBES.map(vibe => (
-                    <button key={vibe.id} onClick={() => toggleMultiSelect('vibes', vibe.id)} className={`px-3 py-1 text-sm rounded-full border-2 transition-all ${filters.vibes.includes(vibe.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>
-                        {vibe.name}
-                    </button>
+                <div className="mt-4 grid grid-cols-4 gap-2">
+                    {([1, 2, 3, 4] as const).map(tier => (
+                        <button
+                            key={tier}
+                            onClick={() => handleFilterChange('priceTier', tier)}
+                            className={`py-2 text-sm rounded-lg border-2 font-bold transition-all ${
+                                filters.priceTier === tier
+                                    ? 'bg-brand text-white border-brand'
+                                    : 'bg-soft border-border text-muted hover:border-brand/50'
+                            }`}
+                        >
+                            {'$'.repeat(tier)}
+                        </button>
                     ))}
                 </div>
             </details>
 
-            {/* Amenities */}
+            {/* Amenities (collapsed) */}
             <details className="py-2 border-t border-border group">
                 <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
                     Fasilitas
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-4 grid grid-cols-4 gap-2">
                     {AMENITIES.map(amenity => (
-                    <button key={amenity.id} onClick={() => toggleMultiSelect('amenities', amenity.id)} className={`px-3 py-1 text-sm rounded-full border-2 transition-all ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}>
-                        {amenity.icon} {amenity.name}
-                    </button>
+                        <button 
+                            key={amenity.id} 
+                            onClick={() => toggleMultiSelect('amenities', amenity.id)} 
+                            title={amenity.name}
+                            className={`p-3 text-2xl rounded-lg border-2 transition-all flex items-center justify-center ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}
+                        >
+                            {amenity.icon}
+                        </button>
                     ))}
                 </div>
             </details>
-            
-            {/* Price Tier */}
-            <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
-                    Harga (Maks.)
-                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
-                </summary>
-                <div className="mt-4">
-                    <div className="flex justify-between text-muted text-sm">
-                        <span>Murah</span>
-                        <span>Sultan</span>
-                    </div>
-                    <input type="range" min="1" max="4" value={filters.priceTier} onChange={e => handleFilterChange('priceTier', parseInt(e.target.value))} className="w-full mt-1 accent-brand"/>
-                </div>
-            </details>
 
-            {/* Crowd Level */}
+            {/* Crowd Level (already collapsed) */}
             <details className="py-2 border-t border-border group">
                 <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
                     Tingkat Keramaian (Maks.)
@@ -169,13 +165,29 @@ const FilterPanelContent: React.FC<{
                     </div>
                 </div>
             </details>
+
+            {/* Tags (moved to bottom, no details) */}
+            <div className="py-2 border-t border-border">
+                <label className="font-semibold block">Tag Komunitas</label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                    {allTags.map(tag => (
+                        <button 
+                            key={tag.id} 
+                            onClick={() => toggleMultiSelect('tags', tag.id)} 
+                            className={`px-3 py-1.5 text-xs rounded-full border-2 font-bold transition-all ${filters.tags.includes(tag.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}
+                        >
+                           #{tag.name}
+                        </button>
+                    ))}
+                </div>
+            </div>
         </>
     );
 };
 
 const ExplorePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
-  const { cafes, loading, error } = cafeContext!;
+  const { cafes, loading, error, getAllTags } = cafeContext!;
   const { theme } = useContext(ThemeContext);
   const { favoriteIds } = useFavorites();
   
@@ -184,6 +196,7 @@ const ExplorePage: React.FC = () => {
   const observerRef = useRef<HTMLDivElement>(null);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
 
   const isFavoritesView = searchParams.get('favorites') === 'true';
   const sortParam = searchParams.get('sort');
@@ -193,6 +206,7 @@ const ExplorePage: React.FC = () => {
     city: searchParams.get('city') || 'all',
     vibes: searchParams.getAll('vibe') || [],
     amenities: searchParams.getAll('amenity') || [],
+    tags: searchParams.getAll('tag') || [],
     priceTier: parseInt(searchParams.get('price_tier') || '4', 10) as PriceTier,
     crowdMorning: parseInt(searchParams.get('crowd_morning') || '5', 10),
     crowdAfternoon: parseInt(searchParams.get('crowd_afternoon') || '5', 10),
@@ -204,6 +218,14 @@ const ExplorePage: React.FC = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'default' | 'distance'>('default');
   const [isLocating, setIsLocating] = useState(false);
+
+  useEffect(() => {
+    const fetchTags = async () => {
+        const tagsData = await getAllTags();
+        setAllTags(tagsData);
+    };
+    fetchTags();
+  }, [getAllTags]);
 
   useEffect(() => {
     if (isFiltersOpen) {
@@ -261,6 +283,7 @@ const ExplorePage: React.FC = () => {
     if (filters.city !== 'all') newParams.set('city', filters.city);
     filters.vibes.forEach(vibe => newParams.append('vibe', vibe));
     filters.amenities.forEach(amenity => newParams.append('amenity', amenity));
+    filters.tags.forEach(tag => newParams.append('tag', tag));
     if (filters.priceTier < 4) newParams.set('price_tier', String(filters.priceTier));
     if (filters.crowdMorning < 5) newParams.set('crowd_morning', String(filters.crowdMorning));
     if (filters.crowdAfternoon < 5) newParams.set('crowd_afternoon', String(filters.crowdAfternoon));
@@ -269,17 +292,19 @@ const ExplorePage: React.FC = () => {
   }, [filters, setSearchParams, isFavoritesView, sortParam]);
 
   const sortedCafes: CafeWithDistance[] = useMemo(() => {
+    let baseCafes = cafes.filter(c => c.status === 'approved');
     let processedCafes: Cafe[];
     
     if (isFavoritesView) {
         const favoriteSet = new Set(favoriteIds);
-        processedCafes = cafes.filter(cafe => favoriteSet.has(cafe.id));
+        processedCafes = baseCafes.filter(cafe => favoriteSet.has(cafe.id));
     } else {
-        processedCafes = cafes.filter(cafe => {
+        processedCafes = baseCafes.filter(cafe => {
             if (filters.search && !cafe.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
             if (filters.city !== 'all' && cafe.city !== filters.city) return false;
             if (filters.vibes.length > 0 && !filters.vibes.every(v => cafe.vibes.some(cv => cv.id === v))) return false;
             if (filters.amenities.length > 0 && !filters.amenities.every(a => cafe.amenities.some(ca => ca.id === a))) return false;
+            if (filters.tags.length > 0 && !filters.tags.every(t => cafe.tags.some(ct => ct.id === t))) return false;
             if (cafe.priceTier > filters.priceTier) return false;
             if (cafe.avgCrowdMorning > filters.crowdMorning) return false;
             if (cafe.avgCrowdAfternoon > filters.crowdAfternoon) return false;
@@ -348,18 +373,18 @@ const ExplorePage: React.FC = () => {
   }, [visibleCount, sortedCafes.length]);
 
 
-  const toggleMultiSelect = (key: 'vibes' | 'amenities', value: string) => {
+  const toggleMultiSelect = (key: 'vibes' | 'amenities' | 'tags', value: string) => {
     const currentValues = filters[key];
     const newValues = currentValues.includes(value)
       ? currentValues.filter(item => item !== value)
       : [...currentValues, value];
-    handleFilterChange(key, newValues);
+    handleFilterChange(key, newValues as any);
   };
 
   if (error) return <DatabaseConnectionError />;
 
   const filterPanelProps = {
-    filters, handleFilterChange, toggleMultiSelect, setOpeningStatus, sortBy, isLocating, locationError, handleSortByDistance
+    filters, handleFilterChange, toggleMultiSelect, setOpeningStatus, sortBy, isLocating, locationError, handleSortByDistance, allTags
   };
   
   const isSpecialView = isFavoritesView || sortParam === 'trending';
@@ -433,7 +458,7 @@ const ExplorePage: React.FC = () => {
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
                 {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
             </div>
-        ) : !loading && cafes.length === 0 ? (
+        ) : !loading && cafes.filter(c => c.status === 'approved').length === 0 ? (
             <div className="text-center py-10 bg-card rounded-3xl border border-border">
                 <InboxIcon className="mx-auto h-12 w-12 text-muted" />
                 <p className="mt-4 text-xl font-bold font-jakarta">Belum Ada Cafe yang Terdaftar</p>
