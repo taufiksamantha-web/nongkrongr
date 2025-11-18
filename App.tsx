@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink, useLocation, Navigate, Outlet } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import ExplorePage from './pages/ExplorePage';
@@ -36,6 +36,8 @@ const Header: React.FC = () => {
   const { currentUser, logout } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   
   const activeLinkClass = "bg-brand text-white";
   const inactiveLinkClass = "hover:bg-brand/10 dark:hover:bg-brand/20";
@@ -54,6 +56,18 @@ const Header: React.FC = () => {
     }
     // Jika berhasil, UI akan diperbarui melalui AuthContext, dan modal sudah ditutup.
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [mobileMenuRef]);
 
   return (
     <>
@@ -83,16 +97,41 @@ const Header: React.FC = () => {
                       <UserCircleIcon className="h-6 w-6 text-brand" />
                       <span>{currentUser.username}</span>
                   </Link>
-                  <button onClick={() => setIsLogoutModalOpen(true)} className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Logout">
+                  <button onClick={() => setIsLogoutModalOpen(true)} className="hidden sm:flex p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Logout">
                       <ArrowRightOnRectangleIcon className="h-6 w-6" />
+                  </button>
+                  <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" aria-label="Buka menu pengguna">
+                      <UserCircleIcon className="h-6 w-6 text-brand"/>
                   </button>
               </div>
             ) : (
-               <Link to="/login" className="bg-brand text-white font-bold py-2 px-5 rounded-xl hover:bg-brand/90 transition-all">
-                  Login
+               <Link to="/login" className="p-2 rounded-full text-brand border-2 border-brand/50 hover:bg-brand hover:text-white transition-all" aria-label="Login">
+                  <ArrowRightOnRectangleIcon className="h-6 w-6" />
               </Link>
             )}
           </div>
+          
+           {isMobileMenuOpen && currentUser && (
+                <div ref={mobileMenuRef} className="absolute top-full right-4 mt-2 w-56 bg-card rounded-2xl shadow-lg border border-border p-2 z-50 sm:hidden animate-fade-in-down">
+                    <div className="px-3 py-2 border-b border-border mb-1">
+                        <p className="font-bold text-primary truncate" title={currentUser.username}>{currentUser.username}</p>
+                        <p className="text-sm text-muted truncate" title={currentUser.email}>{currentUser.email}</p>
+                    </div>
+                    <Link 
+                        to="/admin" 
+                        className="block w-full text-left px-3 py-2 rounded-lg hover:bg-soft dark:hover:bg-gray-700/50 font-semibold transition-colors" 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                        Dashboard
+                    </Link>
+                    <button 
+                        onClick={() => { setIsMobileMenuOpen(false); setIsLogoutModalOpen(true); }} 
+                        className="block w-full text-left px-3 py-2 rounded-lg text-accent-pink hover:bg-soft dark:hover:bg-gray-700/50 font-semibold transition-colors"
+                    >
+                        Logout
+                    </button>
+                </div>
+           )}
         </nav>
       </header>
 
