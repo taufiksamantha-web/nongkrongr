@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -113,6 +114,7 @@ const LoginForm: React.FC = () => {
                                 onChange={(e) => setUsername(e.target.value)}
                                 className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
                                 required
+                                placeholder="Buat username unik"
                             />
                         </div>
                     )}
@@ -126,6 +128,7 @@ const LoginForm: React.FC = () => {
                             onChange={(e) => setEmail(e.target.value)}
                             className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
                             required
+                            placeholder={mode === 'login' ? 'Masukkan username atau email' : 'Masukkan email aktif'}
                         />
                     </div>
                     <div>
@@ -137,7 +140,7 @@ const LoginForm: React.FC = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
                             required
-                            placeholder="••••••••"
+                            placeholder={mode === 'login' ? 'Masukkan password' : 'Password (minimal 6 karakter)'}
                         />
                     </div>
 
@@ -151,7 +154,7 @@ const LoginForm: React.FC = () => {
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
                                 required
-                                placeholder="••••••••"
+                                placeholder="Konfirmasi password"
                             />
                         </div>
                     )}
