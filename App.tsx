@@ -96,14 +96,22 @@ const Header: React.FC = () => {
             {currentUser ? (
               <div className="flex items-center gap-2">
                   <Link to="/admin" className="hidden sm:flex items-center gap-2 font-semibold text-primary dark:text-white p-2 rounded-xl hover:bg-soft dark:hover:bg-gray-700 transition-colors">
-                      <UserCircleIcon className="h-6 w-6 text-brand" />
+                      {currentUser.avatar_url ? (
+                          <img src={currentUser.avatar_url} alt="Profile" className="h-6 w-6 rounded-full object-cover" />
+                      ) : (
+                          <UserCircleIcon className="h-6 w-6 text-brand" />
+                      )}
                       <span>{currentUser.username}</span>
                   </Link>
                   <button onClick={() => setIsLogoutModalOpen(true)} className="hidden sm:flex p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Logout">
                       <ArrowRightOnRectangleIcon className="h-6 w-6" />
                   </button>
                   <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" aria-label="Buka menu pengguna">
-                      <UserCircleIcon className="h-6 w-6 text-brand"/>
+                      {currentUser.avatar_url ? (
+                          <img src={currentUser.avatar_url} alt="Profile" className="h-6 w-6 rounded-full object-cover" />
+                      ) : (
+                          <UserCircleIcon className="h-6 w-6 text-brand"/>
+                      )}
                   </button>
               </div>
             ) : (
@@ -115,9 +123,16 @@ const Header: React.FC = () => {
           
            {isMobileMenuOpen && currentUser && (
                 <div ref={mobileMenuRef} className="absolute top-full right-4 mt-2 w-56 bg-card rounded-2xl shadow-lg border border-border p-2 z-50 sm:hidden animate-fade-in-down">
-                    <div className="px-3 py-2 border-b border-border mb-1">
-                        <p className="font-bold text-primary truncate" title={currentUser.username}>{currentUser.username}</p>
-                        <p className="text-sm text-muted truncate" title={currentUser.email}>{currentUser.email}</p>
+                    <div className="flex items-center gap-3 px-3 py-2 border-b border-border mb-1">
+                        {currentUser.avatar_url ? (
+                            <img src={currentUser.avatar_url} alt="Profile" className="h-10 w-10 rounded-full object-cover" />
+                        ) : (
+                            <UserCircleIcon className="h-10 w-10 text-brand" />
+                        )}
+                        <div>
+                            <p className="font-bold text-primary truncate" title={currentUser.username}>{currentUser.username}</p>
+                            <p className="text-sm text-muted truncate" title={currentUser.email}>{currentUser.email}</p>
+                        </div>
                     </div>
                     <Link 
                         to="/admin" 

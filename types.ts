@@ -105,6 +105,7 @@ export interface Profile {
   role: 'admin' | 'user' | 'admin_cafe';
   status: 'active' | 'pending_approval';
   updated_at?: string;
+  avatar_url?: string;
 }
 
 // Combined user object for the app

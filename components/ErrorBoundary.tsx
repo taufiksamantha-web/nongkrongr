@@ -69,6 +69,8 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
     
+    // FIX: Moved `return this.props.children;` inside the `render` method.
+    // In a class component, all rendering logic must be contained within the `render()` method to ensure `this.props` is accessible.
     return this.props.children;
   }
 }

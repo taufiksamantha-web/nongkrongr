@@ -10,6 +10,7 @@ interface AuthContextType {
     login: (identifier: string, password: string) => Promise<{ error: AuthError | null }>;
     signup: (username: string, email: string, password: string, isCafeAdmin?: boolean) => Promise<{ error: AuthError | null }>;
     logout: () => Promise<{ error: AuthError | null }>;
+    updateUserProfile: (updates: Partial<User>) => Promise<{ error: AuthError | null }>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,7 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             async (event, session) => {
                 // We only need to react to explicit sign-in/out events here.
                 // The visibility check will handle expired sessions.
-                if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
                     fetchUserAndSetState(session);
                 }
             }
@@ -146,6 +147,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         return { error: null };
     };
+    
+    const updateUserProfile = async (updates: Partial<User>) => {
+        if (!currentUser) return { error: new AuthError("No user is logged in") };
+        
+        // Prevent updating primary key or other restricted fields if passed
+        const { id, role, status, ...updateData } = updates;
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .update(updateData)
+            .eq('id', currentUser.id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error updating user profile:', error);
+            return { error };
+        }
+
+        if (data) {
+            setCurrentUser(data as User);
+        }
+        
+        return { error: null };
+    };
 
     const logout = async () => {
         const { error } = await supabase.auth.signOut();
@@ -163,6 +189,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         signup,
         logout,
+        updateUserProfile,
     };
 
     if (loading) {

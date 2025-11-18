@@ -27,7 +27,8 @@
         { "name": "username", "type": "text", "is_unique": true },
         { "name": "email", "type": "text", "is_unique": true },
         { "name": "role", "type": "text", "default": "user" },
-        { "name": "status", "type": "text", "default": "active" }
+        { "name": "status", "type": "text", "default": "active" },
+        { "name": "avatar_url", "type": "text", "is_nullable": true }
       ],
       "csv_file": "profiles.csv"
     },
