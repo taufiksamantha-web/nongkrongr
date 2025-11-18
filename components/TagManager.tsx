@@ -115,16 +115,17 @@ const TagManager: React.FC<TagManagerProps> = ({ cafe, setNotification }) => {
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Tambah tag (e.g., KidsFriendly, MeetingSpot)"
-                            className="w-full p-3 pr-24 border-2 border-border bg-soft rounded-xl text-primary dark:bg-gray-700/50 focus:ring-2 focus:ring-brand transition-all"
+                            className="w-full p-3 pr-14 sm:pr-28 border-2 border-border bg-soft rounded-xl text-primary dark:bg-gray-700/50 focus:ring-2 focus:ring-brand transition-all"
                             disabled={isLoading}
                         />
                          <button
                             onClick={() => handleAddTag(inputValue)}
                             disabled={isLoading || !inputValue.trim()}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-brand text-white font-bold py-2 px-4 rounded-lg hover:bg-brand/90 transition-all disabled:bg-brand/50"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center bg-brand text-white font-bold h-10 rounded-lg hover:bg-brand/90 transition-all disabled:bg-brand/50 w-10 sm:w-auto sm:px-4 sm:gap-1"
+                            aria-label="Tambah Tag"
                         >
                             <PlusIcon className="h-5 w-5" />
-                            Tambah
+                            <span className="hidden sm:inline">Tambah</span>
                         </button>
                     </div>
 

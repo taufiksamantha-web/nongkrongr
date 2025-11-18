@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserDashboard from '../components/admin/UserDashboard';
@@ -9,7 +9,7 @@ import AdminCafeDashboard from '../components/admin/AdminCafeDashboard';
 import FloatingNotification from '../components/common/FloatingNotification';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import { ThemeContext } from '../App';
-import { SunIcon, MoonIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
+import { SunIcon, MoonIcon, InformationCircleIcon, HomeIcon } from '@heroicons/react/24/solid';
 
 const LoadingSpinner: React.FC = () => (
     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -83,7 +83,15 @@ const AdminPage: React.FC = () => {
                         <h2 className="text-xl">Welcome, <span className="font-bold text-primary">{currentUser.username}</span></h2>
                         <p className="text-gray-500">You are logged in as: <span className="font-semibold">{currentUser.role.toUpperCase().replace('_', ' ')}</span></p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4">
+                        <Link 
+                            to="/" 
+                            className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
+                            aria-label="Home"
+                            title="Kembali ke Home"
+                        >
+                            <HomeIcon className="h-6 w-6" />
+                        </Link>
                         <button 
                             onClick={toggleTheme} 
                             className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"

@@ -35,65 +35,63 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
       e.stopPropagation();
       if (voted || !cafeContext) return;
       
-      // Set UI to voted state first for immediate feedback
       setVoted(true);
       localStorage.setItem(storageKey, 'true');
 
       const { error } = await cafeContext.incrementHelpfulCount(review.id);
 
       if (error) {
-        // If DB update failed, revert UI changes and inform user
         setVoted(false);
         localStorage.removeItem(storageKey);
         alert('Gagal menyimpan vote. Perubahan telah dibatalkan. Silakan coba lagi.');
       }
   };
   
-  const content = (
-    <div>
-      <div className="flex justify-between items-start">
-        <p className="text-5xl text-brand font-bold opacity-20 -ml-2">“</p>
-        <div className="flex flex-col space-y-1 items-end flex-shrink-0 ml-2">
-            <RatingBadge icon={<StarIcon className="h-3 w-3" />} score={review.ratingAesthetic} color="bg-accent-pink" />
-            <RatingBadge icon={<BriefcaseIcon className="h-3 w-3" />} score={review.ratingWork} color="bg-accent-cyan" />
-        </div>
-      </div>
-      <p className="text-muted italic -mt-8 line-clamp-4">
-        {review.text}
-      </p>
-    </div>
-  );
-
   return (
     <div 
       className="bg-card rounded-3xl shadow-lg p-6 flex flex-col h-full transform transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl border border-border animate-fade-in-up review-card-optimized"
       style={{ animationDelay }}
     >
-      <div className="flex-grow">
-          {review.photos && review.photos.length > 0 && review.photos[0] 
-            ? content 
-            : <Link to={`/cafe/${review.cafeSlug}`} className="block h-full">{content}</Link>
-          }
-      </div>
+      {review.photos && review.photos.length > 0 && review.photos[0] && (
+        <Link to={`/cafe/${review.cafeSlug}`} className="block mb-4">
+            <ImageWithFallback 
+              src={review.photos[0]} 
+              alt={`Review by ${review.author}`} 
+              className="w-full h-40 object-cover rounded-xl"
+              width={300}
+              height={200}
+            />
+        </Link>
+      )}
 
-      <div className="mt-4 pt-4 border-t border-border">
-          {review.photos && review.photos.length > 0 && review.photos[0] && (
-            <Link to={`/cafe/${review.cafeSlug}`} className="block mb-4">
-                <ImageWithFallback 
-                  src={review.photos[0]} 
-                  alt={`Review by ${review.author}`} 
-                  className="w-full h-24 object-cover rounded-xl"
-                  width={250}
-                  height={150}
-                />
-            </Link>
-        )}
+      <Link to={`/cafe/${review.cafeSlug}`} className="block flex-grow">
+          <div className="flex justify-between items-start">
+            <p className="text-5xl text-brand font-bold opacity-20 -ml-2">“</p>
+            <div className="flex flex-col space-y-1 items-end flex-shrink-0 ml-2">
+                <RatingBadge icon={<StarIcon className="h-3 w-3" />} score={review.ratingAesthetic} color="bg-accent-pink" />
+                <RatingBadge icon={<BriefcaseIcon className="h-3 w-3" />} score={review.ratingWork} color="bg-accent-cyan" />
+            </div>
+          </div>
+          <p className="text-muted italic -mt-8 line-clamp-4">
+            {review.text}
+          </p>
+      </Link>
+
+      <div className="mt-auto pt-4 border-t border-border">
         <div className="flex justify-between items-center">
-            <div>
-                <p className="font-bold text-primary dark:text-gray-100">{review.author}</p>
-                <Link to={`/cafe/${review.cafeSlug}`} className="text-sm text-brand hover:underline font-semibold">
-                    di {review.cafeName}
-                </Link>
+             <div className="flex items-center gap-3">
+                <img
+                    src={review.author_avatar_url || `https://ui-avatars.com/api/?name=${review.author.replace(/\s/g, '+')}&background=random&color=fff`}
+                    alt={review.author}
+                    className="h-10 w-10 rounded-full object-cover"
+                    loading="lazy"
+                />
+                <div>
+                    <p className="font-bold text-primary dark:text-gray-100">{review.author}</p>
+                    <Link to={`/cafe/${review.cafeSlug}`} className="text-sm text-brand hover:underline font-semibold">
+                        di {review.cafeName}
+                    </Link>
+                </div>
             </div>
             <button
               onClick={handleVote}

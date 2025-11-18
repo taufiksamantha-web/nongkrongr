@@ -59,6 +59,7 @@ export interface Review {
   createdAt: string | Date;
   status: 'pending' | 'approved' | 'rejected';
   helpful_count: number;
+  author_avatar_url?: string | null;
 }
 
 export interface Cafe {

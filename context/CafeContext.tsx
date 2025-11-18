@@ -139,15 +139,33 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (showLoader) setLoading(true);
         setError(null);
         try {
+            const { data: profilesData, error: profilesError } = await supabase.from('profiles').select('username, avatar_url');
+            if (profilesError) console.warn("Could not fetch profiles for review avatars:", profilesError);
+
+            const profileAvatarMap = new Map<string, string>();
+            if (profilesData) {
+                for (const profile of profilesData) {
+                    if (profile.username && profile.avatar_url) {
+                        profileAvatarMap.set(profile.username, profile.avatar_url);
+                    }
+                }
+            }
+
             const { data, error: fetchError } = await supabase.from('cafes').select(`*,vibes:cafe_vibes(*, vibes(*)),amenities:cafe_amenities(*, amenities(*)),tags:cafe_tags(*, tags(*)),spots(*),reviews(*),events(*)`);
             if (fetchError) throw fetchError;
+
             const formattedData = data.map(cafe => ({
                 ...cafe, coords: { lat: cafe.lat ?? 0, lng: cafe.lng ?? 0 },
                 vibes: cafe.vibes.map((v: any) => v.vibes).filter(Boolean),
                 amenities: cafe.amenities.map((a: any) => a.amenities).filter(Boolean),
                 tags: cafe.tags.map((t: any) => t.tags).filter(Boolean),
                 spots: cafe.spots || [], events: cafe.events || [],
-                reviews: (cafe.reviews || []).map((r: any) => ({ ...r, photos: Array.isArray(r.photos) ? r.photos.filter(Boolean) : [], helpful_count: r.helpful_count || 0 })),
+                reviews: (cafe.reviews || []).map((r: any) => ({ 
+                    ...r, 
+                    photos: Array.isArray(r.photos) ? r.photos.filter(Boolean) : [], 
+                    helpful_count: r.helpful_count || 0,
+                    author_avatar_url: profileAvatarMap.get(r.author) || null,
+                })),
             } as Cafe));
             const cafesWithAverages = formattedData.map(calculateAverages);
             setCafes(cafesWithAverages);
