@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 type FormMode = 'login' | 'signup';
 
 const LoginForm: React.FC = () => {
     const { login, signup } = useAuth();
+    const navigate = useNavigate();
     const [mode, setMode] = useState<FormMode>('login');
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
@@ -53,6 +54,10 @@ const LoginForm: React.FC = () => {
             const { error: authError } = await login(email, password);
             if (authError) {
                 setError(authError.message || 'Email atau password salah.');
+            } else {
+                // On successful login, navigate to the homepage.
+                // The onAuthStateChange listener will handle the global state update.
+                navigate('/');
             }
         }
         setLoading(false);

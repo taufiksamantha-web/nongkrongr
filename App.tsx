@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink, useLocation, Navigate, Outlet } from 'react-router-dom';
 import HomePage from './pages/HomePage';
@@ -43,16 +44,15 @@ const Header: React.FC = () => {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     const { error } = await logout();
+    // Selalu tutup modal dan reset status loading setelah percobaan logout.
+    setIsLogoutModalOpen(false);
+    setIsLoggingOut(false);
+
     if (error) {
         console.error("Logout failed:", error.message);
-        // Notify user about the failure and reset the UI state
         alert(`Gagal untuk logout: ${error.message}`);
-        setIsLogoutModalOpen(false);
-        setIsLoggingOut(false);
     }
-    // On successful logout, the onAuthStateChange listener in AuthContext
-    // will update the state, causing a re-render where this component
-    // shows the "Login" button, so we don't need to manually reset state here.
+    // Jika berhasil, UI akan diperbarui melalui AuthContext, dan modal sudah ditutup.
   };
 
   return (
@@ -122,7 +122,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { currentUser } = useAuth();
     if (currentUser) {
-        return <Navigate to="/admin" replace />;
+        return <Navigate to="/" replace />;
     }
     return <>{children}</>;
 };

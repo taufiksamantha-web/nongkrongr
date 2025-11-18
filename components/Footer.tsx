@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { settingsService } from '../services/settingsService';
 
 const InstagramIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -21,6 +22,28 @@ const TwitterIcon = () => (
 
 
 const Footer: React.FC = () => {
+    const [socialLinks, setSocialLinks] = useState({
+        instagram: '',
+        tiktok: '',
+        twitter: '',
+    });
+
+    useEffect(() => {
+        const fetchLinks = async () => {
+            const [instagram, tiktok, twitter] = await Promise.all([
+                settingsService.getSetting('social_instagram_url'),
+                settingsService.getSetting('social_tiktok_url'),
+                settingsService.getSetting('social_twitter_url'),
+            ]);
+            setSocialLinks({
+                instagram: instagram || '',
+                tiktok: tiktok || '',
+                twitter: twitter || '',
+            });
+        };
+        fetchLinks();
+    }, []);
+
     return (
         <footer className="bg-card border-t border-border mt-16">
             <div className="container mx-auto px-6 py-12">
@@ -50,9 +73,9 @@ const Footer: React.FC = () => {
                     <div>
                          <h4 className="font-bold text-primary dark:text-gray-200 uppercase tracking-wider">Follow Us</h4>
                          <div className="mt-4 flex space-x-4 justify-center lg:justify-start">
-                            <a href="#" aria-label="Instagram" className="text-muted hover:text-[#E1306C] transition-colors"><InstagramIcon /></a>
-                            <a href="#" aria-label="TikTok" className="text-muted hover:text-accent-cyan transition-colors"><TikTokIcon /></a>
-                            <a href="#" aria-label="Twitter" className="text-muted hover:text-[#1DA1F2] transition-colors"><TwitterIcon /></a>
+                            {socialLinks.instagram && socialLinks.instagram !== '#' && <a href={socialLinks.instagram} aria-label="Instagram" className="text-muted hover:text-[#E1306C] transition-colors"><InstagramIcon /></a>}
+                            {socialLinks.tiktok && socialLinks.tiktok !== '#' && <a href={socialLinks.tiktok} aria-label="TikTok" className="text-muted hover:text-accent-cyan transition-colors"><TikTokIcon /></a>}
+                            {socialLinks.twitter && socialLinks.twitter !== '#' && <a href={socialLinks.twitter} aria-label="Twitter" className="text-muted hover:text-[#1DA1F2] transition-colors"><TwitterIcon /></a>}
                          </div>
                     </div>
                 </div>

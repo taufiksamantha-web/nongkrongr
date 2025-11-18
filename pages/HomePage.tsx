@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Cafe, Review } from '../types';
+import { Cafe, Review, User } from '../types';
 import { VIBES } from '../constants';
 import { CafeContext } from '../context/CafeContext';
+import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoriteContext';
 import CafeCard from '../components/CafeCard';
 import FeaturedCafeCard from '../components/FeaturedCafeCard';
@@ -77,6 +78,7 @@ const EmptyState: React.FC<{ title: string; message: string }> = ({ title, messa
 const HomePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
   const { cafes, loading, error } = cafeContext!;
+  const { currentUser } = useAuth();
   const { favoriteIds } = useFavorites();
   
   const [trendingCafes, setTrendingCafes] = useState<Cafe[]>([]);
@@ -161,24 +163,53 @@ const HomePage: React.FC = () => {
       const sortedByAesthetic = [...cafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
       setTrendingCafes(sortedByAesthetic.slice(0, 4));
 
-      // Recommended
-      const calculateRecommendationScore = (cafe: Cafe): number => {
-        if (cafe.reviews.filter(r => r.status === 'approved').length === 0) return 0;
-        let score = (cafe.avgAestheticScore + cafe.avgWorkScore) / 2;
-        if (cafe.spots.length > 0) score += 1.5;
-        if (cafe.reviews.length > 3) score += 1.0;
-        if (cafe.amenities.length >= 5) score += 0.5;
-        if (cafe.isSponsored) score += 10 - (cafe.sponsoredRank * 0.5);
-        return score;
+      // --- Smart Recommendations ---
+      const calculateSmartScore = (cafe: Cafe, user: User | null, allUserReviews: Review[], location: { lat: number; lng: number } | null): number => {
+          // Base score
+          let score = (cafe.avgAestheticScore + cafe.avgWorkScore) / 2;
+          if (cafe.spots.length > 0) score += 1.5;
+          if (cafe.reviews.filter(r => r.status === 'approved').length > 3) score += 1.0;
+          if (cafe.amenities.length >= 5) score += 0.5;
+          if (cafe.isSponsored) score += 10 - (cafe.sponsoredRank * 0.5);
+
+          // User-specific scoring
+          if (user && allUserReviews.length > 0) {
+              const positiveReviews = allUserReviews.filter(r => (r.ratingAesthetic + r.ratingWork) >= 15);
+              const preferenceProfile = {
+                  vibes: new Map<string, number>(),
+                  amenities: new Map<string, number>(),
+              };
+
+              positiveReviews.forEach(review => {
+                  const reviewedCafe = cafes.find(c => c.id === review.cafe_id);
+                  reviewedCafe?.vibes.forEach(vibe => preferenceProfile.vibes.set(vibe.id, (preferenceProfile.vibes.get(vibe.id) || 0) + 1));
+                  reviewedCafe?.amenities.forEach(amenity => preferenceProfile.amenities.set(amenity.id, (preferenceProfile.amenities.get(amenity.id) || 0) + 1));
+              });
+
+              cafe.vibes.forEach(vibe => { if (preferenceProfile.vibes.has(vibe.id)) score += 2.0; });
+              cafe.amenities.forEach(amenity => { if (preferenceProfile.amenities.has(amenity.id)) score += 1.5; });
+          }
+          // Location-based scoring for guests
+          else if (!user && location) {
+              const distance = calculateDistance(location.lat, location.lng, cafe.coords.lat, cafe.coords.lng);
+              // Adds up to 5 points for cafes within 1km, diminishing rapidly.
+              const distanceBonus = 5 / (distance + 1);
+              score += distanceBonus;
+          }
+          
+          return score;
       };
 
+      const allUserReviews = currentUser ? cafes.flatMap(c => c.reviews.filter(r => r.author === currentUser.username)) : [];
+
       const recommended = cafes
-        .map(cafe => ({ cafe, score: calculateRecommendationScore(cafe) }))
+        .map(cafe => ({ cafe, score: calculateSmartScore(cafe, currentUser, allUserReviews, userLocation) }))
         .sort((a, b) => b.score - a.score)
         .filter(item => item.score > 0)
         .map(item => item.cafe);
       
       setRecommendedCafes(recommended.slice(0, 5));
+
 
       // Newcomers
       const sortedByNew = [...cafes].sort((a, b) => {
@@ -225,7 +256,7 @@ const HomePage: React.FC = () => {
         setFavoriteCafes([]);
         setCafeOfTheWeek(null);
     }
-  }, [cafes, favoriteIds, userLocation]);
+  }, [cafes, favoriteIds, userLocation, currentUser]);
   
   const resetInterval = useCallback(() => {
     if (slideIntervalRef.current) clearInterval(slideIntervalRef.current);

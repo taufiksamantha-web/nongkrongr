@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, ReactNode, useContext, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -25,52 +26,72 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const processSession = useCallback(async (session: Session | null) => {
-        // If there's no session, we're done. No user, no loading.
-        if (!session) {
+    const fetchUserAndSetState = useCallback(async (session: Session | null): Promise<void> => {
+        if (!session?.user) {
             setCurrentUser(null);
             setLoading(false);
             return;
         }
 
-        // There is a session, let's try to get the profile.
+        // A session exists, now verify we can access protected data (the user's own profile).
+        // This is the most reliable way to check if the token is actually valid.
         const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
 
-        // If there's an error getting the profile, or the profile doesn't exist,
-        // we treat this as a "not logged in" state and clean up.
         if (error || !profile) {
-            console.error("Auth state error: User session exists but profile is missing. Forcing sign out.", error);
-            // Sign out to clear the inconsistent state from Supabase Auth.
+            // If this fails, the token is likely invalid. Sign out to clear the bad session.
+            console.error("Session validation failed. User profile inaccessible. Signing out.", { error });
             await supabase.auth.signOut();
-            // And crucially, update our app's state immediately to unblock the UI.
-            setCurrentUser(null);
-            setLoading(false);
+            setCurrentUser(null); // Explicitly set user to null immediately.
         } else {
-            // Success case: we have a session and a profile.
+            // All good.
             setCurrentUser(profile as User);
-            setLoading(false);
         }
+        setLoading(false);
     }, []);
 
     useEffect(() => {
-        // onAuthStateChange is the single source of truth. It's called upon initialization
-        // and whenever the user signs in, out, or the token is refreshed.
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (_event, session) => {
-                await processSession(session);
+        setLoading(true);
+        // On initial load, get the session and validate it.
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            fetchUserAndSetState(session);
+        });
+
+        // The listener handles subsequent changes like login, logout.
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+                // We only need to react to explicit sign-in/out events here.
+                // The visibility check will handle expired sessions.
+                if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                    fetchUserAndSetState(session);
+                }
             }
         );
+        
+        // Set up a periodic check every time the tab becomes visible.
+        // This is more robust than a one-time focus event for handling long inactivity.
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // When tab becomes visible, re-validate the session.
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                   fetchUserAndSetState(session);
+                });
+            }
+        };
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
-            subscription?.unsubscribe();
+            authListener.subscription.unsubscribe();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, [processSession]);
+    }, [fetchUserAndSetState]);
 
     const login = async (email: string, password: string) => {
+        // The onAuthStateChange listener will handle state updates on success.
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         return { error };
     };
@@ -104,8 +125,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = async () => {
-        // Simply sign out. The onAuthStateChange listener will handle the state update.
         const { error } = await supabase.auth.signOut();
+        // The onAuthStateChange listener will also set the user to null,
+        // but we do it here too for a faster UI response.
+        if (!error) {
+            setCurrentUser(null);
+        }
         return { error };
     };
 
@@ -117,8 +142,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
     };
 
-    // Render the loader until the initial auth check is complete.
-    // The onAuthStateChange listener guarantees to set loading to false.
     if (loading) {
         return <FullScreenLoader />;
     }

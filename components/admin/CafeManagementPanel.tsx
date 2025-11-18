@@ -8,7 +8,7 @@ import FloatingNotification from '../common/FloatingNotification';
 import AdminCafeForm from './AdminCafeForm';
 import CafeStatisticsModal from './CafeStatisticsModal';
 import ImageWithFallback from '../common/ImageWithFallback';
-import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, ArrowUpIcon, ArrowDownIcon, TrophyIcon, ClockIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, ArrowUpIcon, ArrowDownIcon, TrophyIcon, ClockIcon, ChartBarSquareIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 const ITEMS_PER_PAGE = 5;
 type SortableKeys = 'name' | 'district' | 'created_at' | 'status';
@@ -247,8 +247,8 @@ const CafeManagementPanel: React.FC = () => {
                                         {currentUser?.role === 'admin' ? <SponsorToggle cafe={cafe} onToggle={handleToggleSponsor} disabled={isSaving} /> : (cafe.isSponsored ? <CheckCircleIcon className="h-5 w-5 text-green-500"/> : <XCircleIcon className="h-5 w-5 text-red-500"/>)}
                                     </div>
                                     <div className="flex gap-4">
-                                        <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 font-bold hover:underline">Statistik</button>
-                                        {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
+                                        <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 p-1 rounded-full hover:bg-blue-100" title="Lihat Statistik"><ChartBarSquareIcon className="h-6 w-6" /></button>
+                                        {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink p-1 rounded-full hover:bg-red-100" title="Hapus Cafe"><TrashIcon className="h-6 w-6"/></button>}
                                     </div>
                                 </div>
                             </div>
@@ -270,9 +270,9 @@ const CafeManagementPanel: React.FC = () => {
                                 <div className="flex items-center justify-center gap-2">
                                     {currentUser?.role === 'admin' ? <SponsorToggle cafe={cafe} onToggle={handleToggleSponsor} disabled={isSaving} /> : (cafe.isSponsored ? <CheckCircleIcon className="h-6 w-6 text-green-500"/> : <XCircleIcon className="h-6 w-6 text-red-500"/>)}
                                 </div>
-                                <div className="text-right space-x-3">
-                                    <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 font-bold hover:underline">Statistik</button>
-                                    {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink font-bold hover:underline">Hapus</button>}
+                                <div className="text-right flex items-center justify-end gap-3">
+                                    <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors" title="Lihat Statistik"><ChartBarSquareIcon className="h-6 w-6" /></button>
+                                    {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink hover:text-red-700 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors" title="Hapus Cafe"><TrashIcon className="h-6 w-6" /></button>}
                                 </div>
                             </div>
                         </div>

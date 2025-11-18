@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { CafeContext } from '../../context/CafeContext';
-import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
 import CafeManagementPanel from './CafeManagementPanel';
 import ReviewManagement from './PendingReviews';
 import UserManagementPanel from './UserManagementPanel';
@@ -16,6 +16,8 @@ const AdminDashboard: React.FC = () => {
     const totalCafes = cafes.length;
     const sponsoredCafes = cafes.filter(cafe => cafe.isSponsored).length;
     const nonSponsoredCafes = totalCafes - sponsoredCafes;
+    const approvedCafes = cafes.filter(cafe => cafe.status === 'approved').length;
+    const pendingCafes = cafes.filter(cafe => cafe.status === 'pending').length;
 
     return (
         <div>
@@ -36,7 +38,7 @@ const AdminDashboard: React.FC = () => {
                 <div className="bg-card p-6 rounded-3xl shadow-sm border border-border space-y-6">
                     <div>
                         <h3 className="text-xl font-bold font-jakarta mb-4">Ringkasan Kafe</h3>
-                        <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
                            <StatCard 
                                 title="Total Cafe" 
                                 value={totalCafes} 
@@ -44,16 +46,22 @@ const AdminDashboard: React.FC = () => {
                                 color="brand" 
                             />
                             <StatCard 
-                                title="Sponsored" 
-                                value={sponsoredCafes} 
+                                title="Disetujui" 
+                                value={approvedCafes} 
                                 icon={<CheckBadgeIcon className="h-8 w-8 text-green-500" />} 
                                 color="green" 
                             />
                             <StatCard 
-                                title="Regular" 
-                                value={nonSponsoredCafes} 
-                                icon={<XCircleIcon className="h-8 w-8 text-red-500" />} 
-                                color="red" 
+                                title="Tertunda" 
+                                value={pendingCafes} 
+                                icon={<ClockIcon className="h-8 w-8 text-yellow-500" />} 
+                                color="yellow" 
+                            />
+                             <StatCard 
+                                title="Sponsored" 
+                                value={sponsoredCafes} 
+                                icon={<CheckBadgeIcon className="h-8 w-8 text-purple-500" />} 
+                                color="purple" 
                             />
                         </div>
                     </div>
