@@ -128,36 +128,25 @@ const ReviewManagement: React.FC = () => {
             <div className="space-y-4">
                 {paginatedReviews.map(review => (
                     <div key={review.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-2xl border border-border">
-                        <div className="flex justify-between items-start flex-wrap gap-y-2">
-                           <div className="flex-grow flex items-start gap-4">
-                               <img
-                                    src={review.author_avatar_url || `https://ui-avatars.com/api/?name=${review.author.replace(/\s/g, '+')}&background=random&color=fff`}
-                                    alt={review.author}
-                                    className="h-10 w-10 rounded-full object-cover flex-shrink-0 mt-1"
-                                />
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                            <div className="flex items-start gap-4 flex-1">
+                                {review.photos && review.photos[0] && (
+                                    <a href={review.photos[0]} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                                        <ImageWithFallback
+                                            src={review.photos[0]}
+                                            alt={`Foto review oleh ${review.author}`}
+                                            className="h-24 w-24 object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
+                                            width={150}
+                                            height={150}
+                                        />
+                                    </a>
+                                )}
                                 <div className="flex-grow">
-                                    <div>
-                                        <span className="font-bold text-lg">{review.author}</span>
-                                        <span className="font-normal text-muted"> mereview </span> 
-                                        <span className="font-bold">{review.cafeName}</span>
-                                    </div>
+                                    <p className="font-bold text-lg">{review.author} <span className="font-normal text-muted">mereview</span> {review.cafeName}</p>
                                     <p className="text-primary dark:text-gray-300 my-2 italic">"{review.text}"</p>
-                                    {review.photos && review.photos[0] && (
-                                         <div className="mt-2">
-                                            <a href={review.photos[0]} target="_blank" rel="noopener noreferrer">
-                                                <ImageWithFallback
-                                                    src={review.photos[0]}
-                                                    alt={`Foto review oleh ${review.author}`}
-                                                    className="h-24 w-auto max-w-full object-cover rounded-lg border border-border hover:opacity-80 transition-opacity"
-                                                    width={150}
-                                                    height={150}
-                                                />
-                                            </a>
-                                         </div>
-                                    )}
                                 </div>
-                           </div>
-                           <div className="flex gap-2 flex-shrink-0 ml-0 sm:ml-4 self-center sm:self-start">
+                            </div>
+                            <div className="flex gap-2 flex-shrink-0 w-full sm:w-auto justify-end">
                                {review.status === 'pending' && (
                                  <>
                                    <button 

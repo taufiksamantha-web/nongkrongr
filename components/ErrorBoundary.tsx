@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { supabase } from '../lib/supabaseClient';
 
@@ -10,8 +10,11 @@ interface State {
   hasError: boolean;
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
-  state: State = { hasError: false };
+class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
   static getDerivedStateFromError(_error: Error): State {
     return { hasError: true };
@@ -65,8 +68,6 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
     
-    // FIX: Ensured the default return statement is correctly placed within the render method.
-    // In a class component, all rendering logic must be contained within the render() method to ensure `this.props` is accessible.
     return this.props.children;
   }
 }

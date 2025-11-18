@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink, useLocation, Navigate, Outlet } from 'react-router-dom';
 import HomePage from './pages/HomePage';
@@ -183,13 +184,31 @@ const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <>{children}</>;
 };
 
-const MainLayout: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }> = ({ showWelcome, onCloseWelcome }) => {
+const MainLayout: React.FC = () => {
     const location = useLocation();
     const isHomePage = location.pathname === '/';
+    const { currentUser, loading: authLoading } = useAuth();
+    const [showWelcome, setShowWelcome] = useState(false);
+
+    useEffect(() => {
+      // Hanya jalankan pengecekan ini sekali setelah status otentikasi diketahui
+      if (!authLoading) {
+        const welcomeSeen = localStorage.getItem('nongkrongr_welcome_seen');
+        // Tampilkan jika belum pernah dilihat DAN pengguna tidak login
+        if (!welcomeSeen && !currentUser) {
+          setShowWelcome(true);
+        }
+      }
+    }, [authLoading, currentUser]);
+
+    const handleCloseWelcome = () => {
+        localStorage.setItem('nongkrongr_welcome_seen', 'true');
+        setShowWelcome(false);
+    };
 
     return (
         <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col">
-            {showWelcome && isHomePage && <WelcomeModal onClose={onCloseWelcome} />}
+            {showWelcome && isHomePage && <WelcomeModal onClose={handleCloseWelcome} />}
             <Header />
             <main className="flex-grow">
                 <Outlet />
@@ -202,7 +221,6 @@ const MainLayout: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
 };
 
 const App: React.FC = () => {
-  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('nongkrongr_welcome_seen'));
   const [theme, setTheme] = useState<Theme>(() => {
     const storedTheme = localStorage.getItem('theme') as Theme | null;
     if (storedTheme) {
@@ -221,11 +239,6 @@ const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const handleCloseWelcome = () => {
-    localStorage.setItem('nongkrongr_welcome_seen', 'true');
-    setShowWelcome(false);
-  };
-
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
@@ -239,7 +252,7 @@ const App: React.FC = () => {
               <HashRouter>
                   <ScrollToTopOnNavigate />
                   <Routes>
-                    <Route element={<MainLayout showWelcome={showWelcome} onCloseWelcome={handleCloseWelcome} />}>
+                    <Route element={<MainLayout />}>
                         <Route path="/" element={<HomePage />} />
                         <Route path="/explore" element={<ExplorePage />} />
                         <Route path="/cafe/:slug" element={<DetailPage />} />

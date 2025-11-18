@@ -13,6 +13,17 @@ export const userService = {
     }
     return data as Profile[];
   },
+
+  async getAllUsers(): Promise<Profile[]> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*');
+    if (error) {
+        console.error("Error fetching all users:", error);
+        throw error;
+    }
+    return data as Profile[];
+  },
   
   async updateUserStatus(userId: string, status: Profile['status']): Promise<{ error: any }> {
     const { error } = await supabase

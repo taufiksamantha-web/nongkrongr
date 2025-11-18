@@ -287,7 +287,7 @@ const DetailPage: React.FC = () => {
                     {/* Interactive Map & Action Button */}
                     <div className="space-y-4">
                         <div className="relative z-10 rounded-3xl shadow-md overflow-hidden h-96 border border-border">
-                            <InteractiveMap cafe={cafe} theme={theme} showUserLocation={true} />
+                            <InteractiveMap cafe={cafe} theme={theme} showDistanceControl={true} />
                         </div>
                         <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
                             <MapPinIcon className="h-5 w-5" />

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -113,74 +114,75 @@ const LoginForm: React.FC = () => {
                     {error && <p className="bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 p-3 rounded-xl text-center text-sm font-semibold">{error}</p>}
                     {successMessage && <p className="bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300 p-3 rounded-xl text-center text-sm font-semibold">{successMessage}</p>}
                     
-                    {mode === 'signup' && (
-                         <div>
-                            <label htmlFor="username" className="font-semibold">Username</label>
+                    <div key={mode} className="space-y-6 animate-fade-in-up" style={{animationDuration: '0.4s'}}>
+                        {mode === 'signup' && (
+                            <div>
+                                <label htmlFor="username" className="font-semibold">Username</label>
+                                <input
+                                    id="username"
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
+                                    required
+                                    placeholder="Buat username unik"
+                                />
+                            </div>
+                        )}
+                        <div>
+                            <label htmlFor="email" className="font-semibold">{mode === 'login' ? 'Email atau Username' : 'Email'}</label>
                             <input
-                                id="username"
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                id="email"
+                                ref={loginInputRef}
+                                type={mode === 'login' ? 'text' : 'email'}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
                                 required
-                                placeholder="Buat username unik"
+                                placeholder={mode === 'login' ? 'Masukkan email atau username' : 'Masukkan email aktif'}
                             />
                         </div>
-                    )}
-                    <div>
-                        <label htmlFor="email" className="font-semibold">{mode === 'login' ? 'Email atau Username' : 'Email'}</label>
-                        <input
-                            id="email"
-                            ref={loginInputRef}
-                            type={mode === 'login' ? 'text' : 'email'}
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
-                            required
-                            placeholder={mode === 'login' ? 'Masukkan username atau email' : 'Masukkan email aktif'}
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="password" className="font-semibold">Password</label>
-                        <input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
-                            required
-                            placeholder={mode === 'login' ? 'Masukkan password' : 'Password (minimal 6 karakter)'}
-                        />
-                    </div>
-
-                    {mode === 'signup' && (
-                         <div>
-                            <label htmlFor="confirmPassword" className="font-semibold">Konfirmasi Password</label>
+                        <div>
+                            <label htmlFor="password" className="font-semibold">Password</label>
                             <input
-                                id="confirmPassword"
+                                id="password"
                                 type="password"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
                                 required
-                                placeholder="Konfirmasi password"
+                                placeholder={mode === 'login' ? 'Masukkan password' : 'Password (minimal 6 karakter)'}
                             />
                         </div>
-                    )}
 
-                    {mode === 'signup' && (
-                        <div className="flex items-center gap-3 p-3 bg-soft dark:bg-gray-700/50 rounded-xl border border-border">
-                            <input
-                                id="isCafeAdmin"
-                                type="checkbox"
-                                checked={isCafeAdmin}
-                                onChange={(e) => setIsCafeAdmin(e.target.checked)}
-                                className="h-5 w-5 rounded text-brand focus:ring-brand border-gray-400"
-                            />
-                            <label htmlFor="isCafeAdmin" className="font-semibold text-primary cursor-pointer">Daftar sebagai Pengelola Kafe</label>
-                        </div>
-                    )}
+                        {mode === 'signup' && (
+                            <div>
+                                <label htmlFor="confirmPassword" className="font-semibold">Konfirmasi Password</label>
+                                <input
+                                    id="confirmPassword"
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
+                                    required
+                                    placeholder="Konfirmasi password"
+                                />
+                            </div>
+                        )}
 
+                        {mode === 'signup' && (
+                            <div className="flex items-center gap-3 p-3 bg-soft dark:bg-gray-700/50 rounded-xl border border-border">
+                                <input
+                                    id="isCafeAdmin"
+                                    type="checkbox"
+                                    checked={isCafeAdmin}
+                                    onChange={(e) => setIsCafeAdmin(e.target.checked)}
+                                    className="h-5 w-5 rounded text-brand focus:ring-brand border-gray-400"
+                                />
+                                <label htmlFor="isCafeAdmin" className="font-semibold text-primary cursor-pointer">Daftar sebagai Pengelola Kafe</label>
+                            </div>
+                        )}
+                    </div>
 
                     <button type="submit" className="w-full bg-brand text-white font-bold py-3 rounded-2xl text-lg hover:bg-brand/90 transition-all disabled:bg-brand/50" disabled={loading}>
                         {loading ? 'Memproses...' : (mode === 'login' ? 'Login' : 'Daftar')}

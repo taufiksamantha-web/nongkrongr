@@ -55,13 +55,15 @@ const calculateAverages = (cafe: Cafe): Cafe => {
 };
 
 // --- Supabase Data Helpers ---
-const prepareCafeRecordForSupabase = (data: Partial<Cafe>) => {
+const prepareCafeRecordForSupabase = (data: Partial<Cafe> & { created_by?: string }) => {
     const record = {
         id: data.id, // FIX: Ensure the ID is included in the record for insertion.
         name: data.name, slug: data.slug, description: data.description, address: data.address,
         city: data.city, district: data.district, openingHours: data.openingHours, priceTier: data.priceTier,
         lat: data.coords?.lat, lng: data.coords?.lng, isSponsored: data.isSponsored, sponsoredUntil: data.sponsoredUntil,
-        sponsoredRank: data.sponsoredRank, logoUrl: data.logoUrl, coverUrl: data.coverUrl, manager_id: data.manager_id, status: data.status,
+        sponsoredRank: data.sponsoredRank, logoUrl: data.logoUrl, coverUrl: data.coverUrl, manager_id: data.manager_id, 
+        created_by: data.created_by,
+        status: data.status,
     };
     Object.keys(record).forEach(key => (record as any)[key] === undefined && delete (record as any)[key]);
     return record;
@@ -235,7 +237,8 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 id: newId, // FIX: Pass the newly generated ID to the record for insertion.
                 slug, 
                 status: newCafeOptimistic.status,
-                manager_id 
+                manager_id,
+                created_by: currentUser?.id
             });
             const { data: newCafeDb, error: mainError } = await supabase.from('cafes').insert(record).select().single();
             if (mainError) throw mainError;

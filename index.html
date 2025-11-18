@@ -2,7 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nongkrongr: South Sumatra Cafe Finder</title>
@@ -158,6 +157,56 @@
           transform: translate(-50%, -50%) scale(3.5);
           opacity: 0;
         }
+      }
+      /* Styles for map popup glass effect */
+      .glass-popup .leaflet-popup-content-wrapper {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      }
+      .glass-popup .leaflet-popup-tip {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .dark .glass-popup .leaflet-popup-content-wrapper {
+        background: rgba(26, 26, 42, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .dark .glass-popup .leaflet-popup-content-wrapper .text-gray-800 {
+        color: #f1f5f9; /* slate-100 */
+      }
+      .dark .glass-popup .leaflet-popup-content-wrapper .text-gray-600 {
+        color: #94a3b8; /* slate-400 */
+      }
+      .dark .glass-popup .leaflet-popup-content-wrapper a {
+        color: hsl(var(--brand-light));
+      }
+      .dark .glass-popup .leaflet-popup-tip {
+         background: rgba(26, 26, 42, 0.7);
+      }
+      /* Custom map controls */
+      .leaflet-control-custom {
+        background-color: white;
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .dark .leaflet-control-custom {
+         background-color: #181a20; /* approx. gray-900 */
+         color: #e2e8f0; /* slate-200 */
+      }
+      .leaflet-control-custom:hover {
+        background-color: #f4f4f5; /* gray-100 */
+      }
+      .dark .leaflet-control-custom:hover {
+        background-color: #374151; /* gray-700 */
       }
     </style>
   <script type="importmap">

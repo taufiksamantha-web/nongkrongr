@@ -88,6 +88,7 @@ export interface Cafe {
   reviews: Review[];
   events: Event[];
   manager_id?: string; // ID of the user who manages this cafe
+  created_by?: string; // ID of the user who created this cafe entry
   created_at?: string;
   status: 'pending' | 'approved' | 'rejected';
   // Aggregated scores

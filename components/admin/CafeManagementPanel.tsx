@@ -1,14 +1,16 @@
 import React, { useState, useContext, useMemo, useEffect } from 'react';
-import { Cafe } from '../../types';
+import { Cafe, User } from '../../types';
 import { CafeContext } from '../../context/CafeContext';
 import { useAuth } from '../../context/AuthContext';
 import { settingsService } from '../../services/settingsService';
+import { userService } from '../../services/userService';
 import ConfirmationModal from '../common/ConfirmationModal';
 import FloatingNotification from '../common/FloatingNotification';
 import AdminCafeForm from './AdminCafeForm';
 import CafeStatisticsModal from './CafeStatisticsModal';
+import ChangeOwnerModal from './ChangeOwnerModal';
 import ImageWithFallback from '../common/ImageWithFallback';
-import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, ArrowUpIcon, ArrowDownIcon, TrophyIcon, ClockIcon, ChartBarSquareIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, ArrowUpIcon, ArrowDownIcon, TrophyIcon, ClockIcon, ChartBarSquareIcon, TrashIcon, PencilSquareIcon } from '@heroicons/react/24/solid';
 
 const ITEMS_PER_PAGE = 5;
 type SortableKeys = 'name' | 'district' | 'created_at' | 'status';
@@ -52,8 +54,10 @@ const CafeManagementPanel: React.FC = () => {
     
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+    const [isChangeOwnerModalOpen, setIsChangeOwnerModalOpen] = useState(false);
     const [editingCafe, setEditingCafe] = useState<Cafe | null>(null);
     const [statsCafe, setStatsCafe] = useState<Cafe | null>(null);
+    const [cafeToChangeOwner, setCafeToChangeOwner] = useState<Cafe | null>(null);
     const [cafeToDelete, setCafeToDelete] = useState<Cafe | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -63,15 +67,24 @@ const CafeManagementPanel: React.FC = () => {
     const [isConfirmingMultiDelete, setIsConfirmingMultiDelete] = useState(false);
     const [sortConfig, setSortConfig] = useState<{ key: SortableKeys; direction: 'asc' | 'desc' }>({ key: 'created_at', direction: 'desc' });
     const [cafeOfTheWeekId, setCafeOfTheWeekId] = useState<string | null>(null);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
 
-    const fetchCafeOfTheWeek = async () => {
-        const id = await settingsService.getSetting('cafe_of_the_week_id');
-        setCafeOfTheWeekId(id);
-    };
-    
     useEffect(() => {
-        fetchCafeOfTheWeek();
-    }, []);
+        const fetchInitialData = async () => {
+            const id = await settingsService.getSetting('cafe_of_the_week_id');
+            setCafeOfTheWeekId(id);
+
+            if (currentUser?.role === 'admin') {
+                try {
+                    const users = await userService.getAllUsers();
+                    setAllUsers(users);
+                } catch (e) {
+                    setNotification({ message: 'Gagal memuat daftar pengguna.', type: 'error' });
+                }
+            }
+        };
+        fetchInitialData();
+    }, [currentUser]);
 
     const handleSetCafeOfTheWeek = async (cafeId: string) => {
         setIsSaving(true);
@@ -125,6 +138,24 @@ const CafeManagementPanel: React.FC = () => {
             setNotification({ message: `Gagal update: ${error.message}`, type: 'error' });
         } else {
             setNotification({ message: `Status sponsor "${cafe.name}" diperbarui.`, type: 'success' });
+        }
+        setIsSaving(false);
+    };
+
+    const handleOpenChangeOwner = (cafe: Cafe) => {
+        setCafeToChangeOwner(cafe);
+        setIsChangeOwnerModalOpen(true);
+    };
+
+    const handleSaveOwner = async (cafeId: string, newOwnerId: string | null) => {
+        setIsSaving(true);
+        const { error } = await updateCafe(cafeId, { manager_id: newOwnerId === null ? undefined : newOwnerId });
+        if (error) {
+            setNotification({ message: 'Gagal mengubah owner.', type: 'error' });
+        } else {
+            setNotification({ message: 'Owner kafe berhasil diperbarui.', type: 'success' });
+            setIsChangeOwnerModalOpen(false);
+            setCafeToChangeOwner(null);
         }
         setIsSaving(false);
     };
@@ -195,6 +226,7 @@ const CafeManagementPanel: React.FC = () => {
     );
 
     const userCanManage = (cafe: Cafe) => currentUser?.role === 'admin' || currentUser?.id === cafe.manager_id;
+    const findUserName = (userId: string | undefined) => allUsers.find(u => u.id === userId)?.username || 'N/A';
 
     return (
          <>
@@ -237,7 +269,10 @@ const CafeManagementPanel: React.FC = () => {
                                         <button onClick={() => { if (userCanManage(cafe)) { setEditingCafe(cafe); setIsFormOpen(true); }}} className="text-left w-full group disabled:cursor-default" disabled={!userCanManage(cafe)}>
                                             <p className="font-bold text-lg text-primary dark:text-white truncate group-hover:underline">{cafe.name}</p>
                                         </button>
-                                        <p className="text-sm text-muted">{cafe.district}</p>
+                                        <div className="text-xs text-muted mt-1 space-y-0.5">
+                                            <p>Owner: <span className="font-semibold">{findUserName(cafe.manager_id)}</span></p>
+                                            <p>Dibuat oleh: <span className="font-semibold">{findUserName(cafe.created_by)}</span></p>
+                                        </div>
                                         <div className="mt-2"><StatusBadge status={cafe.status} /></div>
                                     </div>
                                 </div>
@@ -246,7 +281,8 @@ const CafeManagementPanel: React.FC = () => {
                                         <span className="text-sm font-semibold">Sponsored:</span>
                                         {currentUser?.role === 'admin' ? <SponsorToggle cafe={cafe} onToggle={handleToggleSponsor} disabled={isSaving} /> : (cafe.isSponsored ? <CheckCircleIcon className="h-5 w-5 text-green-500"/> : <XCircleIcon className="h-5 w-5 text-red-500"/>)}
                                     </div>
-                                    <div className="flex gap-4">
+                                    <div className="flex gap-2">
+                                        {currentUser?.role === 'admin' && <button onClick={() => handleOpenChangeOwner(cafe)} className="text-blue-500 p-1 rounded-full hover:bg-blue-100" title="Ubah Owner"><PencilSquareIcon className="h-6 w-6" /></button>}
                                         <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 p-1 rounded-full hover:bg-blue-100" title="Lihat Statistik"><ChartBarSquareIcon className="h-6 w-6" /></button>
                                         {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink p-1 rounded-full hover:bg-red-100" title="Hapus Cafe"><TrashIcon className="h-6 w-6"/></button>}
                                     </div>
@@ -256,7 +292,8 @@ const CafeManagementPanel: React.FC = () => {
                             <div className={`hidden lg:grid ${currentUser?.role === 'admin' ? 'grid-cols-[auto_6rem_1fr_auto_auto_auto]' : 'grid-cols-[6rem_1fr_auto_auto_auto]'} items-center gap-3 px-4 py-3`}>
                                  {currentUser?.role === 'admin' && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition" checked={selectedCafeIds.includes(cafe.id)} onChange={() => handleSelectOne(cafe.id)} aria-label={`Pilih ${cafe.name}`}/>}
                                  <ImageWithFallback src={cafe.coverUrl} alt={cafe.name} className="w-20 h-14 object-cover rounded-lg" width={150} height={100} />
-                                <div className="min-w-0 flex items-center gap-2">
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
                                      {currentUser?.role === 'admin' && (
                                         <button onClick={() => handleSetCafeOfTheWeek(cafe.id)} disabled={isSaving || cafe.status !== 'approved'} title={cafe.status !== 'approved' ? 'Hanya kafe yang disetujui bisa jadi Cafe of the Week' : 'Set as Cafe of the Week'} className={`p-1 rounded-full transition-colors disabled:opacity-50 ${cafeOfTheWeekId === cafe.id ? 'text-accent-amber' : 'text-muted hover:text-accent-amber'}`}>
                                             <TrophyIcon className="h-5 w-5" />
@@ -265,6 +302,15 @@ const CafeManagementPanel: React.FC = () => {
                                     <button onClick={() => { if(userCanManage(cafe)) { setEditingCafe(cafe); setIsFormOpen(true); }}} className="text-left w-full group disabled:cursor-default" disabled={!userCanManage(cafe)}>
                                         <p className="font-semibold text-primary dark:text-gray-200 truncate group-hover:underline">{cafe.name}</p>
                                     </button>
+                                    </div>
+                                    <div className="text-xs text-muted mt-1">
+                                        Owner: <span className="font-semibold">{findUserName(cafe.manager_id)}</span>
+                                        {currentUser?.role === 'admin' && 
+                                            <button onClick={() => handleOpenChangeOwner(cafe)} className="ml-2 text-blue-500 hover:underline text-xs font-bold">[Ubah]</button>
+                                        }
+                                        <br />
+                                        Dibuat oleh: <span className="font-semibold">{findUserName(cafe.created_by)}</span>
+                                    </div>
                                 </div>
                                 <div className="truncate"><StatusBadge status={cafe.status} /></div>
                                 <div className="flex items-center justify-center gap-2">
@@ -306,6 +352,7 @@ const CafeManagementPanel: React.FC = () => {
                 }}
             />}
             {isStatsModalOpen && statsCafe && <CafeStatisticsModal cafe={statsCafe} onClose={() => setIsStatsModalOpen(false)} />}
+            {isChangeOwnerModalOpen && cafeToChangeOwner && <ChangeOwnerModal cafe={cafeToChangeOwner} users={allUsers} onSave={handleSaveOwner} onCancel={() => setIsChangeOwnerModalOpen(false)} isSaving={isSaving}/>}
             {cafeToDelete && userCanManage(cafeToDelete) && <ConfirmationModal title="Hapus Cafe" message={`Yakin ingin menghapus "${cafeToDelete.name}"? Ini akan menghapus semua data terkait. Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmDeleteCafe} onCancel={() => setCafeToDelete(null)} isConfirming={isSaving}/>}
             {isConfirmingMultiDelete && currentUser?.role === 'admin' && <ConfirmationModal title={`Hapus ${selectedCafeIds.length} Kafe`} message={`Yakin ingin menghapus ${selectedCafeIds.length} kafe yang dipilih? Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmMultiDelete} onCancel={() => setIsConfirmingMultiDelete(false)} confirmText={`Ya, Hapus (${selectedCafeIds.length})`} isConfirming={isSaving}/>}
         </>

@@ -54,6 +54,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
 
     const handleFileChange = useCallback(async (file: File | null) => {
         if (file) {
+            // Validation: Max 5MB
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Ukuran file terlalu besar. Maksimal 5MB.");
+                return;
+            }
+
             try {
                 const base64 = await fileToBase64(file);
                 setPhoto(base64);

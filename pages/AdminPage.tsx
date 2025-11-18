@@ -1,7 +1,7 @@
 
 
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserDashboard from '../components/admin/UserDashboard';
@@ -83,14 +83,9 @@ const AdminPage: React.FC = () => {
                         <h2 className="text-xl">Welcome, <span className="font-bold text-primary">{currentUser.username}</span></h2>
                         <p className="text-gray-500">You are logged in as: <span className="font-semibold">{currentUser.role.toUpperCase().replace('_', ' ')}</span></p>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-4">
-                        <Link 
-                            to="/" 
-                            className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
-                            aria-label="Home"
-                            title="Kembali ke Home"
-                        >
-                            <HomeIcon className="h-6 w-6" />
+                    <div className="flex items-center gap-4">
+                         <Link to="/" className="hidden sm:flex items-center gap-2 text-muted hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors duration-300" title="Go to Homepage">
+                            <HomeIcon className="h-6 w-6"/>
                         </Link>
                         <button 
                             onClick={toggleTheme} 

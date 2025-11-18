@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier, Tag, User } from '../types';
@@ -121,6 +122,29 @@ const FilterPanelContent: React.FC<{
                             }`}
                         >
                             {'$'.repeat(tier)}
+                        </button>
+                    ))}
+                </div>
+            </details>
+
+            {/* Vibes (Default Closed & Moved Below Price) */}
+            <details className="py-2 border-t border-border group">
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                    Vibe
+                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                </summary>
+                <div className="mt-4 flex flex-wrap gap-2">
+                    {VIBES.map(vibe => (
+                        <button
+                            key={vibe.id}
+                            onClick={() => toggleMultiSelect('vibes', vibe.id)}
+                            className={`px-3 py-1.5 text-sm rounded-full border-2 font-bold transition-all ${
+                                filters.vibes.includes(vibe.id)
+                                    ? 'bg-brand text-white border-brand'
+                                    : 'bg-soft border-border text-muted hover:border-brand/50'
+                            }`}
+                        >
+                            {vibe.name}
                         </button>
                     ))}
                 </div>
