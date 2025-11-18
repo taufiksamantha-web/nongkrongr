@@ -1,4 +1,5 @@
 
+
 import React, { useContext } from 'react';
 import { CafeContext } from '../../context/CafeContext';
 import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
@@ -25,7 +26,7 @@ const AdminDashboard: React.FC = () => {
         <div>
             <AdminWelcomeHint />
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-                <h1 className="text-4xl font-bold font-jakarta">Dashboard Overview</h1>
+                <h1 className="text-3xl sm:text-4xl font-bold font-jakarta whitespace-nowrap">Dashboard Overview</h1>
             </div>
 
             {/* Cafe Summary Section - Moved to top and made full-width */}

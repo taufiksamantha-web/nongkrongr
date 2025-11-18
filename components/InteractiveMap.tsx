@@ -135,14 +135,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
               }
 
               if (isFirstLocationUpdate) {
-                  const cafeBounds = L.latLngBounds();
-                  (cafe ? [cafe] : cafes || []).forEach(c => { if (c.coords) cafeBounds.extend([c.coords.lat, c.coords.lng]); });
-                  const finalBounds = cafeBounds.extend(userLatLng);
-                  if (finalBounds.isValid()) {
-                      map.fitBounds(finalBounds, { padding: [50, 50], maxZoom: 16, duration: 0.5 });
-                  } else {
-                      map.setView(userLatLng, 15);
-                  }
+                  map.setView(userLatLng, 15, { animate: true, duration: 0.5 });
                   isFirstLocationUpdate = false;
               }
           },

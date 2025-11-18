@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Cafe, PriceTier, Tag } from '../types';
+import { Cafe, PriceTier, Tag, User } from '../types';
 import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
+import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoriteContext';
 import { SOUTH_SUMATRA_CITIES, VIBES, AMENITIES } from '../constants';
 import CafeCard from '../components/CafeCard';
@@ -15,6 +16,7 @@ import { checkIfOpen, checkIfOpenLate } from '../utils/timeUtils';
 import SkeletonCard from '../components/SkeletonCard';
 
 const ITEMS_PER_PAGE = 12;
+const INITIAL_INFINITE_SCROLL_LIMIT = 20;
 
 type CafeWithDistance = Cafe & { distance?: number };
 type OpeningStatus = 'all' | 'open_now' | 'open_late' | 'closed';
@@ -29,7 +31,8 @@ const FilterPanelContent: React.FC<{
     locationError: string | null;
     handleSortByDistance: () => void;
     allTags: Tag[];
-}> = ({ filters, handleFilterChange, toggleMultiSelect, setOpeningStatus, sortBy, isLocating, locationError, handleSortByDistance, allTags }) => {
+    currentUser: User | null;
+}> = ({ filters, handleFilterChange, toggleMultiSelect, setOpeningStatus, sortBy, isLocating, locationError, handleSortByDistance, allTags, currentUser }) => {
     
     const openingStatusOptions: { value: OpeningStatus; label: string }[] = [
         { value: 'all', label: 'Semua' },
@@ -53,11 +56,10 @@ const FilterPanelContent: React.FC<{
 
             {/* Sort by distance */}
             <div className="py-2 border-t border-border">
-                <label className="font-semibold">Urutkan</label>
                 <button
                     onClick={handleSortByDistance}
                     disabled={isLocating}
-                    className={`mt-2 w-full flex items-center justify-center gap-2 p-3 text-sm rounded-xl border-2 font-bold transition-all ${
+                    className={`w-full flex items-center justify-center gap-2 p-3 text-sm rounded-xl border-2 font-bold transition-all ${
                         sortBy === 'distance'
                             ? 'bg-brand text-white border-brand'
                             : 'bg-soft border-border text-primary hover:border-brand/50'
@@ -167,20 +169,22 @@ const FilterPanelContent: React.FC<{
             </details>
 
             {/* Tags (moved to bottom, no details) */}
-            <div className="py-2 border-t border-border">
-                <label className="font-semibold block">Tag Komunitas</label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                    {allTags.map(tag => (
-                        <button 
-                            key={tag.id} 
-                            onClick={() => toggleMultiSelect('tags', tag.id)} 
-                            className={`px-3 py-1.5 text-xs rounded-full border-2 font-bold transition-all ${filters.tags.includes(tag.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}
-                        >
-                           #{tag.name}
-                        </button>
-                    ))}
+            {currentUser && (
+                <div className="py-2 border-t border-border">
+                    <label className="font-semibold block">Tag Komunitas</label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {allTags.map(tag => (
+                            <button 
+                                key={tag.id} 
+                                onClick={() => toggleMultiSelect('tags', tag.id)} 
+                                className={`px-3 py-1.5 text-xs rounded-full border-2 font-bold transition-all ${filters.tags.includes(tag.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}
+                            >
+                               #{tag.name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
         </>
     );
 };
@@ -190,10 +194,11 @@ const ExplorePage: React.FC = () => {
   const { cafes, loading, error, getAllTags } = cafeContext!;
   const { theme } = useContext(ThemeContext);
   const { favoriteIds } = useFavorites();
+  const { currentUser } = useAuth();
   
   const [searchParams, setSearchParams] = useSearchParams();
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
-  const observerRef = useRef<HTMLDivElement>(null);
+  const loaderRef = useRef<HTMLDivElement>(null);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [allTags, setAllTags] = useState<Tag[]>([]);
@@ -341,9 +346,11 @@ const ExplorePage: React.FC = () => {
     });
   }, [cafes, filters, sortBy, userLocation, isFavoritesView, favoriteIds, sortParam]);
 
+  const cafesToShow = useMemo(() => sortedCafes, [sortedCafes]);
+  
   const visibleCafes = useMemo(() => {
-    return sortedCafes.slice(0, visibleCount);
-  }, [sortedCafes, visibleCount]);
+    return cafesToShow.slice(0, visibleCount);
+  }, [cafesToShow, visibleCount]);
 
   useEffect(() => {
     setVisibleCount(ITEMS_PER_PAGE);
@@ -351,27 +358,25 @@ const ExplorePage: React.FC = () => {
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => {
-        const firstEntry = entries[0];
-        if (firstEntry.isIntersecting && visibleCount < sortedCafes.length) {
-          setVisibleCount((prevCount) => prevCount + ITEMS_PER_PAGE);
-        }
-      },
-      { threshold: 1.0 }
+        (entries) => {
+            if (entries[0].isIntersecting && !loading) {
+                if (visibleCount < cafesToShow.length && visibleCount < INITIAL_INFINITE_SCROLL_LIMIT) {
+                    setVisibleCount(prev => Math.min(prev + ITEMS_PER_PAGE, cafesToShow.length));
+                }
+            }
+        },
+        { rootMargin: "0px 0px 400px 0px" }
     );
-
-    const currentObserverRef = observerRef.current;
-    if (currentObserverRef) {
-      observer.observe(currentObserverRef);
+    const currentLoaderRef = loaderRef.current;
+    if (currentLoaderRef) {
+        observer.observe(currentLoaderRef);
     }
-
     return () => {
-      if (currentObserverRef) {
-        observer.unobserve(currentObserverRef);
-      }
+        if (currentLoaderRef) {
+            observer.unobserve(currentLoaderRef);
+        }
     };
-  }, [visibleCount, sortedCafes.length]);
-
+}, [loaderRef, loading, visibleCount, cafesToShow]);
 
   const toggleMultiSelect = (key: 'vibes' | 'amenities' | 'tags', value: string) => {
     const currentValues = filters[key];
@@ -384,10 +389,13 @@ const ExplorePage: React.FC = () => {
   if (error) return <DatabaseConnectionError />;
 
   const filterPanelProps = {
-    filters, handleFilterChange, toggleMultiSelect, setOpeningStatus, sortBy, isLocating, locationError, handleSortByDistance, allTags
+    filters, handleFilterChange, toggleMultiSelect, setOpeningStatus, sortBy, isLocating, locationError, handleSortByDistance, allTags, currentUser
   };
   
   const isSpecialView = isFavoritesView || sortParam === 'trending';
+
+  const showInfiniteLoader = visibleCount < cafesToShow.length && visibleCount < INITIAL_INFINITE_SCROLL_LIMIT;
+  const showMoreButton = visibleCount < cafesToShow.length && visibleCount >= INITIAL_INFINITE_SCROLL_LIMIT;
 
   return (
     <div className="container mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
@@ -437,7 +445,7 @@ const ExplorePage: React.FC = () => {
             />
         </div>
         <div className="relative z-10 rounded-3xl mb-8 overflow-hidden shadow-md h-96 border border-border">
-            <InteractiveMap cafes={sortedCafes} theme={theme} showUserLocation={true} showHeatmap={showHeatmap} />
+            <InteractiveMap cafes={visibleCafes} theme={theme} showUserLocation={true} showHeatmap={showHeatmap} />
             <button
                 onClick={() => setShowHeatmap(!showHeatmap)}
                 className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-card/80 backdrop-blur-sm text-primary font-bold py-2 px-4 rounded-full shadow-lg hover:bg-card transition-colors"
@@ -469,10 +477,23 @@ const ExplorePage: React.FC = () => {
                 <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
                     {visibleCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} distance={cafe.distance} animationDelay={`${i * 75}ms`} />)}
                 </div>
-                {visibleCount < sortedCafes.length && (
-                    <div ref={observerRef} className="flex justify-center items-center py-8">
-                        <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-brand"></div>
-                        <span className="sr-only">Loading more cafes...</span>
+                
+                {showInfiniteLoader && (
+                    <div ref={loaderRef} className="py-8">
+                        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+                            {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
+                        </div>
+                    </div>
+                )}
+
+                {showMoreButton && (
+                    <div className="flex justify-center py-8">
+                        <button
+                            onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
+                            className="bg-brand text-white font-bold py-3 px-8 rounded-2xl hover:bg-brand/90 transition-all duration-300"
+                        >
+                            Tampilkan Lagi
+                        </button>
                     </div>
                 )}
             </>

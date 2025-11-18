@@ -25,7 +25,7 @@ const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color:
 
     return (
         <div className="flex flex-col items-center text-center">
-            <div className="relative w-24 h-24 sm:w-28 sm:h-28">
+            <div className="relative w-20 h-20 sm:w-28 sm:h-28">
                 <svg className="w-full h-full" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="45" className="stroke-current text-gray-200 dark:text-gray-700" strokeWidth="10" fill="transparent" />
                     <circle
@@ -39,11 +39,11 @@ const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color:
                     />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-xl sm:text-2xl font-bold font-jakarta" style={{ color }}>{score > 0 ? score.toFixed(1) : 'N/A'}</span>
+                    <span className="text-lg sm:text-2xl font-bold font-jakarta" style={{ color }}>{score > 0 ? score.toFixed(1) : 'N/A'}</span>
                     <span className="text-xs text-muted">/ {max}</span>
                 </div>
             </div>
-            <p className="mt-2 sm:mt-4 font-semibold">{label}</p>
+            <p className="mt-2 sm:mt-4 text-sm font-semibold">{label}</p>
         </div>
     );
 };
@@ -298,10 +298,10 @@ const DetailPage: React.FC = () => {
                     {/* Scores */}
                     <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
                         <h2 className="text-3xl font-bold font-jakarta text-center mb-8">Skor Nongkrongr</h2>
-                        <div className="flex flex-wrap justify-around items-start gap-4">
+                        <div className="flex flex-row justify-around items-start gap-2 sm:gap-4">
                             <ScoreDisplay label="Aesthetic" score={cafe.avgAestheticScore} max={10} color="#FF4081" />
                             <ScoreDisplay label="Nugas" score={cafe.avgWorkScore} max={10} color="#00E5FF"/>
-                            <ScoreDisplay label="Keramaian Malam" score={cafe.avgCrowdEvening} max={5} color="#7C4DFF"/>
+                            <ScoreDisplay label="Keramaian" score={cafe.avgCrowdEvening} max={5} color="#7C4DFF"/>
                         </div>
                     </div>
 

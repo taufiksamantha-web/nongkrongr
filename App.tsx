@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink, useLocation, Navigate, Outlet } from 'react-router-dom';
 import HomePage from './pages/HomePage';
@@ -187,17 +188,14 @@ const MainLayout: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
 
 const App: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('nongkrongr_welcome_seen'));
-  const [theme, setTheme] = useState<Theme>('dark');
-  
-  useEffect(() => {
+  const [theme, setTheme] = useState<Theme>(() => {
     const storedTheme = localStorage.getItem('theme') as Theme | null;
     if (storedTheme) {
-        setTheme(storedTheme);
-    } else {
-        setTheme('dark');
+      return storedTheme;
     }
-  }, []);
-
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+  
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {

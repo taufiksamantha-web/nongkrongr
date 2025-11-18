@@ -47,13 +47,13 @@ const Footer: React.FC = () => {
     return (
         <footer className="bg-card border-t border-border mt-16">
             <div className="container mx-auto px-6 py-12">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 text-center lg:text-left">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-left">
                     {/* Branding & About */}
-                    <div className="col-span-1 lg:col-span-2">
+                    <div className="col-span-1 md:col-span-2">
                         <Link to="/" className="inline-block mb-2">
-                           <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-8 lg:h-10 w-auto mx-auto lg:mx-0" />
+                           <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-8 lg:h-10 w-auto" />
                         </Link>
-                        <p className="mt-2 text-muted max-w-sm mx-auto lg:mx-0">
+                        <p className="mt-2 text-muted max-w-sm">
                             Platform rekomendasi cafe aesthetic di Sumatera Selatan untuk Gen Z yang hobi nongkrong, hunting foto, dan nugas.
                         </p>
                     </div>
@@ -73,7 +73,7 @@ const Footer: React.FC = () => {
                     {/* Social Media */}
                     <div>
                          <h4 className="font-bold text-primary dark:text-gray-200 uppercase tracking-wider">Follow Us</h4>
-                         <div className="mt-4 flex space-x-4 justify-center lg:justify-start">
+                         <div className="mt-4 flex space-x-4 justify-start">
                             {socialLinks.instagram && socialLinks.instagram !== '#' && <a href={socialLinks.instagram} aria-label="Instagram" className="text-muted hover:text-[#E1306C] transition-colors"><InstagramIcon /></a>}
                             {socialLinks.tiktok && socialLinks.tiktok !== '#' && <a href={socialLinks.tiktok} aria-label="TikTok" className="text-muted hover:text-accent-cyan transition-colors"><TikTokIcon /></a>}
                             {socialLinks.twitter && socialLinks.twitter !== '#' && <a href={socialLinks.twitter} aria-label="Twitter" className="text-muted hover:text-[#1DA1F2] transition-colors"><TwitterIcon /></a>}

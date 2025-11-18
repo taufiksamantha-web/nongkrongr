@@ -22,12 +22,16 @@ const LoginForm: React.FC = () => {
     useEffect(() => {
         loginInputRef.current?.focus();
         setError('');
-        setSuccessMessage('');
-        // Clear fields on mode change for better UX
-        setUsername('');
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
+        // Do not clear success message on mode change, so user can see it after form switches.
+        // setSuccessMessage(''); 
+        
+        // Clear fields on mode change for better UX, but only if not coming from a successful signup
+        if (!successMessage) {
+            setUsername('');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+        }
     }, [mode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -61,6 +65,11 @@ const LoginForm: React.FC = () => {
                 } else {
                     setSuccessMessage('Pendaftaran berhasil! Silakan login untuk melanjutkan.');
                 }
+                // Reset form fields after successful signup
+                setUsername('');
+                setEmail(''); // Keep email for login convenience? No, user might have used username. Clear all.
+                setPassword('');
+                setConfirmPassword('');
                 setMode('login');
                 setIsCafeAdmin(false);
             }
