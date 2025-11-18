@@ -8,6 +8,7 @@ import AdminPage from './pages/AdminPage';
 import AboutPage from './pages/AboutPage';
 import LoginPage from './pages/LoginPage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import FeedbackPage from './pages/FeedbackPage';
 import WelcomeModal from './components/WelcomeModal';
 import Footer from './components/Footer';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -178,16 +179,6 @@ const MainLayout: React.FC<{ showWelcome: boolean; onCloseWelcome: () => void; }
                 <Outlet />
             </main>
             
-            <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
-                <Link 
-                    to="/explore"
-                    className="flex items-center gap-3 bg-brand hover:bg-brand/90 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:shadow-brand/30 transition-all duration-300 transform hover:scale-105 active:scale-95 animate-subtle-bounce"
-                >
-                    <MagnifyingGlassIcon className="h-6 w-6" />
-                    <span>Jelajahi</span>
-                </Link>
-            </div>
-
             <Footer />
             <ScrollToTopButton />
         </div>
@@ -241,6 +232,7 @@ const App: React.FC = () => {
                         <Route path="/cafe/:slug" element={<DetailPage />} />
                         <Route path="/about" element={<AboutPage />} />
                         <Route path="/leaderboard" element={<LeaderboardPage />} />
+                        <Route path="/feedback" element={<FeedbackPage />} />
                     </Route>
                     
                     <Route path="/login" element={

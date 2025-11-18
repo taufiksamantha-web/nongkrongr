@@ -112,6 +112,17 @@
       ]
     },
     {
+      "name": "feedback",
+      "columns": [
+        { "name": "id", "type": "bigint", "is_primary_key": true, "is_identity": true },
+        { "name": "created_at", "type": "timestamptz", "default": "now()" },
+        { "name": "name", "type": "text" },
+        { "name": "message", "type": "text" },
+        { "name": "user_id", "type": "uuid", "references": "profiles(id)", "on_delete": "set null", "is_nullable": true },
+        { "name": "status", "type": "text", "default": "new" }
+      ]
+    },
+    {
       "name": "cafe_vibes",
       "columns": [
         { "name": "cafe_id", "type": "text", "is_primary_key": true, "references": "cafes(id)", "on_delete": "cascade" },

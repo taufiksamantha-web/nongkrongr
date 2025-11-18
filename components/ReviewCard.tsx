@@ -30,14 +30,23 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
     }
   }, [storageKey]);
 
-  const handleVote = (e: React.MouseEvent) => {
+  const handleVote = async (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (voted || !cafeContext) return;
       
-      cafeContext.incrementHelpfulCount(review.id);
-      localStorage.setItem(storageKey, 'true');
+      // Set UI to voted state first for immediate feedback
       setVoted(true);
+      localStorage.setItem(storageKey, 'true');
+
+      const { error } = await cafeContext.incrementHelpfulCount(review.id);
+
+      if (error) {
+        // If DB update failed, revert UI changes and inform user
+        setVoted(false);
+        localStorage.removeItem(storageKey);
+        alert('Gagal menyimpan vote. Perubahan telah dibatalkan. Silakan coba lagi.');
+      }
   };
   
   const content = (
@@ -49,7 +58,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
             <RatingBadge icon={<BriefcaseIcon className="h-3 w-3" />} score={review.ratingWork} color="bg-accent-cyan" />
         </div>
       </div>
-      <p className="text-muted italic -mt-8 line-clamp-4 min-h-[80px]">
+      <p className="text-muted italic -mt-8 line-clamp-4">
         {review.text}
       </p>
     </div>
@@ -60,11 +69,12 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
       className="bg-card rounded-3xl shadow-lg p-6 flex flex-col h-full transform transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl border border-border animate-fade-in-up review-card-optimized"
       style={{ animationDelay }}
     >
-      {/* Jika ada foto, linknya di foto. Jika tidak, linknya di seluruh card */}
-      {review.photos && review.photos.length > 0 && review.photos[0] 
-        ? content 
-        : <Link to={`/cafe/${review.cafeSlug}`} className="block flex-grow">{content}</Link>
-      }
+      <div className="flex-grow">
+          {review.photos && review.photos.length > 0 && review.photos[0] 
+            ? content 
+            : <Link to={`/cafe/${review.cafeSlug}`} className="block h-full">{content}</Link>
+          }
+      </div>
 
       <div className="mt-4 pt-4 border-t border-border">
           {review.photos && review.photos.length > 0 && review.photos[0] && (

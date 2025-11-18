@@ -66,6 +66,7 @@ const Footer: React.FC = () => {
                             <Link to="/explore" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Explore</Link>
                             <Link to="/leaderboard" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Leaderboard</Link>
                             <Link to="/about" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Tentang Kami</Link>
+                            <Link to="/feedback" className="block text-muted hover:text-brand dark:hover:text-white transition-colors">Saran & Masukan</Link>
                         </nav>
                     </div>
 

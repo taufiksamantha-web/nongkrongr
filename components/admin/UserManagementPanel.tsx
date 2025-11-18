@@ -5,9 +5,10 @@ import { useAuth } from '../../context/AuthContext';
 import UserFormModal from './UserFormModal';
 import FloatingNotification from '../common/FloatingNotification';
 import ConfirmationModal from '../common/ConfirmationModal';
-import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/solid';
+import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, PencilIcon, TrashIcon, UserCircleIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 
 const ITEMS_PER_PAGE = 5;
+type RoleTab = 'admin' | 'admin_cafe' | 'user';
 
 const UserManagementPanel: React.FC = () => {
     const { currentUser } = useAuth();
@@ -20,6 +21,7 @@ const UserManagementPanel: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [activeTab, setActiveTab] = useState<RoleTab>('admin_cafe');
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -36,16 +38,16 @@ const UserManagementPanel: React.FC = () => {
     useEffect(() => {
         fetchUsers();
     }, []);
-
-    const filteredUsers = useMemo(() => {
-        return users.filter(user =>
-            user.username.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }, [users, searchQuery]);
-
+    
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery]);
+    }, [searchQuery, activeTab]);
+
+    const filteredUsers = useMemo(() => {
+        return users
+            .filter(user => user.role === activeTab)
+            .filter(user => user.username.toLowerCase().includes(searchQuery.toLowerCase()));
+    }, [users, searchQuery, activeTab]);
 
     const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
     const paginatedUsers = filteredUsers.slice(
@@ -82,15 +84,15 @@ const UserManagementPanel: React.FC = () => {
             return;
         }
         setIsDeleting(true);
-        // PENTING: Menghapus user dari tabel 'auth.users' membutuhkan hak akses admin
-        // dan idealnya dilakukan melalui Supabase Edge Function untuk keamanan.
-        // Kode di bawah ini hanya menghapus profil, bukan data otentikasi user.
         const { error } = await supabase.from('profiles').delete().eq('id', userToDelete.id);
         if (error) {
             setNotification({ message: `Gagal menghapus profil: ${error.message}`, type: 'error' });
         } else {
             setNotification({ message: `Profil "${userToDelete.username}" telah dihapus.`, type: 'success' });
             setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+             if (paginatedUsers.length === 1 && currentPage > 1) {
+                setCurrentPage(currentPage - 1);
+            }
         }
         setUserToDelete(null);
         setIsDeleting(false);
@@ -100,13 +102,33 @@ const UserManagementPanel: React.FC = () => {
         setEditingUser(user);
         setIsUserFormOpen(true);
     };
+
+    const TabButton: React.FC<{ role: RoleTab, icon: React.ReactNode, label: string }> = ({ role, icon, label }) => (
+        <button
+            onClick={() => setActiveTab(role)}
+            className={`flex items-center justify-center gap-2 w-full p-3 font-bold border-b-4 transition-colors ${
+                activeTab === role 
+                ? 'text-brand border-brand' 
+                : 'text-muted border-transparent hover:bg-soft dark:hover:bg-gray-700/50'
+            }`}
+        >
+            {icon}
+            {label}
+        </button>
+    );
     
     return (
         <div>
              {notification && <FloatingNotification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
             <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-                 <h2 className="text-2xl font-bold font-jakarta">User Management</h2>
+                 <h2 className="text-2xl font-bold font-jakarta">Manajemen User</h2>
             </div>
+             <div className="flex border-b border-border mb-4">
+                <TabButton role="admin_cafe" icon={<BuildingStorefrontIcon className="h-5 w-5"/>} label="Pengelola" />
+                <TabButton role="user" icon={<UserCircleIcon className="h-5 w-5"/>} label="User" />
+                <TabButton role="admin" icon={<PencilIcon className="h-5 w-5"/>} label="Admin" />
+            </div>
+
             <div className="relative mb-4">
                 <MagnifyingGlassIcon className="h-5 w-5 text-muted absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
@@ -122,13 +144,13 @@ const UserManagementPanel: React.FC = () => {
                     <thead>
                         <tr className="border-b-2 border-border">
                             <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Username</th>
-                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Role</th>
-                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider text-right">Actions</th>
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Email</th>
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider text-right">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan={3} className="text-center p-4 text-muted">Loading users...</td></tr>
+                            <tr><td colSpan={3} className="text-center p-4 text-muted">Memuat user...</td></tr>
                         ) : paginatedUsers.length === 0 ? (
                             <tr><td colSpan={3} className="text-center p-10 text-muted">
                                 <InboxIcon className="mx-auto h-10 w-10 mb-2" />
@@ -138,13 +160,14 @@ const UserManagementPanel: React.FC = () => {
                             paginatedUsers.map(user => (
                                 <tr key={user.id} className="border-b border-border last:border-0">
                                     <td className="p-4 font-semibold text-primary dark:text-gray-200">{user.username}</td>
-                                    <td className="p-4"><span className={`px-2 py-1 text-xs font-bold rounded-full ${user.role === 'admin' ? 'bg-brand/10 text-brand' : 'bg-gray-200 dark:bg-gray-600 text-muted'}`}>{user.role.toUpperCase()}</span></td>
+                                    <td className="p-4 text-muted text-sm truncate">{user.email}</td>
                                     <td className="p-4 text-right">
                                         <div className="inline-flex items-center gap-2">
                                             <button 
                                                 onClick={() => handleOpenEditForm(user)} 
-                                                className="p-2 text-brand rounded-full hover:bg-brand/10 transition-colors"
+                                                className="p-2 text-brand rounded-full hover:bg-brand/10 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                                 aria-label={`Edit user ${user.username}`}
+                                                disabled={user.id === currentUser?.id}
                                             >
                                                 <PencilIcon className="h-5 w-5" />
                                             </button>

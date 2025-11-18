@@ -116,7 +116,7 @@ interface CafeContextType {
     addReview: (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => Promise<{ data: any, error: any }>;
     updateReviewStatus: (reviewId: string, status: Review['status']) => Promise<{ error: any }>;
     deleteReview: (reviewId: string) => Promise<{ error: any }>;
-    incrementHelpfulCount: (reviewId: string) => Promise<void>;
+    incrementHelpfulCount: (reviewId: string) => Promise<{ error: any }>;
     getPendingReviews: () => (Review & { cafeName: string; cafeId: string })[];
     getAllReviews: () => (Review & { cafeName: string; cafeId: string })[];
     getPendingCafes: () => Cafe[];
@@ -323,13 +323,52 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const incrementHelpfulCount = async (reviewId: string) => {
+    const incrementHelpfulCount = async (reviewId: string): Promise<{ error: any }> => {
+        // Optimistic update: immediately increment in the UI
         setCafes(prev => prev.map(c => ({...c, reviews: c.reviews.map(r => r.id === reviewId ? {...r, helpful_count: (r.helpful_count || 0) + 1} : r)})));
-        const { error } = await supabase.rpc('increment_helpful_count', { review_id_param: reviewId });
-        if (error) {
-            console.error("Failed to increment helpful count:", error);
-            // Non-critical, no rollback needed, but maybe refresh to be safe
-            fetchCafes(false);
+
+        try {
+            // The RPC call was failing, likely because the function doesn't exist in the DB.
+            // This is a non-atomic read-then-write operation as a fallback.
+            // It might have race conditions but is better than a broken feature.
+            
+            // 1. Fetch the current review from the database
+            const { data: currentReview, error: fetchError } = await supabase
+                .from('reviews')
+                .select('helpful_count')
+                .eq('id', reviewId)
+                .single();
+
+            if (fetchError) {
+                // If the review is not found, or another error occurs
+                throw fetchError;
+            }
+
+            // 2. Calculate the new count based on the *actual* database value
+            const newCount = (currentReview?.helpful_count || 0) + 1;
+
+            // 3. Update the review with the new count
+            const { error: updateError } = await supabase
+                .from('reviews')
+                .update({ helpful_count: newCount })
+                .eq('id', reviewId);
+
+            if (updateError) {
+                throw updateError;
+            }
+            
+            // If the update is successful, the optimistic UI state is likely correct.
+            // The real-time subscription will eventually ensure consistency across clients.
+            return { error: null };
+
+        } catch (error: any) {
+            // Log the actual error message
+            console.error("Failed to increment helpful count, reverting:", error.message || error);
+            
+            // Revert optimistic update by decrementing the count in the UI
+            setCafes(prev => prev.map(c => ({...c, reviews: c.reviews.map(r => r.id === reviewId ? {...r, helpful_count: Math.max(0, (r.helpful_count || 1) - 1)} : r)})));
+            
+            return { error };
         }
     };
 

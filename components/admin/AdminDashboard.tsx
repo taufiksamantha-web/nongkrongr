@@ -1,3 +1,4 @@
+
 import React, { useContext } from 'react';
 import { CafeContext } from '../../context/CafeContext';
 import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
@@ -5,10 +6,11 @@ import CafeManagementPanel from './CafeManagementPanel';
 import ReviewManagement from './PendingReviews';
 import UserManagementPanel from './UserManagementPanel';
 import WebsiteSettingsPanel from './WebsiteSettingsPanel';
+import FeedbackPanel from './FeedbackPanel';
 import StatCard from './StatCard';
 import StatChart from './StatChart';
 import AdminWelcomeHint from './AdminWelcomeHint';
-import ApprovalHub from './ApprovalHub'; // Import ApprovalHub
+import ApprovalHub from './ApprovalHub';
 
 const AdminDashboard: React.FC = () => {
     const { cafes } = useContext(CafeContext)!;
@@ -66,10 +68,11 @@ const AdminDashboard: React.FC = () => {
                 <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><ApprovalHub /></div>
                 <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><CafeManagementPanel /></div>
                 <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><ReviewManagement /></div>
+                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><UserManagementPanel /></div>
+                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><FeedbackPanel /></div>
               </div>
 
               <div className="lg:col-span-1 space-y-8">
-                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><UserManagementPanel /></div>
                 <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><WebsiteSettingsPanel /></div>
               </div>
             </div>

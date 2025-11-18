@@ -9,7 +9,7 @@ import CafeCard from '../components/CafeCard';
 import FeaturedCafeCard from '../components/FeaturedCafeCard';
 import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
-import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon, MapPinIcon, RocketLaunchIcon, TrophyIcon } from '@heroicons/react/24/solid';
+import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon, MapPinIcon, RocketLaunchIcon, TrophyIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonFeaturedCard from '../components/SkeletonFeaturedCard';
@@ -301,7 +301,7 @@ const HomePage: React.FC = () => {
   if (error) return <DatabaseConnectionError />;
 
   return (
-    <div>
+    <div className="relative">
       <div className="relative bg-gray-900 overflow-hidden">
         <div 
           className="absolute inset-0 z-0"
@@ -410,6 +410,17 @@ const HomePage: React.FC = () => {
             <SectionHeader icon={<ChatBubbleBottomCenterTextIcon className="h-8 w-8"/>} title="Kata Mereka Tentang Cafe Hits" subtitle="Review teratas dari para penjelajah cafe di Sumatera Selatan." />
              {loading ? (<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{[...Array(4)].map((_, i) => <SkeletonReviewCard key={i} />)}</div>) : topReviews.length > 0 ? (<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">{topReviews.map((review, i) => (<ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />))}</div>) : (<EmptyState title="Belum Ada Review" message="Sepertinya belum ada review yang ditinggalkan oleh pengguna. Jadilah yang pertama!" />)}
         </div>
+      </div>
+
+      {/* Tombol Jelajahi untuk Mobile */}
+      <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
+          <Link 
+              to="/explore"
+              className="flex items-center gap-3 bg-brand hover:bg-brand/90 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:shadow-brand/30 transition-all duration-300 transform hover:scale-105 active:scale-95 animate-subtle-bounce"
+          >
+              <MagnifyingGlassIcon className="h-6 w-6" />
+              <span>Jelajahi</span>
+          </Link>
       </div>
     </div>
   );
