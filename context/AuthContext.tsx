@@ -175,11 +175,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const logout = async () => {
         const { error } = await supabase.auth.signOut();
-        // The onAuthStateChange listener will also set the user to null,
-        // but we do it here too for a faster UI response.
-        if (!error) {
-            setCurrentUser(null);
+        
+        // Always clear the user state locally, regardless of server response.
+        // This ensures the user is visually logged out even if the server session is already gone/invalid.
+        setCurrentUser(null);
+
+        if (error) {
+            // If the error indicates the session is missing or invalid, treat it as a successful logout.
+            // "Auth session missing!" or 403/401 means the user is effectively already logged out on the server.
+            const isSessionError = 
+                error.message.includes('Auth session missing') || 
+                error.message.includes('session_not_found') ||
+                error.status === 401 ||
+                error.status === 403;
+            
+            if (isSessionError) {
+                console.warn("Logout warning (safe to ignore):", error.message);
+                return { error: null };
+            }
         }
+        
         return { error };
     };
 
