@@ -25,6 +25,7 @@
       "columns": [
         { "name": "id", "type": "uuid", "is_primary_key": true, "references": "auth.users(id)" },
         { "name": "username", "type": "text", "is_unique": true },
+        { "name": "email", "type": "text", "is_unique": true },
         { "name": "role", "type": "text", "default": "user" },
         { "name": "status", "type": "text", "default": "active" }
       ],

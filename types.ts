@@ -101,6 +101,7 @@ export interface Cafe {
 export interface Profile {
   id: string;
   username: string;
+  email: string;
   role: 'admin' | 'user' | 'admin_cafe';
   status: 'active' | 'pending_approval';
   updated_at?: string;

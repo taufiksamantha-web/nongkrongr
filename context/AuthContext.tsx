@@ -7,7 +7,7 @@ import { AuthError, Session } from '@supabase/supabase-js';
 interface AuthContextType {
     currentUser: User | null;
     loading: boolean;
-    login: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+    login: (identifier: string, password: string) => Promise<{ error: AuthError | null }>;
     signup: (username: string, email: string, password: string, isCafeAdmin?: boolean) => Promise<{ error: AuthError | null }>;
     logout: () => Promise<{ error: AuthError | null }>;
 }
@@ -90,9 +90,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, [fetchUserAndSetState]);
 
-    const login = async (email: string, password: string) => {
-        // The onAuthStateChange listener will handle state updates on success.
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const login = async (identifier: string, password: string) => {
+        let emailToLogin = identifier;
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+
+        if (!isEmail) {
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('username', identifier)
+                .single();
+
+            if (profileError || !profile) {
+                console.error("Username lookup failed:", profileError);
+                return { error: new AuthError("Username/email atau password salah.") };
+            }
+            emailToLogin = profile.email;
+        }
+
+        const { error } = await supabase.auth.signInWithPassword({ email: emailToLogin, password });
+        if (error && error.message === 'Invalid login credentials') {
+             return { error: new AuthError("Username/email atau password salah.") };
+        }
         return { error };
     };
 
@@ -114,10 +133,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const { error: profileError } = await supabase
             .from('profiles')
-            .insert({ id: signUpData.user.id, username, role, status });
+            .insert({ id: signUpData.user.id, username, email, role, status });
         
         if (profileError) {
             console.error("Critical: Failed to create user profile after signup.", profileError);
+            // Attempt to delete the auth user if profile creation fails to avoid orphaned auth accounts.
+            // This requires admin privileges and is best done in a server environment (e.g., Edge Function).
+            // For client-side, this is a best-effort that might fail.
+            // await supabase.auth.admin.deleteUser(signUpData.user.id);
             return { error: new AuthError(profileError.message) };
         }
         

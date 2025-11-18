@@ -5,7 +5,7 @@ import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoriteContext';
-import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon, TagIcon } from '@heroicons/react/24/solid';
+import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon, TagIcon, CurrencyDollarIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
@@ -241,6 +241,21 @@ const DetailPage: React.FC = () => {
                              <ClockIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
                             <span>Buka: {cafe.openingHours}</span>
                         </div>
+                        <div className="flex items-center text-muted mt-2">
+                            <CurrencyDollarIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
+                            <div className="flex items-center">
+                                <span className="sr-only">Price tier {cafe.priceTier} out of 4</span>
+                                {[1, 2, 3, 4].map((tier) => (
+                                    <CurrencyDollarIcon
+                                        key={tier}
+                                        aria-hidden="true"
+                                        className={`h-6 w-6 ${
+                                            tier <= cafe.priceTier ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600'
+                                        }`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                         {isClosed && (
                             <div className="mt-3 flex items-center gap-3 bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 p-3 rounded-xl text-sm font-semibold">
                                 <ExclamationTriangleIcon className="h-6 w-6 flex-shrink-0" />
@@ -259,13 +274,15 @@ const DetailPage: React.FC = () => {
                     </div>
                     
                     {/* Tags */}
-                     <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
-                        <div className="flex items-center gap-3 mb-4">
-                           <TagIcon className="h-6 w-6 text-brand" />
-                           <h2 className="text-2xl font-bold font-jakarta">Tag Komunitas</h2>
+                    {currentUser && (
+                         <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
+                            <div className="flex items-center gap-3 mb-4">
+                               <TagIcon className="h-6 w-6 text-brand" />
+                               <h2 className="text-2xl font-bold font-jakarta">Tag Komunitas</h2>
+                            </div>
+                            <TagManager cafe={cafe} setNotification={setNotification} />
                         </div>
-                        <TagManager cafe={cafe} setNotification={setNotification} />
-                    </div>
+                    )}
 
                     {/* Interactive Map & Action Button */}
                     <div className="space-y-4">

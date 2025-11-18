@@ -1,4 +1,4 @@
-id,username,role,status
-3ae5c66f-70d6-4071-9a08-5019ca9fb056,admin_nongkrongr,admin,active
-3226a62a-1a05-4992-b3ce-3ec08586d1e1,user_biasa,user,active
-f47ac10b-58cc-4372-a567-0e02b2c3d479,sins_manager,admin_cafe,active
+id,username,email,role,status
+3ae5c66f-70d6-4071-9a08-5019ca9fb056,admin_nongkrongr,admin@nongkrongr.com,admin,active
+3226a62a-1a05-4992-b3ce-3ec08586d1e1,user_biasa,user@example.com,user,active
+f47ac10b-58cc-4372-a567-0e02b2c3d479,sins_manager,sins.manager@example.com,admin_cafe,active

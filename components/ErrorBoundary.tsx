@@ -11,13 +11,8 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Reverted to a standard constructor for state initialization. This is a more robust
-  // pattern that ensures `this.props` is correctly set up via `super(props)`, resolving
-  // issues where it might not be recognized on the component instance.
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false };
-  }
+  // FIX: Initialized state as a class property. The constructor-based initialization was causing errors where `this.state` and `this.props` were not being recognized on the component instance.
+  public state: State = { hasError: false };
 
   static getDerivedStateFromError(_error: Error): State {
     return { hasError: true };

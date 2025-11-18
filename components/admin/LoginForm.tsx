@@ -11,16 +11,22 @@ const LoginForm: React.FC = () => {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [isCafeAdmin, setIsCafeAdmin] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [loading, setLoading] = useState(false);
-    const emailInputRef = useRef<HTMLInputElement>(null);
+    const loginInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        emailInputRef.current?.focus();
+        loginInputRef.current?.focus();
         setError('');
         setSuccessMessage('');
+        // Clear fields on mode change for better UX
+        setUsername('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
     }, [mode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -30,6 +36,16 @@ const LoginForm: React.FC = () => {
         setLoading(true);
 
         if (mode === 'signup') {
+            if (password.length < 6) {
+                setError("Password minimal 6 karakter.");
+                setLoading(false);
+                return;
+            }
+            if (password !== confirmPassword) {
+                setError("Password dan konfirmasi password tidak cocok.");
+                setLoading(false);
+                return;
+            }
             if (username.length < 3) {
                 setError("Username minimal 3 karakter.");
                 setLoading(false);
@@ -37,7 +53,7 @@ const LoginForm: React.FC = () => {
             }
             const { error: authError } = await signup(username, email, password, isCafeAdmin);
             if (authError) {
-                 setError(authError.message || 'Gagal mendaftar. Email mungkin sudah digunakan.');
+                 setError(authError.message || 'Gagal mendaftar. Email atau username mungkin sudah digunakan.');
             } else {
                 if (isCafeAdmin) {
                     setSuccessMessage('Pendaftaran sebagai pengelola berhasil! Akun Anda akan aktif setelah disetujui oleh admin.');
@@ -45,18 +61,14 @@ const LoginForm: React.FC = () => {
                     setSuccessMessage('Pendaftaran berhasil! Silakan login untuk melanjutkan.');
                 }
                 setMode('login');
-                // Reset form fields for login
-                setUsername('');
-                setPassword('');
                 setIsCafeAdmin(false);
             }
         } else {
+            // 'email' state here holds either username or email
             const { error: authError } = await login(email, password);
             if (authError) {
-                setError(authError.message || 'Email atau password salah.');
+                setError(authError.message || 'Username/email atau password salah.');
             } else {
-                // On successful login, navigate to the homepage.
-                // The onAuthStateChange listener will handle the global state update.
                 navigate('/');
             }
         }
@@ -101,21 +113,19 @@ const LoginForm: React.FC = () => {
                                 onChange={(e) => setUsername(e.target.value)}
                                 className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
                                 required
-                                placeholder="e.g., kopilover"
                             />
                         </div>
                     )}
                     <div>
-                        <label htmlFor="email" className="font-semibold">Email</label>
+                        <label htmlFor="email" className="font-semibold">{mode === 'login' ? 'Email atau Username' : 'Email'}</label>
                         <input
                             id="email"
-                            ref={emailInputRef}
-                            type="email"
+                            ref={loginInputRef}
+                            type={mode === 'login' ? 'text' : 'email'}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
                             required
-                            placeholder="e.g., admin@example.com"
                         />
                     </div>
                     <div>
@@ -130,6 +140,21 @@ const LoginForm: React.FC = () => {
                             placeholder="••••••••"
                         />
                     </div>
+
+                    {mode === 'signup' && (
+                         <div>
+                            <label htmlFor="confirmPassword" className="font-semibold">Konfirmasi Password</label>
+                            <input
+                                id="confirmPassword"
+                                type="password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
+                                required
+                                placeholder="••••••••"
+                            />
+                        </div>
+                    )}
 
                     {mode === 'signup' && (
                         <div className="flex items-center gap-3 p-3 bg-soft dark:bg-gray-700/50 rounded-xl border border-border">
