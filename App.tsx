@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { HashRouter, Routes, Route, Link, NavLink, useLocation, Navigate, Outlet } from 'react-router-dom';
 import HomePage from './pages/HomePage';
@@ -17,7 +15,9 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { CafeProvider } from './context/CafeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
-import { SunIcon, MoonIcon, MagnifyingGlassIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/solid';
+import { NotificationProvider, useNotifications } from './context/NotificationContext';
+import NotificationPanel from './components/NotificationPanel';
+import { SunIcon, MoonIcon, UserCircleIcon, ArrowRightOnRectangleIcon, BellIcon } from '@heroicons/react/24/solid';
 import ScrollToTopOnNavigate from './components/ScrollToTopOnNavigate';
 import ScrollToTopButton from './components/ScrollToTopButton';
 import ConfirmationModal from './components/common/ConfirmationModal';
@@ -37,10 +37,13 @@ export const ThemeContext = createContext<ThemeContextType>({
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const { currentUser, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   
   const activeLinkClass = "bg-brand text-white";
   const inactiveLinkClass = "hover:bg-brand/10 dark:hover:bg-brand/20";
@@ -65,19 +68,22 @@ const Header: React.FC = () => {
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         setIsMobileMenuOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [mobileMenuRef]);
+  }, [mobileMenuRef, notifRef]);
 
   return (
     <>
       <header className="bg-card/80 backdrop-blur-lg sticky top-0 z-50 border-b border-border">
         <nav className="container mx-auto px-4 py-2 flex items-center justify-between relative">
           <Link to="/" className="flex items-center py-2">
-            <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-10 w-auto" />
+            <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-8 w-auto" />
           </Link>
           
           <div className="hidden lg:flex items-center space-x-4 absolute left-1/2 -translate-x-1/2">
@@ -94,8 +100,24 @@ const Header: React.FC = () => {
             >
               {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6 text-yellow-400" />}
             </button>
+            
             {currentUser ? (
               <div className="flex items-center gap-2">
+                   {/* Notification Icon - Only for logged in users */}
+                   <div className="relative" ref={notifRef}>
+                        <button
+                            onClick={() => setIsNotifOpen(!isNotifOpen)}
+                            className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300 relative"
+                            aria-label="Notifikasi"
+                        >
+                            <BellIcon className="h-6 w-6" />
+                            {unreadCount > 0 && (
+                                <span className="absolute top-1 right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-card"></span>
+                            )}
+                        </button>
+                        <NotificationPanel isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
+                    </div>
+
                   <Link to="/admin" className="hidden sm:flex items-center gap-2 font-semibold text-primary dark:text-white p-2 rounded-xl hover:bg-soft dark:hover:bg-gray-700 transition-colors">
                       {currentUser.avatar_url ? (
                           <img src={currentUser.avatar_url} alt="Profile" className="h-6 w-6 rounded-full object-cover" />
@@ -248,33 +270,35 @@ const App: React.FC = () => {
       <AuthProvider>
         <FavoriteProvider>
           <CafeProvider>
-            <ErrorBoundary>
-              <HashRouter>
-                  <ScrollToTopOnNavigate />
-                  <Routes>
-                    <Route element={<MainLayout />}>
-                        <Route path="/" element={<HomePage />} />
-                        <Route path="/explore" element={<ExplorePage />} />
-                        <Route path="/cafe/:slug" element={<DetailPage />} />
-                        <Route path="/about" element={<AboutPage />} />
-                        <Route path="/leaderboard" element={<LeaderboardPage />} />
-                        <Route path="/feedback" element={<FeedbackPage />} />
-                    </Route>
-                    
-                    <Route path="/login" element={
-                        <GuestRoute>
-                            <LoginPage />
-                        </GuestRoute>
-                    } />
-                    
-                    <Route path="/admin" element={
-                        <ProtectedRoute>
-                            <AdminPage />
-                        </ProtectedRoute>
-                    } />
-                  </Routes>
-              </HashRouter>
-            </ErrorBoundary>
+            <NotificationProvider>
+                <ErrorBoundary>
+                  <HashRouter>
+                      <ScrollToTopOnNavigate />
+                      <Routes>
+                        <Route element={<MainLayout />}>
+                            <Route path="/" element={<HomePage />} />
+                            <Route path="/explore" element={<ExplorePage />} />
+                            <Route path="/cafe/:slug" element={<DetailPage />} />
+                            <Route path="/about" element={<AboutPage />} />
+                            <Route path="/leaderboard" element={<LeaderboardPage />} />
+                            <Route path="/feedback" element={<FeedbackPage />} />
+                        </Route>
+                        
+                        <Route path="/login" element={
+                            <GuestRoute>
+                                <LoginPage />
+                            </GuestRoute>
+                        } />
+                        
+                        <Route path="/admin" element={
+                            <ProtectedRoute>
+                                <AdminPage />
+                            </ProtectedRoute>
+                        } />
+                      </Routes>
+                  </HashRouter>
+                </ErrorBoundary>
+            </NotificationProvider>
           </CafeProvider>
         </FavoriteProvider>
       </AuthProvider>

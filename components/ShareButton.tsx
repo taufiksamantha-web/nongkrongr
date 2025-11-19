@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ShareIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/solid';
 
@@ -39,20 +40,14 @@ const ShareButton: React.FC<ShareButtonProps> = ({ cafeName, cafeDescription }) 
   return (
     <button
       onClick={handleShare}
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold border-2 transition-all duration-300 ${copied ? 'bg-green-100 text-green-700 border-green-200' : 'bg-soft border-border hover:bg-brand/10 hover:text-brand hover:border-brand/20'}`}
+      className={`inline-flex items-center justify-center p-3 rounded-full transition-all duration-300 shadow-sm ${copied ? 'bg-green-100 text-green-700 border-2 border-green-200' : 'bg-soft border-2 border-border hover:bg-brand/10 hover:text-brand hover:border-brand/20'}`}
       aria-label="Bagikan kafe ini"
-      style={{ minWidth: '110px', justifyContent: 'center' }}
+      title="Bagikan"
     >
       {copied ? (
-        <>
-          <ClipboardDocumentCheckIcon className="h-6 w-6" />
-          <span>Copied!</span>
-        </>
+        <ClipboardDocumentCheckIcon className="h-6 w-6" />
       ) : (
-        <>
-          <ShareIcon className="h-6 w-6" />
-          <span>Share</span>
-        </>
+        <ShareIcon className="h-6 w-6" />
       )}
     </button>
   );

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Cafe, Review } from '../types';
@@ -68,7 +69,7 @@ const checkCafeOpenStatus = (openingHours: string): boolean => {
         if (timeParts.length !== 2) return null;
         const hours = parseInt(timeParts[0], 10);
         const minutes = parseInt(timeParts[1], 10);
-        if (isNaN(hours) || isNaN(minutes)) return null;
+        if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
         return hours * 60 + minutes;
     };
 
@@ -105,6 +106,7 @@ const DetailPage: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [isClosed, setIsClosed] = useState(false);
+    const [isAnimatingFavorite, setIsAnimatingFavorite] = useState(false);
 
     useEffect(() => {
         if (slug && cafes.length > 0) {
@@ -163,14 +165,15 @@ const DetailPage: React.FC = () => {
     }
 
     const favorited = isFavorite(cafe.id);
-    const nameWordCount = cafe.name.split(' ').length;
 
     const handleFavoriteClick = () => {
+        setIsAnimatingFavorite(true);
         if (favorited) {
             removeFavorite(cafe.id);
         } else {
             addFavorite(cafe.id);
         }
+        setTimeout(() => setIsAnimatingFavorite(false), 300);
     };
 
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${cafe.coords.lat},${cafe.coords.lng}`;
@@ -202,68 +205,72 @@ const DetailPage: React.FC = () => {
                 <div className="lg:col-span-2 space-y-8">
                     {/* Header */}
                     <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
-                             <div className="flex flex-col items-center sm:flex-row sm:items-start text-center sm:text-left flex-1 min-w-0">
+                        <div className="flex flex-col md:flex-row justify-between gap-6 mb-4">
+                             <div className="flex items-center md:items-start gap-5 flex-1">
+                                {/* Logo with Fixed Size for Proportion */}
                                 {cafe.logoUrl ? (
                                     <ImageWithFallback 
                                         src={cafe.logoUrl} 
                                         alt={`${cafe.name} logo`} 
-                                        className="w-16 h-16 rounded-2xl object-contain mb-4 sm:mb-0 sm:mr-4 shadow-md"
+                                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl object-contain shadow-md bg-soft p-1 border border-border flex-shrink-0"
                                         width={100}
                                         height={100}
                                     />
                                 ) : (
-                                    <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-2xl mb-4 sm:mb-0 sm:mr-4 shadow-md">
-                                        <BuildingStorefrontIcon className="h-8 w-8 text-muted" />
+                                    <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-3xl shadow-md border border-border">
+                                        <BuildingStorefrontIcon className="h-10 w-10 text-muted" />
                                     </div>
                                 )}
-                                <h1 className={`text-3xl md:text-4xl font-extrabold font-jakarta ${nameWordCount <= 2 ? 'sm:whitespace-nowrap' : ''}`}>
-                                    {cafe.name}
-                                </h1>
+                                <div>
+                                    <h1 className="text-3xl md:text-4xl font-extrabold font-jakarta leading-tight">
+                                        {cafe.name}
+                                    </h1>
+                                    {/* Price Tier Below Name */}
+                                    <div className="flex items-center mt-2">
+                                        <span className="sr-only">Price tier {cafe.priceTier} out of 4</span>
+                                        {[1, 2, 3, 4].map((tier) => (
+                                            <CurrencyDollarIcon
+                                                key={tier}
+                                                aria-hidden="true"
+                                                className={`h-6 w-6 ${
+                                                    tier <= cafe.priceTier ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600'
+                                                }`}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
                              </div>
-                             <div className="flex-shrink-0 flex items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
+                             <div className="flex gap-3 self-start md:self-center justify-end w-full md:w-auto">
                                  <ShareButton cafeName={cafe.name} cafeDescription={cafe.description} />
                                  <button
                                     onClick={handleFavoriteClick}
-                                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold border-2 transition-all duration-300 ${favorited ? 'bg-accent-pink/10 text-accent-pink border-accent-pink/20 hover:bg-accent-pink/20' : 'bg-soft border-border hover:bg-accent-pink/10 hover:text-accent-pink hover:border-accent-pink/20'}`}
+                                    className={`p-3 rounded-full transition-all duration-300 shadow-sm active:scale-75 ${favorited ? 'bg-accent-pink text-white hover:bg-accent-pink/90' : 'bg-soft border-2 border-border text-muted hover:bg-accent-pink/10 hover:text-accent-pink hover:border-accent-pink/20'} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`}
                                     aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+                                    title={favorited ? 'Hapus dari favorit' : 'Tambah ke favorit'}
                                  >
                                     {favorited ? <HeartIcon className="h-6 w-6"/> : <HeartIconOutline className="h-6 w-6" />}
-                                    {favorited ? 'Favorit' : 'Favoritkan'}
                                  </button>
                             </div>
                         </div>
-                        <div className="flex items-center text-muted mb-2">
-                            <MapPinIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
-                            <span>{cafe.address}</span>
-                        </div>
-                        <div className="flex items-center text-muted">
-                             <ClockIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
-                            <span>Buka: {cafe.openingHours}</span>
-                        </div>
-                        <div className="flex items-center text-muted mt-2">
-                            <CurrencyDollarIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
+                        <div className="flex flex-col gap-2 mt-4 text-muted">
                             <div className="flex items-center">
-                                <span className="sr-only">Price tier {cafe.priceTier} out of 4</span>
-                                {[1, 2, 3, 4].map((tier) => (
-                                    <CurrencyDollarIcon
-                                        key={tier}
-                                        aria-hidden="true"
-                                        className={`h-6 w-6 ${
-                                            tier <= cafe.priceTier ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600'
-                                        }`}
-                                    />
-                                ))}
+                                <MapPinIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
+                                <span>{cafe.address}</span>
+                            </div>
+                            <div className="flex items-center">
+                                 <ClockIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
+                                <span>Buka: {cafe.openingHours}</span>
                             </div>
                         </div>
+
                         {isClosed && (
-                            <div className="mt-3 flex items-center gap-3 bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 p-3 rounded-xl text-sm font-semibold">
+                            <div className="mt-4 flex items-center gap-3 bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 p-3 rounded-xl text-sm font-semibold">
                                 <ExclamationTriangleIcon className="h-6 w-6 flex-shrink-0" />
                                 <span>Kafe mungkin sudah tutup saat ini.</span>
                             </div>
                         )}
                         {cafe.description && (
-                            <p className="my-4 text-primary dark:text-gray-300 italic text-lg border-l-4 border-brand/50 pl-4">
+                            <p className="my-6 text-primary dark:text-gray-300 italic text-lg border-l-4 border-brand/50 pl-4">
                                 {cafe.description}
                             </p>
                         )}

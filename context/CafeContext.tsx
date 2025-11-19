@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Cafe, Review, Tag } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -57,7 +58,7 @@ const calculateAverages = (cafe: Cafe): Cafe => {
 // --- Supabase Data Helpers ---
 const prepareCafeRecordForSupabase = (data: Partial<Cafe> & { created_by?: string }) => {
     const record = {
-        id: data.id, // FIX: Ensure the ID is included in the record for insertion.
+        id: data.id,
         name: data.name, slug: data.slug, description: data.description, address: data.address,
         city: data.city, district: data.district, openingHours: data.openingHours, priceTier: data.priceTier,
         lat: data.coords?.lat, lng: data.coords?.lng, isSponsored: data.isSponsored, sponsoredUntil: data.sponsoredUntil,
@@ -70,8 +71,6 @@ const prepareCafeRecordForSupabase = (data: Partial<Cafe> & { created_by?: strin
 };
 
 const updateCafeRelationsInSupabase = async (cafeId: string, relations: Partial<Cafe>) => {
-    // FIX: Only update relations if they are explicitly provided in the `relations` object.
-    // This prevents accidental deletion when updating other non-relational fields (like 'isSponsored').
     if (relations.vibes !== undefined) {
         await supabase.from('cafe_vibes').delete().eq('cafe_id', cafeId);
         if (relations.vibes.length > 0) {
@@ -139,7 +138,9 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const fetchCafes = useCallback(async (showLoader = false) => {
         if (showLoader) setLoading(true);
-        setError(null);
+        // Keep previous error if any, unless specifically cleared.
+        // Don't clear error immediately to avoid flickering if retrying.
+        
         try {
             const { data: profilesData, error: profilesError } = await supabase.from('profiles').select('username, avatar_url');
             if (profilesError) console.warn("Could not fetch profiles for review avatars:", profilesError);
@@ -172,6 +173,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const cafesWithAverages = formattedData.map(calculateAverages);
             setCafes(cafesWithAverages);
             setCachedCafes(cafesWithAverages);
+            setError(null); // Clear error on successful fetch
         } catch (err: any) {
             console.error("Error fetching cafes:", err);
             setError(err.message);
@@ -180,35 +182,41 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
+    // Visibility Change Handler for "Continuous Sync" when returning to tab
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // Silence logging for clean console
+                fetchCafes(false);
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [fetchCafes]);
+
     useEffect(() => {
         if (authLoading) return;
 
         // Initial fetch when provider mounts or auth status changes
         fetchCafes(!getCachedCafes());
         
-        // Setup real-time subscription
+        // Setup real-time subscription with simplified error handling
         const channel = supabase.channel('nongkrongr-db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
-                console.log('Real-time change detected, refetching all cafes.', payload);
+            .on('postgres_changes', { event: '*', schema: 'public' }, () => {
                 fetchCafes(false);
             })
             .subscribe((status, err) => {
-                // This callback is critical for monitoring the health of the real-time connection.
                 if (status === 'SUBSCRIBED') {
-                    console.log('Successfully connected to real-time database channel.');
-                    // If there was a previous connection error, we can clear it now.
-                    setError(null);
+                     // Connected
+                     setError(null);
                 }
-
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
-                    console.error('Database subscription error:', { status, err });
-                    setError(
-                        'Koneksi real-time ke database terputus. Perubahan mungkin tidak akan tampil otomatis. Coba muat ulang halaman.'
-                    );
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    // Suppress alerting user for background disconnects, 
+                    // visibility handler will catch up when user returns.
+                    console.warn(`Realtime connection status: ${status}`, err);
                 }
             });
 
-        // Cleanup function to remove the channel subscription when the component unmounts.
         return () => {
             supabase.removeChannel(channel);
         };
@@ -216,7 +224,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const addCafe = async (cafeData: Partial<Cafe>) => {
         const tempId = `temp-${Date.now()}`;
-        const newId = `cafe-${crypto.randomUUID()}`; // FIX: Generate a permanent, unique ID for the new cafe.
+        const newId = `cafe-${crypto.randomUUID()}`;
         const slug = `${cafeData.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${Math.random().toString(36).substring(2, 6)}`;
         const newCafeOptimistic: Cafe = {
             id: tempId, slug, status: currentUser?.role === 'admin' ? 'approved' : 'pending', ...cafeData,
@@ -227,14 +235,11 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         try {
             const { vibes, amenities, spots, events, ...mainData } = cafeData;
-            
-            const manager_id = (currentUser?.role === 'admin_cafe') 
-                ? currentUser.id 
-                : (cafeData.manager_id || null);
+            const manager_id = (currentUser?.role === 'admin_cafe') ? currentUser.id : (cafeData.manager_id || null);
             
             const record = prepareCafeRecordForSupabase({ 
                 ...mainData, 
-                id: newId, // FIX: Pass the newly generated ID to the record for insertion.
+                id: newId,
                 slug, 
                 status: newCafeOptimistic.status,
                 manager_id,
@@ -243,7 +248,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const { data: newCafeDb, error: mainError } = await supabase.from('cafes').insert(record).select().single();
             if (mainError) throw mainError;
             await updateCafeRelationsInSupabase(newCafeDb.id, { vibes, amenities, spots, events });
-            fetchCafes(false); // Refresh for consistency
+            fetchCafes(false);
             return { data: newCafeDb, error: null };
         } catch (err: any) {
             setCafes(prev => prev.filter(c => c.id !== tempId));
@@ -261,7 +266,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             const { vibes, amenities, spots, events, ...mainData } = updatedData;
             const record = prepareCafeRecordForSupabase(mainData);
-            if (Object.keys(record).length > 1 || record.id === undefined) { // Check if there's more than just the ID (if it exists)
+            if (Object.keys(record).length > 1 || record.id === undefined) {
                 const { error: mainError } = await supabase.from('cafes').update(record).eq('id', id);
                 if (mainError) throw mainError;
             }
@@ -345,50 +350,25 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const incrementHelpfulCount = async (reviewId: string): Promise<{ error: any }> => {
-        // Optimistic update: immediately increment in the UI
         setCafes(prev => prev.map(c => ({...c, reviews: c.reviews.map(r => r.id === reviewId ? {...r, helpful_count: (r.helpful_count || 0) + 1} : r)})));
 
         try {
-            // The RPC call was failing, likely because the function doesn't exist in the DB.
-            // This is a non-atomic read-then-write operation as a fallback.
-            // It might have race conditions but is better than a broken feature.
-            
-            // 1. Fetch the current review from the database
             const { data: currentReview, error: fetchError } = await supabase
-                .from('reviews')
-                .select('helpful_count')
-                .eq('id', reviewId)
-                .single();
+                .from('reviews').select('helpful_count').eq('id', reviewId).single();
 
-            if (fetchError) {
-                // If the review is not found, or another error occurs
-                throw fetchError;
-            }
+            if (fetchError) throw fetchError;
 
-            // 2. Calculate the new count based on the *actual* database value
             const newCount = (currentReview?.helpful_count || 0) + 1;
 
-            // 3. Update the review with the new count
             const { error: updateError } = await supabase
-                .from('reviews')
-                .update({ helpful_count: newCount })
-                .eq('id', reviewId);
+                .from('reviews').update({ helpful_count: newCount }).eq('id', reviewId);
 
-            if (updateError) {
-                throw updateError;
-            }
-            
-            // If the update is successful, the optimistic UI state is likely correct.
-            // The real-time subscription will eventually ensure consistency across clients.
+            if (updateError) throw updateError;
             return { error: null };
 
         } catch (error: any) {
-            // Log the actual error message
             console.error("Failed to increment helpful count, reverting:", error.message || error);
-            
-            // Revert optimistic update by decrementing the count in the UI
             setCafes(prev => prev.map(c => ({...c, reviews: c.reviews.map(r => r.id === reviewId ? {...r, helpful_count: Math.max(0, (r.helpful_count || 1) - 1)} : r)})));
-            
             return { error };
         }
     };
@@ -420,14 +400,10 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!normalizedTagName || !currentUser) {
             return { data: null, error: { message: "Invalid tag name or user not logged in." } };
         }
-
         const originalCafes = [...cafes];
-
         try {
-            // Find or create the tag
             let { data: existingTag } = await supabase.from('tags').select('id, name').eq('name', normalizedTagName).single();
             let tag: Tag;
-
             if (existingTag) {
                 tag = existingTag;
             } else {
@@ -436,34 +412,25 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (createError) throw createError;
                 tag = newTag;
             }
-
-            // Optimistic update
             setCafes(prev => prev.map(c => c.id === cafeId ? { ...c, tags: [...c.tags, tag] } : c));
-
-            // Link tag to cafe
             const { error: linkError } = await supabase.from('cafe_tags').insert({ cafe_id: cafeId, tag_id: tag.id });
-            if (linkError && linkError.code !== '23505') { // 23505 is unique violation, which is fine
-                throw linkError;
-            }
-            
+            if (linkError && linkError.code !== '23505') throw linkError;
             return { data: tag, error: null };
         } catch (err: any) {
-            setCafes(originalCafes); // Rollback
+            setCafes(originalCafes);
             return { data: null, error: err };
         }
     };
 
     const removeTagFromCafe = async (cafeId: string, tagId: string) => {
         const originalCafes = [...cafes];
-        // Optimistic update
         setCafes(prev => prev.map(c => c.id === cafeId ? { ...c, tags: c.tags.filter(t => t.id !== tagId) } : c));
-
         try {
             const { error } = await supabase.from('cafe_tags').delete().match({ cafe_id: cafeId, tag_id: tagId });
             if (error) throw error;
             return { error: null };
         } catch (err: any) {
-            setCafes(originalCafes); // Rollback
+            setCafes(originalCafes);
             return { error: err };
         }
     };

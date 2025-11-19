@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -84,7 +85,7 @@ const AdminPage: React.FC = () => {
                         <p className="text-gray-500">You are logged in as: <span className="font-semibold">{currentUser.role.toUpperCase().replace('_', ' ')}</span></p>
                     </div>
                     <div className="flex items-center gap-4">
-                         <Link to="/" className="hidden sm:flex items-center gap-2 text-muted hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors duration-300" title="Go to Homepage">
+                         <Link to="/" className="flex items-center gap-2 text-muted hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors duration-300" title="Go to Homepage">
                             <HomeIcon className="h-6 w-6"/>
                         </Link>
                         <button 
