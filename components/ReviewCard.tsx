@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { Review } from '../types';
@@ -90,7 +91,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay }) => {
         <div className="flex justify-between items-center">
              <div className="flex items-center gap-3">
                 <img
-                    src={review.author_avatar_url || `https://ui-avatars.com/api/?name=${review.author.replace(/\s/g, '+')}&background=random&color=fff`}
+                    src={review.author_avatar_url || `https://ui-avatars.com/api/?name=${(review.author || 'User').replace(/\s/g, '+')}&background=random&color=fff`}
                     alt={review.author}
                     className="h-10 w-10 rounded-full object-cover"
                     loading="lazy"

@@ -1,6 +1,6 @@
+
 import React, { useState } from 'react';
 import CafeManagementPanel from './CafeManagementPanel';
-import ProfileEditor from './ProfileEditor';
 import { BuildingStorefrontIcon, UserCircleIcon } from '@heroicons/react/24/solid';
 
 const welcomeMessages = [
@@ -26,14 +26,6 @@ const AdminCafeDashboard: React.FC = () => {
                         </p>
                     </div>
                 </div>
-            </div>
-
-            <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
-                <div className="flex items-center gap-3 mb-4">
-                    <UserCircleIcon className="h-8 w-8 text-accent-cyan" />
-                    <h2 className="text-2xl font-bold font-jakarta">Pengaturan Profil</h2>
-                </div>
-                <ProfileEditor />
             </div>
 
             <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">

@@ -1,7 +1,7 @@
 
 import React, { useContext } from 'react';
 import { CafeContext } from '../../context/CafeContext';
-import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon, ClockIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import CafeManagementPanel from './CafeManagementPanel';
 import ReviewManagement from './PendingReviews';
 import UserManagementPanel from './UserManagementPanel';

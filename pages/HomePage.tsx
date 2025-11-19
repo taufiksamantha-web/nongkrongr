@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review, User } from '../types';
@@ -302,7 +303,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="relative">
-      <div className="relative bg-gray-900 overflow-hidden">
+      <div className="relative bg-gray-900 overflow-hidden -mt-32">
         <div 
           className="absolute inset-0 z-0"
           style={{ transform: `translateY(${scrollY * 0.4}px)`, willChange: 'transform' }}
@@ -318,7 +319,7 @@ const HomePage: React.FC = () => {
            )}
             <div className="absolute inset-0 bg-black/60"></div>
         </div>
-        <div className="relative z-10 container mx-auto px-6 py-20 text-center">
+        <div className="relative z-10 container mx-auto px-6 pt-40 pb-20 text-center">
           <h1 className="text-5xl md:text-7xl font-extrabold font-jakarta text-white leading-snug drop-shadow-lg">
             Temukan Spot Nongkrong<br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-accent-pink to-brand-light">Estetikmu</span>
@@ -412,14 +413,14 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tombol Jelajahi untuk Mobile */}
+      {/* Tombol Explore untuk Mobile */}
       <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
           <Link 
               to="/explore"
-              className="flex items-center gap-3 bg-brand hover:bg-brand/90 text-white font-bold py-4 px-8 rounded-full shadow-lg hover:shadow-brand/30 transition-all duration-300 transform hover:scale-105 active:scale-95 animate-subtle-bounce"
+              className="flex items-center gap-3 bg-brand text-white shadow-lg shadow-brand/30 hover:bg-brand/90 font-bold py-4 px-8 rounded-full transition-all duration-300 transform hover:scale-105 active:scale-95 animate-subtle-bounce"
           >
               <MagnifyingGlassIcon className="h-6 w-6" />
-              <span>Jelajahi</span>
+              <span>Explore</span>
           </Link>
       </div>
     </div>

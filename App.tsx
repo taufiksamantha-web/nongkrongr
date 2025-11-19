@@ -45,9 +45,9 @@ const Header: React.FC = () => {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   
-  const activeLinkClass = "bg-brand text-white";
-  const inactiveLinkClass = "hover:bg-brand/10 dark:hover:bg-brand/20";
-  const linkClass = "px-4 py-2 rounded-2xl font-bold transition-all duration-300";
+  const activeLinkClass = "bg-brand text-white shadow-md shadow-brand/20";
+  const inactiveLinkClass = "hover:bg-brand/10 dark:hover:bg-brand/20 text-muted hover:text-primary dark:hover:text-white";
+  const linkClass = "px-4 py-2 rounded-xl font-bold transition-all duration-300 text-sm";
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -78,99 +78,117 @@ const Header: React.FC = () => {
 
   return (
     <>
-      <header className="bg-card/80 backdrop-blur-lg sticky top-0 z-50 border-b border-border">
-        <nav className="container mx-auto px-4 py-2 flex items-center justify-between relative">
-          <Link to="/" className="flex items-center py-2">
-            <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-5 sm:h-7 w-auto" />
-          </Link>
-          
-          <div className="hidden lg:flex items-center space-x-4 absolute left-1/2 -translate-x-1/2">
-            <NavLink to="/" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
-            <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
-            <NavLink to="/about" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Tentang Kami</NavLink>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={toggleTheme} 
-              className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6 text-yellow-400" />}
-            </button>
+      <div className="container mx-auto px-4 pt-4 sticky top-4 z-50">
+        <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 shadow-sm flex items-center justify-between">
+          <nav className="w-full flex items-center justify-between relative">
+            <Link to="/" className="flex items-center mr-6">
+              <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-6 sm:h-10 w-auto" />
+            </Link>
             
-            {currentUser ? (
-              <div className="flex items-center gap-2">
-                   <div className="relative" ref={notifRef}>
-                        <button
-                            onClick={() => setIsNotifOpen(!isNotifOpen)}
-                            className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300 relative"
-                            aria-label="Notifikasi"
-                        >
-                            <BellIcon className="h-6 w-6" />
-                            {unreadCount > 0 && (
-                                <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-card"></span>
-                            )}
-                        </button>
-                        <NotificationPanel isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
-                    </div>
+            <div className="hidden lg:flex items-center space-x-2 absolute left-1/2 -translate-x-1/2 bg-gray-100 dark:bg-gray-700/50 p-1.5 rounded-2xl border border-gray-200 dark:border-gray-600">
+              <NavLink to="/" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
+              <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
+              <NavLink to="/about" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Tentang Kami</NavLink>
+            </div>
 
-                  <Link to="/admin" className="hidden sm:flex items-center gap-2 font-semibold text-primary dark:text-white p-2 rounded-xl hover:bg-soft dark:hover:bg-gray-700 transition-colors">
-                      {currentUser.avatar_url ? (
-                          <img src={currentUser.avatar_url} alt="Profile" className="h-6 w-6 rounded-full object-cover" />
-                      ) : (
-                          <UserCircleIcon className="h-6 w-6 text-brand" />
-                      )}
-                      <span className="text-sm max-w-[100px] truncate">{currentUser.username}</span>
-                  </Link>
-                  <button onClick={() => setIsLogoutModalOpen(true)} className="hidden sm:flex p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Logout">
-                      <ArrowRightOnRectangleIcon className="h-6 w-6" />
+            <div className="flex items-center gap-3">
+              {/* Right Controls Container */}
+              <div className="flex items-center bg-gray-100 dark:bg-gray-700/50 rounded-full p-1.5 border border-gray-200 dark:border-gray-600">
+                  <button 
+                    onClick={toggleTheme} 
+                    className="p-2 rounded-full text-muted hover:text-yellow-500 hover:bg-white dark:hover:bg-gray-600 transition-all"
+                    aria-label="Toggle theme"
+                  >
+                    {theme === 'light' ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
                   </button>
-                  <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" aria-label="Buka menu pengguna">
-                      {currentUser.avatar_url ? (
-                          <img src={currentUser.avatar_url} alt="Profile" className="h-6 w-6 rounded-full object-cover" />
-                      ) : (
-                          <UserCircleIcon className="h-6 w-6 text-brand"/>
-                      )}
-                  </button>
-              </div>
-            ) : (
-               <Link to="/login" className="p-2 rounded-full text-brand border-2 border-brand/50 hover:bg-brand hover:text-white transition-all" aria-label="Login">
-                  <ArrowRightOnRectangleIcon className="h-6 w-6" />
-              </Link>
-            )}
-          </div>
-          
-           {isMobileMenuOpen && currentUser && (
-                <div ref={mobileMenuRef} className="absolute top-full right-4 mt-2 w-56 bg-card rounded-2xl shadow-lg border border-border p-2 z-50 sm:hidden animate-fade-in-down">
-                    <div className="flex items-center gap-3 px-3 py-2 border-b border-border mb-1">
-                        {currentUser.avatar_url ? (
-                            <img src={currentUser.avatar_url} alt="Profile" className="h-10 w-10 rounded-full object-cover" />
-                        ) : (
-                            <UserCircleIcon className="h-10 w-10 text-brand" />
-                        )}
-                        <div className="overflow-hidden">
-                            <p className="font-bold text-primary truncate" title={currentUser.username}>{currentUser.username}</p>
-                            <p className="text-xs text-muted truncate" title={currentUser.email}>{currentUser.email}</p>
-                        </div>
-                    </div>
-                    <Link 
-                        to="/admin" 
-                        className="block w-full text-left px-3 py-2 rounded-lg hover:bg-soft dark:hover:bg-gray-700/50 font-semibold transition-colors" 
-                        onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                        Dashboard
+
+                  {currentUser && (
+                     <>
+                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                        <div className="relative" ref={notifRef}>
+                              <button
+                                  onClick={() => setIsNotifOpen(!isNotifOpen)}
+                                  className="p-2 rounded-full text-muted hover:text-brand hover:bg-white dark:hover:bg-gray-600 transition-all relative"
+                                  aria-label="Notifikasi"
+                              >
+                                  <BellIcon className="h-5 w-5" />
+                                  {unreadCount > 0 && (
+                                      <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full border border-card"></span>
+                                  )}
+                              </button>
+                              <NotificationPanel isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
+                          </div>
+                     </>
+                  )}
+                  
+                  <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                  
+                  {currentUser ? (
+                    <>
+                        <Link to="/admin" className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold text-primary dark:text-white hover:bg-white dark:hover:bg-gray-600 transition-all">
+                            {currentUser.avatar_url ? (
+                                <img src={currentUser.avatar_url} alt="Profile" className="h-6 w-6 rounded-full object-cover border border-brand/20" />
+                            ) : (
+                                <div className="h-6 w-6 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold text-xs">
+                                    {currentUser.username.charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                            <span className="max-w-[80px] truncate">{currentUser.username}</span>
+                        </Link>
+                        <button onClick={() => setIsLogoutModalOpen(true)} className="hidden sm:flex p-2 rounded-full text-muted hover:text-red-500 hover:bg-white dark:hover:bg-gray-600 transition-all" title="Logout">
+                            <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                        </button>
+                        {/* Mobile Trigger - Always Icon */}
+                        <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden flex items-center gap-1 px-2 py-1 rounded-full hover:bg-white dark:hover:bg-gray-600 transition-all" aria-label="Buka menu pengguna">
+                             <UserCircleIcon className="h-7 w-7 text-brand"/>
+                        </button>
+                    </>
+                  ) : (
+                     <Link to="/login" className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-brand hover:bg-white dark:hover:bg-gray-600 transition-all" aria-label="Login">
+                        <span className="hidden sm:inline">Login</span>
+                        <ArrowRightOnRectangleIcon className="h-5 w-5" />
                     </Link>
-                    <button 
-                        onClick={() => { setIsMobileMenuOpen(false); setIsLogoutModalOpen(true); }} 
-                        className="block w-full text-left px-3 py-2 rounded-lg text-accent-pink hover:bg-soft dark:hover:bg-gray-700/50 font-semibold transition-colors"
-                    >
-                        Logout
-                    </button>
-                </div>
-           )}
-        </nav>
-      </header>
+                  )}
+              </div>
+            </div>
+            
+             {isMobileMenuOpen && currentUser && (
+                  <div ref={mobileMenuRef} className="absolute top-full right-0 mt-4 w-64 bg-card dark:bg-gray-800 rounded-3xl shadow-xl border border-border p-3 z-50 sm:hidden animate-fade-in-down">
+                      <div className="flex items-center gap-3 px-4 py-4 border-b border-border mb-2 bg-soft dark:bg-gray-700/30 rounded-2xl">
+                          {currentUser.avatar_url ? (
+                              <img src={currentUser.avatar_url} alt="Profile" className="h-12 w-12 rounded-full object-cover" />
+                          ) : (
+                              <UserCircleIcon className="h-12 w-12 text-brand" />
+                          )}
+                          <div className="overflow-hidden">
+                              <p className="font-bold text-primary dark:text-white truncate">{currentUser.username}</p>
+                              <p className="text-xs text-muted truncate">{currentUser.email}</p>
+                          </div>
+                      </div>
+                      <div className="space-y-1">
+                          <NavLink to="/" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'hover:bg-soft dark:hover:bg-gray-700'}`}>Home</NavLink>
+                          <NavLink to="/explore" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'hover:bg-soft dark:hover:bg-gray-700'}`}>Explore</NavLink>
+                           <NavLink to="/about" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'hover:bg-soft dark:hover:bg-gray-700'}`}>Tentang Kami</NavLink>
+                           <div className="border-t border-border my-2"></div>
+                          <Link 
+                              to="/admin" 
+                              className="block w-full text-left px-4 py-3 rounded-xl hover:bg-soft dark:hover:bg-gray-700 font-semibold transition-colors text-primary dark:text-white" 
+                              onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                              Dashboard
+                          </Link>
+                          <button 
+                              onClick={() => { setIsMobileMenuOpen(false); setIsLogoutModalOpen(true); }} 
+                              className="block w-full text-left px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold transition-colors"
+                          >
+                              Logout
+                          </button>
+                      </div>
+                  </div>
+             )}
+          </nav>
+        </header>
+      </div>
 
       {isLogoutModalOpen && (
         <ConfirmationModal
@@ -224,10 +242,10 @@ const MainLayout: React.FC = () => {
     };
 
     return (
-        <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col">
+        <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col transition-colors duration-300">
             {showWelcome && isHomePage && <WelcomeModal onClose={handleCloseWelcome} />}
             <Header />
-            <main className="flex-grow">
+            <main className="flex-grow pt-4">
                 <Outlet />
             </main>
             

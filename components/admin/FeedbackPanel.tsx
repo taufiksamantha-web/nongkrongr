@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { EnvelopeIcon, CheckCircleIcon, ArchiveBoxXMarkIcon, UserCircleIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
@@ -110,7 +111,7 @@ const FeedbackPanel: React.FC = () => {
                                         <span className="font-bold text-primary">{item.profile?.username || item.name}</span>
                                         <span className="text-muted">{getRoleIcon(item.profile?.role)}</span>
                                         <span className={`text-xs font-semibold ${!item.profile && 'text-purple-600 dark:text-purple-400'}`}>
-                                            {!item.profile ? '(Tamu)' : `(${item.profile.role.replace('admin_cafe', 'Pengelola')})`}
+                                            {!item.profile ? '(Tamu)' : `(${(item.profile.role || '').replace('admin_cafe', 'Pengelola')})`}
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted">{new Date(item.created_at).toLocaleString('id-ID')}</p>

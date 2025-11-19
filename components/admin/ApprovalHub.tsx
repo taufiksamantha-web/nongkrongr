@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Profile, Cafe } from '../../types';
 import { CafeContext } from '../../context/CafeContext';
 import { userService } from '../../services/userService';
-import { UserGroupIcon, BuildingStorefrontIcon, CheckCircleIcon, XCircleIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
+import { UserGroupIcon, BuildingStorefrontIcon, CheckCircleIcon, XCircleIcon, ArrowPathIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/solid';
 
 const ApprovalHub: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'users' | 'cafes'>('users');
@@ -80,14 +80,14 @@ const ApprovalHub: React.FC = () => {
     const TabButton: React.FC<{ type: 'users' | 'cafes'; icon: React.ReactNode; label: string; count: number }> = ({ type, icon, label, count }) => (
         <button
             onClick={() => setActiveTab(type)}
-            className={`flex items-center gap-3 w-1/2 p-4 font-bold border-b-4 transition-colors ${
+            className={`flex items-center justify-center gap-2 w-1/2 p-4 font-bold border-b-4 transition-colors ${
                 activeTab === type 
                 ? 'text-brand border-brand' 
                 : 'text-muted border-transparent hover:bg-soft dark:hover:bg-gray-700/50'
             }`}
         >
             {icon}
-            {label}
+            <span className="hidden sm:inline">{label}</span>
             {count > 0 && <span className="px-2 py-0.5 text-xs rounded-full bg-accent-pink text-white">{count}</span>}
         </button>
     );
@@ -97,56 +97,74 @@ const ApprovalHub: React.FC = () => {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-6">
                  <h2 className="text-2xl font-bold font-jakarta">Pusat Persetujuan</h2>
             </div>
            
-            <div className="flex border-b border-border mb-4">
+            <div className="flex border-b border-border mb-6">
                 <TabButton type="users" icon={<UserGroupIcon className="h-6 w-6"/>} label="Pengelola" count={pendingUsers.length} />
                 <TabButton type="cafes" icon={<BuildingStorefrontIcon className="h-6 w-6"/>} label="Kafe Baru" count={pendingCafes.length} />
             </div>
 
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-6">
                 <button 
                     onClick={() => setFilterStatus('pending')} 
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${filterStatus === 'pending' ? 'bg-brand text-white' : 'bg-gray-100 dark:bg-gray-700 text-muted hover:bg-gray-200'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${filterStatus === 'pending' ? 'bg-brand text-white shadow-md shadow-brand/20' : 'bg-gray-100 dark:bg-gray-700 text-muted hover:bg-gray-200'}`}
                 >
                     Menunggu ({activeTab === 'users' ? pendingUsers.length : pendingCafes.length})
                 </button>
                 <button 
                     onClick={() => setFilterStatus('rejected')} 
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${filterStatus === 'rejected' ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300 border border-red-200 dark:border-red-900' : 'bg-gray-100 dark:bg-gray-700 text-muted hover:bg-gray-200'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${filterStatus === 'rejected' ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300 border border-red-200 dark:border-red-900' : 'bg-gray-100 dark:bg-gray-700 text-muted hover:bg-gray-200'}`}
                 >
                     Ditolak ({activeTab === 'users' ? rejectedUsers.length : rejectedCafes.length})
                 </button>
             </div>
 
             <div className="py-2">
-                {isLoading && <p className="text-center text-muted">Memuat data...</p>}
+                {isLoading && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">{[...Array(3)].map((_, i) => <div key={i} className="bg-gray-200 dark:bg-gray-700 h-40 rounded-3xl"></div>)}</div>}
                 {error && <p className="text-center text-accent-pink">{error}</p>}
                 
                 {!isLoading && !error && (
                     <>
                         {activeTab === 'users' && (
-                            <div className="space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {usersToDisplay.length === 0 ? (
-                                    <p className="text-center text-muted py-4">Tidak ada data {filterStatus === 'pending' ? 'menunggu' : 'ditolak'}.</p>
+                                    <div className="col-span-full text-center text-muted py-10 bg-soft/50 rounded-3xl border border-dashed border-border">
+                                        <UserGroupIcon className="h-12 w-12 mx-auto mb-2 opacity-20"/>
+                                        <p>Tidak ada data user {filterStatus === 'pending' ? 'menunggu' : 'ditolak'}.</p>
+                                    </div>
                                 ) : (
                                     usersToDisplay.map(user => (
-                                        <div key={user.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-xl flex justify-between items-center">
+                                        <div key={user.id} className="bg-card dark:bg-gray-800 p-5 rounded-3xl border border-border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
                                             <div>
-                                                <p className="font-semibold text-primary dark:text-gray-200">{user.username}</p>
-                                                <p className="text-xs text-muted">{user.email}</p>
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold text-lg">
+                                                        {user.username.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="overflow-hidden">
+                                                        <p className="font-bold text-primary dark:text-white truncate" title={user.username}>{user.username}</p>
+                                                        <span className="text-xs px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 font-medium">
+                                                            {user.role === 'admin_cafe' ? 'Pengelola' : 'User'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-muted mb-4 truncate" title={user.email}>{user.email}</p>
                                             </div>
-                                            <div className="flex gap-2">
+                                            
+                                            <div className="flex gap-2 mt-2 pt-3 border-t border-border">
                                                 {filterStatus === 'pending' ? (
                                                     <>
-                                                        <button onClick={() => handleUserApproval(user.id, true)} disabled={processingId === user.id} className="p-2 bg-green-100 dark:bg-green-500/20 text-green-600 rounded-full hover:bg-green-200 disabled:opacity-50" title="Setujui"><CheckCircleIcon className="h-5 w-5"/></button>
-                                                        <button onClick={() => handleUserApproval(user.id, false)} disabled={processingId === user.id} className="p-2 bg-red-100 dark:bg-red-500/20 text-red-600 rounded-full hover:bg-red-200 disabled:opacity-50" title="Tolak"><XCircleIcon className="h-5 w-5"/></button>
+                                                        <button onClick={() => handleUserApproval(user.id, true)} disabled={processingId === user.id} className="flex-1 py-2 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 disabled:opacity-50 flex items-center justify-center gap-1 shadow-sm">
+                                                            <CheckCircleIcon className="h-4 w-4"/> Terima
+                                                        </button>
+                                                        <button onClick={() => handleUserApproval(user.id, false)} disabled={processingId === user.id} className="flex-1 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-sm hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1">
+                                                            <XCircleIcon className="h-4 w-4"/> Tolak
+                                                        </button>
                                                     </>
                                                 ) : (
-                                                     <button onClick={() => handleUserApproval(user.id, true)} disabled={processingId === user.id} className="flex items-center gap-1 px-3 py-1 bg-brand/10 text-brand rounded-lg text-xs font-bold hover:bg-brand/20 disabled:opacity-50">
-                                                        <ArrowPathIcon className="h-3 w-3"/> Pulihkan
+                                                     <button onClick={() => handleUserApproval(user.id, true)} disabled={processingId === user.id} className="w-full py-2 bg-brand/10 text-brand border border-brand/20 rounded-xl font-bold text-sm hover:bg-brand/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                                                        <ArrowPathIcon className="h-4 w-4"/> Pulihkan Akses
                                                      </button>
                                                 )}
                                             </div>
@@ -156,25 +174,48 @@ const ApprovalHub: React.FC = () => {
                             </div>
                         )}
                          {activeTab === 'cafes' && (
-                            <div className="space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                  {cafesToDisplay.length === 0 ? (
-                                    <p className="text-center text-muted py-4">Tidak ada data {filterStatus === 'pending' ? 'menunggu' : 'ditolak'}.</p>
+                                     <div className="col-span-full text-center text-muted py-10 bg-soft/50 rounded-3xl border border-dashed border-border">
+                                        <BuildingStorefrontIcon className="h-12 w-12 mx-auto mb-2 opacity-20"/>
+                                        <p>Tidak ada data kafe {filterStatus === 'pending' ? 'menunggu' : 'ditolak'}.</p>
+                                    </div>
                                 ) : (
                                     cafesToDisplay.map(cafe => (
-                                        <div key={cafe.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-xl flex justify-between items-center">
+                                        <div key={cafe.id} className="bg-card dark:bg-gray-800 p-5 rounded-3xl border border-border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
                                             <div>
-                                                <p className="font-semibold text-primary dark:text-gray-200">{cafe.name}</p>
-                                                <p className="text-sm text-muted">{cafe.city}</p>
+                                                <div className="relative h-32 rounded-2xl bg-gray-200 dark:bg-gray-700 overflow-hidden mb-3">
+                                                     {cafe.coverUrl ? (
+                                                         <img src={cafe.coverUrl} alt={cafe.name} className="w-full h-full object-cover" />
+                                                     ) : (
+                                                         <div className="w-full h-full flex items-center justify-center text-muted"><BuildingStorefrontIcon className="h-8 w-8"/></div>
+                                                     )}
+                                                     <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-lg text-white text-xs font-bold">
+                                                         {cafe.priceTier ? '$'.repeat(cafe.priceTier) : '-'}
+                                                     </div>
+                                                </div>
+                                                <h3 className="font-bold text-lg text-primary dark:text-white truncate mb-1">{cafe.name}</h3>
+                                                <div className="flex items-center gap-1 text-xs text-muted mb-1">
+                                                    <MapPinIcon className="h-3 w-3"/> {cafe.city}, {cafe.district}
+                                                </div>
+                                                <div className="flex items-center gap-1 text-xs text-muted mb-3">
+                                                    <ClockIcon className="h-3 w-3"/> {cafe.openingHours}
+                                                </div>
                                             </div>
-                                            <div className="flex gap-2">
+                                            
+                                            <div className="flex gap-2 mt-2 pt-3 border-t border-border">
                                                 {filterStatus === 'pending' ? (
                                                     <>
-                                                        <button onClick={() => handleCafeApproval(cafe.id, true)} disabled={processingId === cafe.id} className="p-2 bg-green-100 dark:bg-green-500/20 text-green-600 rounded-full hover:bg-green-200 disabled:opacity-50" title="Setujui"><CheckCircleIcon className="h-5 w-5"/></button>
-                                                        <button onClick={() => handleCafeApproval(cafe.id, false)} disabled={processingId === cafe.id} className="p-2 bg-red-100 dark:bg-red-500/20 text-red-600 rounded-full hover:bg-red-200 disabled:opacity-50" title="Tolak"><XCircleIcon className="h-5 w-5"/></button>
+                                                        <button onClick={() => handleCafeApproval(cafe.id, true)} disabled={processingId === cafe.id} className="flex-1 py-2 bg-green-500 text-white rounded-xl font-bold text-sm hover:bg-green-600 disabled:opacity-50 flex items-center justify-center gap-1 shadow-sm">
+                                                            <CheckCircleIcon className="h-4 w-4"/> Terima
+                                                        </button>
+                                                        <button onClick={() => handleCafeApproval(cafe.id, false)} disabled={processingId === cafe.id} className="flex-1 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-sm hover:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1">
+                                                            <XCircleIcon className="h-4 w-4"/> Tolak
+                                                        </button>
                                                     </>
                                                 ) : (
-                                                    <button onClick={() => handleCafeApproval(cafe.id, true)} disabled={processingId === cafe.id} className="flex items-center gap-1 px-3 py-1 bg-brand/10 text-brand rounded-lg text-xs font-bold hover:bg-brand/20 disabled:opacity-50">
-                                                        <ArrowPathIcon className="h-3 w-3"/> Setujui Kembali
+                                                    <button onClick={() => handleCafeApproval(cafe.id, true)} disabled={processingId === cafe.id} className="w-full py-2 bg-brand/10 text-brand border border-brand/20 rounded-xl font-bold text-sm hover:bg-brand/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                                                        <ArrowPathIcon className="h-4 w-4"/> Setujui Kembali
                                                      </button>
                                                 )}
                                             </div>

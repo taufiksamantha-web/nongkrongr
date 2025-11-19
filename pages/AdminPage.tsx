@@ -7,8 +7,9 @@ import UserDashboard from '../components/admin/UserDashboard';
 import AdminCafeDashboard from '../components/admin/AdminCafeDashboard';
 import FloatingNotification from '../components/common/FloatingNotification';
 import ConfirmationModal from '../components/common/ConfirmationModal';
+import ProfileUpdateModal from '../components/admin/ProfileUpdateModal';
 import { ThemeContext } from '../App';
-import { SunIcon, MoonIcon, InformationCircleIcon, HomeIcon } from '@heroicons/react/24/solid';
+import { SunIcon, MoonIcon, InformationCircleIcon, HomeIcon, ArrowRightOnRectangleIcon, PencilSquareIcon } from '@heroicons/react/24/solid';
 
 const LoadingSpinner: React.FC = () => (
     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -34,6 +35,7 @@ const AdminPage: React.FC = () => {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
@@ -63,7 +65,7 @@ const AdminPage: React.FC = () => {
     };
 
     return (
-        <div className="bg-soft min-h-screen text-primary dark:text-gray-200">
+        <div className="bg-soft min-h-screen text-primary dark:text-gray-200 pb-12">
             {isLogoutModalOpen && (
                 <ConfirmationModal
                     title="Konfirmasi Logout"
@@ -75,35 +77,78 @@ const AdminPage: React.FC = () => {
                     isConfirming={isLoggingOut}
                 />
             )}
-            <div className="container mx-auto px-6 py-8">
+
+            {isProfileModalOpen && (
+                <ProfileUpdateModal 
+                    onClose={() => setIsProfileModalOpen(false)} 
+                    setNotification={setNotification}
+                />
+            )}
+            
+            <div className="container mx-auto px-4 pt-4">
                 {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
-                <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
-                    <div>
-                        <h2 className="text-xl">Welcome, <span className="font-bold text-primary">{currentUser.username}</span></h2>
-                        <p className="text-gray-500">You are logged in as: <span className="font-semibold">{currentUser.role.toUpperCase().replace('_', ' ')}</span></p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                         <Link to="/" className="flex items-center gap-2 text-muted hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-full transition-colors duration-300" title="Go to Homepage">
-                            <HomeIcon className="h-6 w-6"/>
+                
+                {/* Optimized Navigation Header */}
+                <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 mb-8 flex items-center justify-between sticky top-4 z-30 shadow-sm">
+                    <button 
+                        onClick={() => setIsProfileModalOpen(true)}
+                        className="flex items-center gap-3 px-2 group hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-xl transition-all py-1 cursor-pointer relative"
+                        title="Klik untuk ganti foto profil"
+                    >
+                        <div className="relative">
+                            {currentUser.avatar_url ? (
+                                <img src={currentUser.avatar_url} alt="Profile" className="h-10 w-10 rounded-full object-cover border-2 border-brand/30 group-hover:border-brand transition-colors" />
+                            ) : (
+                                <div className="h-10 w-10 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold border-2 border-brand/30 group-hover:border-brand transition-colors">
+                                    {currentUser.username.charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                            <div className="absolute -bottom-1 -right-1 bg-card rounded-full p-0.5 border border-border opacity-0 group-hover:opacity-100 transition-opacity">
+                                <PencilSquareIcon className="h-3 w-3 text-brand" />
+                            </div>
+                        </div>
+                        <div className="hidden sm:block text-left">
+                            <h2 className="text-sm font-bold font-jakarta text-primary dark:text-white leading-tight group-hover:text-brand transition-colors">
+                                {currentUser.username}
+                            </h2>
+                            <p className="text-xs text-muted font-semibold uppercase tracking-wider">
+                                {(currentUser.role || '').replace('_', ' ')}
+                            </p>
+                        </div>
+                    </button>
+
+                    <div className="flex items-center bg-gray-100 dark:bg-gray-700/50 rounded-full p-1.5 border border-gray-200 dark:border-gray-600">
+                         <Link 
+                            to="/" 
+                            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-muted hover:text-primary hover:bg-white dark:hover:bg-gray-600 transition-all" 
+                            title="Ke Halaman Utama"
+                        >
+                            <HomeIcon className="h-5 w-5"/>
+                            <span className="hidden md:inline">Home</span>
                         </Link>
+                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                         <button 
                             onClick={toggleTheme} 
-                            className="p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-300"
+                            className="p-2 rounded-full text-muted hover:text-yellow-500 hover:bg-white dark:hover:bg-gray-600 transition-all"
                             aria-label="Toggle theme"
-                          >
-                            {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6 text-yellow-400" />}
+                        >
+                            {theme === 'light' ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
                         </button>
+                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                         <button 
                             onClick={() => setIsLogoutModalOpen(true)} 
-                            className="flex items-center justify-center bg-accent-pink text-white font-bold py-2 px-6 rounded-2xl hover:bg-accent-pink/90 transition-all"
+                            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                            title="Logout"
                         >
-                            Logout
+                            <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                            <span className="hidden md:inline">Keluar</span>
                         </button>
                     </div>
-                </div>
+                </header>
                 
-                {currentUser.status === 'pending_approval' ? <PendingApprovalScreen /> : renderDashboardByRole()}
-
+                <div className="px-2">
+                    {currentUser.status === 'pending_approval' ? <PendingApprovalScreen /> : renderDashboardByRole()}
+                </div>
             </div>
         </div>
     );

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { fileToBase64 } from '../../utils/fileUtils';
@@ -63,7 +64,7 @@ const ProfileEditor: React.FC = () => {
             <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="relative group">
                     <img
-                        src={avatarPreview || `https://ui-avatars.com/api/?name=${currentUser.username.replace(/\s/g, '+')}&background=random&color=fff`}
+                        src={avatarPreview || `https://ui-avatars.com/api/?name=${(currentUser.username || 'User').replace(/\s/g, '+')}&background=random&color=fff`}
                         alt="Avatar Preview"
                         className="h-32 w-32 rounded-full object-cover border-4 border-card dark:border-gray-800 shadow-lg"
                     />

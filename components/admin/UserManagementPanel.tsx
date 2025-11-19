@@ -123,8 +123,8 @@ const UserManagementPanel: React.FC = () => {
                 : 'text-muted border-transparent hover:bg-soft dark:hover:bg-gray-700/50'
             }`}
         >
-            {icon}
-            {label}
+            <div className="hidden sm:block">{icon}</div>
+            <span className="text-xs sm:text-base">{label}</span>
             <span className="px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-xs text-muted font-bold">{count}</span>
         </button>
     );
@@ -151,7 +151,9 @@ const UserManagementPanel: React.FC = () => {
                     className="w-full p-3 pl-11 rounded-xl border border-border bg-soft dark:bg-gray-700/50 text-primary dark:text-white placeholder-muted focus:ring-2 focus:ring-brand transition-colors"
                 />
             </div>
-             <div className="bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border overflow-x-auto">
+
+             {/* Desktop Table View */}
+             <div className="hidden md:block bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border overflow-x-auto">
                 <table className="w-full text-left min-w-[480px]">
                     <thead>
                         <tr className="border-b-2 border-border">
@@ -201,11 +203,55 @@ const UserManagementPanel: React.FC = () => {
                 </table>
              </div>
 
+             {/* Mobile Card View */}
+             <div className="md:hidden space-y-3">
+                {loading ? (
+                     <p className="text-center text-muted">Memuat user...</p>
+                ) : paginatedUsers.length === 0 ? (
+                     <div className="text-center p-10 bg-soft dark:bg-gray-700/50 rounded-xl border border-border">
+                        <InboxIcon className="mx-auto h-10 w-10 text-muted mb-2" />
+                        <span className="font-semibold text-muted">User tidak ditemukan</span>
+                     </div>
+                ) : (
+                    paginatedUsers.map(user => (
+                        <div key={user.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-2xl border border-border flex flex-col gap-2">
+                            <div className="flex justify-between items-start">
+                                <div className="flex-1 min-w-0 mr-2">
+                                    <p className="font-bold text-lg text-primary dark:text-gray-200 truncate">{user.username}</p>
+                                    <p className="text-sm text-muted truncate">{user.email}</p>
+                                    <span className="inline-block mt-1 px-2 py-0.5 text-xs font-bold bg-brand/10 dark:bg-brand/20 text-brand rounded-full uppercase">
+                                        {(user.role || '').replace('_', ' ')}
+                                    </span>
+                                </div>
+                                <div className="flex gap-1 shrink-0">
+                                     <button 
+                                        onClick={() => handleOpenEditForm(user)} 
+                                        className="p-2 bg-white dark:bg-gray-800 text-brand rounded-full shadow-sm border border-gray-100 dark:border-gray-700 disabled:opacity-50"
+                                        disabled={user.id === currentUser?.id}
+                                        aria-label="Edit"
+                                    >
+                                        <PencilIcon className="h-5 w-5" />
+                                    </button>
+                                    <button 
+                                        onClick={() => setUserToDelete(user)} 
+                                        className="p-2 bg-white dark:bg-gray-800 text-accent-pink rounded-full shadow-sm border border-gray-100 dark:border-gray-700 disabled:opacity-50"
+                                        disabled={user.id === currentUser?.id}
+                                        aria-label="Archive"
+                                    >
+                                        <TrashIcon className="h-5 w-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+             </div>
+
              {totalPages > 1 && (
                 <div className="flex justify-between items-center mt-6">
-                    <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold enabled:hover:bg-gray-300 dark:enabled:hover:bg-gray-500 disabled:opacity-50"><ChevronLeftIcon className="h-5 w-5"/> Sebelumnya</button>
-                    <span className="font-semibold text-muted text-sm">Halaman {currentPage} dari {totalPages}</span>
-                    <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold enabled:hover:bg-gray-300 dark:enabled:hover:bg-gray-500 disabled:opacity-50">Selanjutnya <ChevronRightIcon className="h-5 w-5"/></button>
+                    <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold enabled:hover:bg-gray-300 dark:enabled:hover:bg-gray-500 disabled:opacity-50"><ChevronLeftIcon className="h-5 w-5"/> <span className="hidden sm:inline">Sebelumnya</span></button>
+                    <span className="font-semibold text-muted text-sm">Hal {currentPage} / {totalPages}</span>
+                    <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold enabled:hover:bg-gray-300 dark:enabled:hover:bg-gray-500 disabled:opacity-50"><span className="hidden sm:inline">Selanjutnya</span> <ChevronRightIcon className="h-5 w-5"/></button>
                 </div>
             )}
 

@@ -1,3 +1,4 @@
+
 import React, { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -8,7 +9,6 @@ import ReviewCard from '../ReviewCard';
 import { HeartIcon, ChatBubbleBottomCenterTextIcon, MagnifyingGlassIcon, UserCircleIcon } from '@heroicons/react/24/solid';
 import SkeletonCard from '../SkeletonCard';
 import SkeletonReviewCard from '../SkeletonReviewCard';
-import ProfileEditor from './ProfileEditor';
 
 const welcomeMessages = [
     "Selamat datang kembali! Mari kita temukan spot nongkrong baru hari ini.",
@@ -67,10 +67,6 @@ const UserDashboard: React.FC = () => {
                 <p className="mt-1 text-muted">{welcomeMessage}</p>
             </div>
             
-            <Section icon={<UserCircleIcon className="h-8 w-8 text-accent-cyan" />} title="Pengaturan Profil">
-                <ProfileEditor />
-            </Section>
-
             <Section icon={<HeartIcon className="h-8 w-8 text-accent-pink" />} title="Kafe Favoritmu">
                 {loading ? (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">

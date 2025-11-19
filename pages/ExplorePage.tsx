@@ -16,9 +16,6 @@ import { calculateDistance } from '../utils/geolocation';
 import { checkIfOpen, checkIfOpenLate } from '../utils/timeUtils';
 import SkeletonCard from '../components/SkeletonCard';
 
-const ITEMS_PER_PAGE = 12;
-const INITIAL_INFINITE_SCROLL_LIMIT = 20;
-
 type CafeWithDistance = Cafe & { distance?: number };
 type OpeningStatus = 'all' | 'open_now' | 'open_late' | 'closed';
 
@@ -44,11 +41,11 @@ const FilterPanelContent: React.FC<{
     
     return (
         <>
-            {/* City (moved to top, no details) */}
+            {/* City */}
             <div className="py-2">
-                <label className="font-semibold block">Kota/Kabupaten</label>
+                <label className="font-semibold block text-primary dark:text-white">Kota/Kabupaten</label>
                 <div className="mt-2">
-                    <select value={filters.city} onChange={e => handleFilterChange('city', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white">
+                    <select value={filters.city} onChange={e => handleFilterChange('city', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white focus:ring-2 focus:ring-brand">
                         <option value="all">Semua Kota/Kabupaten</option>
                         {SOUTH_SUMATRA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
@@ -56,14 +53,14 @@ const FilterPanelContent: React.FC<{
             </div>
 
             {/* Sort by distance */}
-            <div className="py-2 border-t border-border">
+            <div className="py-4 border-t border-border">
                 <button
                     onClick={handleSortByDistance}
                     disabled={isLocating}
                     className={`w-full flex items-center justify-center gap-2 p-3 text-sm rounded-xl border-2 font-bold transition-all ${
                         sortBy === 'distance'
                             ? 'bg-brand text-white border-brand'
-                            : 'bg-soft border-border text-primary hover:border-brand/50'
+                            : 'bg-soft border-border text-primary hover:border-brand/50 dark:text-white dark:bg-gray-700'
                     } disabled:opacity-50 disabled:cursor-wait`}
                 >
                     {isLocating ? (
@@ -81,9 +78,9 @@ const FilterPanelContent: React.FC<{
                 {locationError && <p className="text-xs text-accent-pink mt-1">{locationError}</p>}
             </div>
 
-            {/* Opening Status (collapsed) */}
+            {/* Opening Status */}
             <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none text-primary dark:text-white">
                     Status Buka
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
@@ -104,9 +101,9 @@ const FilterPanelContent: React.FC<{
                 </div>
             </details>
             
-            {/* Price Tier (collapsed) */}
+            {/* Price Tier */}
             <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none text-primary dark:text-white">
                     Harga
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
@@ -118,7 +115,7 @@ const FilterPanelContent: React.FC<{
                             className={`py-2 text-sm rounded-lg border-2 font-bold transition-all ${
                                 filters.priceTier === tier
                                     ? 'bg-brand text-white border-brand'
-                                    : 'bg-soft border-border text-muted hover:border-brand/50'
+                                    : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'
                             }`}
                         >
                             {'$'.repeat(tier)}
@@ -127,9 +124,9 @@ const FilterPanelContent: React.FC<{
                 </div>
             </details>
 
-            {/* Vibes (Default Closed & Moved Below Price) */}
+            {/* Vibes */}
             <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none text-primary dark:text-white">
                     Vibe
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
@@ -141,7 +138,7 @@ const FilterPanelContent: React.FC<{
                             className={`px-3 py-1.5 text-sm rounded-full border-2 font-bold transition-all ${
                                 filters.vibes.includes(vibe.id)
                                     ? 'bg-brand text-white border-brand'
-                                    : 'bg-soft border-border text-muted hover:border-brand/50'
+                                    : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'
                             }`}
                         >
                             {vibe.name}
@@ -150,9 +147,9 @@ const FilterPanelContent: React.FC<{
                 </div>
             </details>
 
-            {/* Amenities (collapsed) */}
+            {/* Amenities */}
             <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none text-primary dark:text-white">
                     Fasilitas
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
@@ -162,7 +159,7 @@ const FilterPanelContent: React.FC<{
                             key={amenity.id} 
                             onClick={() => toggleMultiSelect('amenities', amenity.id)} 
                             title={amenity.name}
-                            className={`p-3 text-2xl rounded-lg border-2 transition-all flex items-center justify-center ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}
+                            className={`p-3 text-2xl rounded-lg border-2 transition-all flex items-center justify-center ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}
                         >
                             {amenity.icon}
                         </button>
@@ -170,9 +167,9 @@ const FilterPanelContent: React.FC<{
                 </div>
             </details>
 
-            {/* Crowd Level (already collapsed) */}
+            {/* Crowd Level */}
             <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none">
+                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none text-primary dark:text-white">
                     Tingkat Keramaian (Maks.)
                     <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
@@ -192,16 +189,16 @@ const FilterPanelContent: React.FC<{
                 </div>
             </details>
 
-            {/* Tags (moved to bottom, no details) */}
+            {/* Tags */}
             {currentUser && (
                 <div className="py-2 border-t border-border">
-                    <label className="font-semibold block">Tag Komunitas</label>
+                    <label className="font-semibold block text-primary dark:text-white">Tag Komunitas</label>
                     <div className="mt-2 flex flex-wrap gap-2">
                         {allTags.map(tag => (
                             <button 
                                 key={tag.id} 
                                 onClick={() => toggleMultiSelect('tags', tag.id)} 
-                                className={`px-3 py-1.5 text-xs rounded-full border-2 font-bold transition-all ${filters.tags.includes(tag.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}
+                                className={`px-3 py-1.5 text-xs rounded-full border-2 font-bold transition-all ${filters.tags.includes(tag.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}
                             >
                                #{tag.name}
                             </button>
@@ -215,13 +212,12 @@ const FilterPanelContent: React.FC<{
 
 const ExplorePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
-  const { cafes, loading, error, getAllTags } = cafeContext!;
+  const { cafes, loading, error, getAllTags, fetchNextPage, hasNextPage, isFetchingNextPage } = cafeContext!;
   const { theme } = useContext(ThemeContext);
   const { favoriteIds } = useFavorites();
   const { currentUser } = useAuth();
   
   const [searchParams, setSearchParams] = useSearchParams();
-  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const loaderRef = useRef<HTMLDivElement>(null);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
@@ -320,6 +316,7 @@ const ExplorePage: React.FC = () => {
     setSearchParams(newParams, { replace: true });
   }, [filters, setSearchParams, isFavoritesView, sortParam]);
 
+  // Filtering Logic (Applies to all loaded cafes from React Query)
   const sortedCafes: CafeWithDistance[] = useMemo(() => {
     let baseCafes = cafes.filter(c => c.status === 'approved');
     let processedCafes: Cafe[];
@@ -358,6 +355,7 @@ const ExplorePage: React.FC = () => {
         return [...processedCafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
     }
     
+    // Default Sort: Sponsored first, then Rating, then Review Count
     return [...processedCafes].sort((a, b) => {
         if (a.isSponsored && !b.isSponsored) return -1;
         if (!a.isSponsored && b.isSponsored) return 1;
@@ -370,26 +368,15 @@ const ExplorePage: React.FC = () => {
     });
   }, [cafes, filters, sortBy, userLocation, isFavoritesView, favoriteIds, sortParam]);
 
-  const cafesToShow = useMemo(() => sortedCafes, [sortedCafes]);
-  
-  const visibleCafes = useMemo(() => {
-    return cafesToShow.slice(0, visibleCount);
-  }, [cafesToShow, visibleCount]);
-
-  useEffect(() => {
-    setVisibleCount(ITEMS_PER_PAGE);
-  }, [filters, sortBy, isFavoritesView, sortParam]);
-
+  // Infinite Scroll Trigger
   useEffect(() => {
     const observer = new IntersectionObserver(
         (entries) => {
-            if (entries[0].isIntersecting && !loading) {
-                if (visibleCount < cafesToShow.length && visibleCount < INITIAL_INFINITE_SCROLL_LIMIT) {
-                    setVisibleCount(prev => Math.min(prev + ITEMS_PER_PAGE, cafesToShow.length));
-                }
+            if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
             }
         },
-        { rootMargin: "0px 0px 400px 0px" }
+        { rootMargin: "0px 0px 200px 0px" }
     );
     const currentLoaderRef = loaderRef.current;
     if (currentLoaderRef) {
@@ -400,7 +387,7 @@ const ExplorePage: React.FC = () => {
             observer.unobserve(currentLoaderRef);
         }
     };
-}, [loaderRef, loading, visibleCount, cafesToShow]);
+}, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const toggleMultiSelect = (key: 'vibes' | 'amenities' | 'tags', value: string) => {
     const currentValues = filters[key];
@@ -418,21 +405,18 @@ const ExplorePage: React.FC = () => {
   
   const isSpecialView = isFavoritesView || sortParam === 'trending';
 
-  const showInfiniteLoader = visibleCount < cafesToShow.length && visibleCount < INITIAL_INFINITE_SCROLL_LIMIT;
-  const showMoreButton = visibleCount < cafesToShow.length && visibleCount >= INITIAL_INFINITE_SCROLL_LIMIT;
-
   return (
     <div className="container mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
       {/* Filter Modal for Mobile */}
       <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[1200] lg:hidden transition-opacity duration-300 ${isFiltersOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsFiltersOpen(false)}>
           <div 
-              className={`bg-card p-6 h-full w-4/5 max-w-sm overflow-y-auto shadow-2xl transform transition-transform duration-300 ${isFiltersOpen ? 'translate-x-0' : '-translate-x-full'}`}
+              className={`bg-card dark:bg-gray-800 p-6 h-full w-4/5 max-w-sm overflow-y-auto shadow-2xl transform transition-transform duration-300 ${isFiltersOpen ? 'translate-x-0' : '-translate-x-full'}`}
               onClick={e => e.stopPropagation()}
           >
               <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-2xl font-bold font-jakarta">Filters</h3>
+                  <h3 className="text-2xl font-bold font-jakarta text-primary dark:text-white">Filters</h3>
                   <button onClick={() => setIsFiltersOpen(false)} className="p-2 rounded-full hover:bg-soft dark:hover:bg-gray-700">
-                      <XMarkIcon className="h-6 w-6" />
+                      <XMarkIcon className="h-6 w-6 text-primary dark:text-white" />
                   </button>
               </div>
               <FilterPanelContent {...filterPanelProps} />
@@ -440,7 +424,7 @@ const ExplorePage: React.FC = () => {
       </div>
 
       {/* Filters Sidebar for Desktop */}
-      <aside className={`hidden lg:block lg:w-1/4 xl:w-1/5 bg-card p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-24 transition-opacity ${isSpecialView ? 'opacity-50 pointer-events-none' : ''}`}>
+      <aside className={`hidden lg:block lg:w-1/4 xl:w-1/5 bg-card dark:bg-gray-800 p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-24 transition-opacity ${isSpecialView ? 'opacity-50 pointer-events-none' : ''}`}>
         <FilterPanelContent {...filterPanelProps} />
       </aside>
 
@@ -450,7 +434,7 @@ const ExplorePage: React.FC = () => {
         <div className="lg:hidden mb-6">
             <button 
                 onClick={() => setIsFiltersOpen(true)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-card border border-border rounded-2xl font-bold shadow-sm active:scale-95 transition-transform disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-card dark:bg-gray-800 border border-border rounded-2xl font-bold shadow-sm active:scale-95 transition-transform disabled:opacity-50 text-primary dark:text-white"
                 disabled={isSpecialView}
             >
                 <AdjustmentsHorizontalIcon className="h-6 w-6 text-brand" />
@@ -464,22 +448,22 @@ const ExplorePage: React.FC = () => {
                 placeholder="Cari berdasarkan nama cafe..."
                 value={filters.search}
                 onChange={e => handleFilterChange('search', e.target.value)}
-                className="w-full p-4 pl-12 text-lg rounded-2xl border-2 border-border focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm bg-card text-primary dark:text-white dark:placeholder-muted disabled:opacity-50"
+                className="w-full p-4 pl-12 text-lg rounded-2xl border-2 border-border focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm bg-card dark:bg-gray-800 text-primary dark:text-white dark:placeholder-muted disabled:opacity-50"
                 disabled={isSpecialView}
             />
         </div>
-        <div className="relative z-10 rounded-3xl mb-8 overflow-hidden shadow-md h-96 border border-border">
-            <InteractiveMap cafes={visibleCafes} theme={theme} showUserLocation={true} showHeatmap={showHeatmap} />
+        <div className="relative z-10 rounded-3xl mb-8 overflow-hidden shadow-md h-64 md:h-96 border border-border">
+            <InteractiveMap cafes={sortedCafes.slice(0, 12)} theme={theme} showUserLocation={true} showHeatmap={showHeatmap} />
             <button
                 onClick={() => setShowHeatmap(!showHeatmap)}
-                className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-card/80 backdrop-blur-sm text-primary font-bold py-2 px-4 rounded-full shadow-lg hover:bg-card transition-colors"
+                className="absolute top-4 left-4 z-[1000] flex items-center gap-2 bg-card/80 dark:bg-gray-800/80 backdrop-blur-sm text-primary dark:text-white font-bold py-2 px-4 rounded-full shadow-lg hover:bg-card transition-colors"
             >
                 <FireIcon className={`h-5 w-5 transition-colors ${showHeatmap ? 'text-red-500' : 'text-muted'}`} />
-                {showHeatmap ? 'Peta Panas: Aktif' : 'Peta Panas: Nonaktif'}
+                {showHeatmap ? 'Heatmap: On' : 'Heatmap: Off'}
             </button>
         </div>
         
-        <h2 className="text-3xl font-bold font-jakarta mb-6">
+        <h2 className="text-3xl font-bold font-jakarta mb-6 text-primary dark:text-white">
             {loading ? 'Mencari cafe...' : 
              isFavoritesView ? `Kafe Favoritmu (${sortedCafes.length})` :
              sortParam === 'trending' ? `Kafe Paling Trending (${sortedCafes.length})` :
@@ -487,44 +471,28 @@ const ExplorePage: React.FC = () => {
         </h2>
 
         {loading ? (
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                 {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
-            </div>
-        ) : !loading && cafes.filter(c => c.status === 'approved').length === 0 ? (
-            <div className="text-center py-10 bg-card rounded-3xl border border-border">
-                <InboxIcon className="mx-auto h-12 w-12 text-muted" />
-                <p className="mt-4 text-xl font-bold font-jakarta">Belum Ada Cafe yang Terdaftar</p>
-                <p className="text-muted mt-2 max-w-xs mx-auto">Sepertinya belum ada data cafe yang bisa ditampilkan. Cek lagi nanti ya!</p>
             </div>
         ) : sortedCafes.length > 0 ? (
             <>
-                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-                    {visibleCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} distance={cafe.distance} animationDelay={`${i * 75}ms`} />)}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                    {sortedCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} distance={cafe.distance} animationDelay={`${(i % 12) * 50}ms`} />)}
                 </div>
                 
-                {showInfiniteLoader && (
-                    <div ref={loaderRef} className="py-8">
-                        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
-                            {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
+                {/* Loader trigger element */}
+                <div ref={loaderRef} className="py-8 flex justify-center w-full">
+                     {isFetchingNextPage && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 w-full">
+                             {[...Array(3)].map((_, i) => <SkeletonCard key={`skel-next-${i}`} />)}
                         </div>
-                    </div>
-                )}
-
-                {showMoreButton && (
-                    <div className="flex justify-center py-8">
-                        <button
-                            onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
-                            className="bg-brand text-white font-bold py-3 px-8 rounded-2xl hover:bg-brand/90 transition-all duration-300"
-                        >
-                            Tampilkan Lagi
-                        </button>
-                    </div>
-                )}
+                     )}
+                </div>
             </>
         ) : (
-            <div className="text-center py-10 bg-card rounded-3xl border border-border">
+            <div className="text-center py-10 bg-card dark:bg-gray-800 rounded-3xl border border-border">
                 <p className="text-4xl mb-4">😕</p>
-                <p className="text-xl font-bold font-jakarta">Yah, cafe yang kamu cari tidak ditemukan.</p>
+                <p className="text-xl font-bold font-jakarta text-primary dark:text-white">Yah, cafe yang kamu cari tidak ditemukan.</p>
                 <p className="text-muted mt-2">Coba ganti kata kuncimu atau kurangi kriteria pencarian ya.</p>
             </div>
         )}
