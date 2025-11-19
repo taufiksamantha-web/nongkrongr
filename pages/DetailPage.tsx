@@ -6,7 +6,7 @@ import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoriteContext';
-import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon, TagIcon, CurrencyDollarIcon, ChevronDownIcon, PhoneIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
+import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon, TagIcon, CurrencyDollarIcon, ChevronDownIcon, PhoneIcon, GlobeAltIcon, SparklesIcon, WifiIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
@@ -18,6 +18,7 @@ import EventCard from '../components/EventCard';
 import ReviewCard from '../components/ReviewCard';
 import TagManager from '../components/TagManager';
 import { DEFAULT_COVER_URL } from '../constants';
+import { getOpeningStatus } from '../utils/timeUtils';
 
 const INITIAL_REVIEWS_COUNT = 20;
 
@@ -28,7 +29,7 @@ const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color:
 
     return (
         <div className="flex flex-col items-center text-center">
-            <div className="relative w-20 h-20 sm:w-28 sm:h-28">
+            <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32">
                 <svg className="w-full h-full" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="45" className="stroke-current text-gray-200 dark:text-gray-700" strokeWidth="10" fill="transparent" />
                     <circle
@@ -42,51 +43,13 @@ const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color:
                     />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-lg sm:text-2xl font-bold font-jakarta" style={{ color }}>{score > 0 ? score.toFixed(1) : 'N/A'}</span>
-                    <span className="text-xs text-muted">/ {max}</span>
+                    <span className="text-lg sm:text-2xl md:text-3xl font-bold font-jakarta" style={{ color }}>{score > 0 ? score.toFixed(1) : 'N/A'}</span>
+                    <span className="text-xs md:text-sm text-muted">/ {max}</span>
                 </div>
             </div>
-            <p className="mt-2 sm:mt-4 text-sm font-semibold">{label}</p>
+            <p className="mt-2 sm:mt-4 text-sm md:text-lg font-semibold">{label}</p>
         </div>
     );
-};
-
-const checkCafeOpenStatus = (openingHours: string): boolean => {
-    if (!openingHours || openingHours.toLowerCase().includes('24')) {
-        return false;
-    }
-
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-
-    const parts = openingHours.split(' - ');
-    if (parts.length !== 2) {
-        return false;
-    }
-
-    const [openTimeStr, closeTimeStr] = parts;
-    
-    const parseTime = (timeStr: string): number | null => {
-        const timeParts = timeStr.trim().split(':');
-        if (timeParts.length !== 2) return null;
-        const hours = parseInt(timeParts[0], 10);
-        const minutes = parseInt(timeParts[1], 10);
-        if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
-        return hours * 60 + minutes;
-    };
-
-    const openTime = parseTime(openTimeStr);
-    const closeTime = parseTime(closeTimeStr);
-
-    if (openTime === null || closeTime === null) {
-        return false;
-    }
-
-    if (closeTime < openTime) {
-        return !(currentTime >= openTime || currentTime < closeTime);
-    } else {
-        return !(currentTime >= openTime && currentTime < closeTime);
-    }
 };
 
 const DetailPage: React.FC = () => {
@@ -104,7 +67,7 @@ const DetailPage: React.FC = () => {
     const [visibleReviewsCount, setVisibleReviewsCount] = useState(INITIAL_REVIEWS_COUNT);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const [isClosed, setIsClosed] = useState(false);
+    const [openingStatus, setOpeningStatus] = useState<any>(null);
     const [isAnimatingFavorite, setIsAnimatingFavorite] = useState(false);
 
     useEffect(() => {
@@ -112,10 +75,19 @@ const DetailPage: React.FC = () => {
             const currentCafe = cafes.find(c => c.slug === slug);
             setCafe(currentCafe || null);
             if (currentCafe?.openingHours) {
-                setIsClosed(checkCafeOpenStatus(currentCafe.openingHours));
+                setOpeningStatus(getOpeningStatus(currentCafe.openingHours));
             }
         }
     }, [slug, cafes]);
+
+    // Update status periodically (every minute)
+    useEffect(() => {
+        if (!cafe?.openingHours) return;
+        const interval = setInterval(() => {
+            setOpeningStatus(getOpeningStatus(cafe.openingHours));
+        }, 60000);
+        return () => clearInterval(interval);
+    }, [cafe?.openingHours]);
 
     const openImageModal = (imageUrl: string) => {
         setSelectedImage(imageUrl);
@@ -143,6 +115,16 @@ const DetailPage: React.FC = () => {
     
     const handleLoadMoreReviews = () => {
         setVisibleReviewsCount(prev => prev + INITIAL_REVIEWS_COUNT);
+    };
+
+    const getPriceColor = (tier: number) => {
+        switch (tier) {
+            case 1: return 'text-green-500'; // Murah
+            case 2: return 'text-blue-500';   // Standar
+            case 3: return 'text-amber-500'; // Premium
+            case 4: return 'text-red-600';     // Mewah
+            default: return 'text-brand';
+        }
     };
 
     if (error) return <DatabaseConnectionError />;
@@ -189,10 +171,10 @@ const DetailPage: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 py-8">
             <button
                 onClick={() => navigate(-1)}
-                className="mb-6 inline-flex items-center gap-2 text-muted hover:text-brand dark:hover:text-brand-light font-semibold transition-colors duration-300 group"
+                className="mb-6 inline-flex items-center gap-2 text-muted hover:text-brand dark:hover:text-brand-light font-semibold transition-colors duration-300 group md:text-lg"
                 aria-label="Kembali ke halaman sebelumnya"
             >
-                <ArrowLeftIcon className="h-5 w-5 transform group-hover:-translate-x-1 transition-transform" />
+                <ArrowLeftIcon className="h-5 w-5 md:h-6 md:w-6 transform group-hover:-translate-x-1 transition-transform" />
                 Kembali
             </button>
             {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
@@ -202,7 +184,7 @@ const DetailPage: React.FC = () => {
                     src={cafe.coverUrl} 
                     defaultSrc={DEFAULT_COVER_URL}
                     alt={cafe.name} 
-                    className="w-full h-56 md:h-96 object-cover rounded-4xl mb-8 border border-border shadow-sm"
+                    className="w-full h-56 md:h-[500px] object-cover rounded-4xl mb-8 border border-border shadow-sm"
                     width={1280}
                     height={768}
                 />
@@ -210,146 +192,191 @@ const DetailPage: React.FC = () => {
                      <ShareButton 
                         cafeName={cafe.name} 
                         cafeDescription={cafe.description} 
-                        className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-all shadow-sm active:scale-90"
+                        className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-all shadow-sm active:scale-90 md:p-4"
                     />
                      <button
                         onClick={handleFavoriteClick}
-                        className={`p-3 rounded-full transition-all duration-300 shadow-sm active:scale-75 bg-black/40 backdrop-blur-md text-white hover:bg-black/60 ${favorited ? 'text-accent-pink' : ''} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`}
+                        className={`p-3 md:p-4 rounded-full transition-all duration-300 shadow-sm active:scale-75 bg-black/40 backdrop-blur-md text-white hover:bg-black/60 ${favorited ? 'text-accent-pink' : ''} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`}
                         aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
                         title={favorited ? 'Hapus dari favorit' : 'Tambah ke favorit'}
                      >
-                        {favorited ? <HeartIcon className="h-6 w-6 text-accent-pink"/> : <HeartIconOutline className="h-6 w-6" />}
+                        {favorited ? <HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-accent-pink"/> : <HeartIconOutline className="h-6 w-6 md:h-8 md:w-8" />}
                      </button>
                 </div>
             </div>
 
             <div className="grid lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                    {/* Header Cafe Improved */}
-                    <div className="bg-card border border-border p-6 md:p-8 rounded-3xl shadow-sm relative">
-                        <div className="flex flex-col sm:flex-row items-start gap-5"> 
+                <div className="lg:col-span-2 space-y-8 md:space-y-12">
+                    {/* Header Cafe Improved - Center on Mobile, Left on Desktop */}
+                    <div className="bg-card border border-border p-6 md:p-10 rounded-3xl shadow-sm relative">
+                        <div className="flex flex-col items-center text-center md:flex-row md:items-start md:text-left gap-6 md:gap-8"> 
                              {/* Logo */}
                              <div className="flex-shrink-0">
                                 {cafe.logoUrl ? (
                                     <ImageWithFallback 
                                         src={cafe.logoUrl} 
                                         alt={`${cafe.name} logo`} 
-                                        className="w-20 h-20 md:w-28 md:h-28 rounded-3xl object-contain shadow-md bg-soft p-1 border border-border"
-                                        width={112}
-                                        height={112}
+                                        className="w-24 h-24 md:w-40 md:h-40 rounded-3xl object-contain shadow-md bg-soft p-1 border border-border"
+                                        width={160}
+                                        height={160}
                                     />
                                 ) : (
-                                    <div className="w-20 h-20 md:w-28 md:h-28 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-3xl shadow-md border border-border">
-                                        <BuildingStorefrontIcon className="h-10 w-10 text-muted" />
+                                    <div className="w-24 h-24 md:w-40 md:h-40 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-3xl shadow-md border border-border">
+                                        <BuildingStorefrontIcon className="h-12 w-12 md:h-20 md:w-20 text-muted" />
                                     </div>
                                 )}
                              </div>
 
-                             {/* Name & Badges */}
+                             {/* Name & Price */}
                              <div className="flex-grow w-full">
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                                     <h1 className="text-3xl md:text-4xl font-extrabold font-jakarta leading-tight text-primary dark:text-white break-words">
-                                        {cafe.name}
-                                    </h1>
-                                    <div className="flex items-center flex-shrink-0 bg-soft dark:bg-gray-700/50 px-3 py-1.5 rounded-xl border border-border">
-                                        {[1, 2, 3, 4].map((tier) => (
-                                            <CurrencyDollarIcon
-                                                key={tier}
-                                                aria-hidden="true"
-                                                className={`h-5 w-5 ${
-                                                    tier <= cafe.priceTier ? 'text-brand' : 'text-gray-300 dark:text-gray-600'
-                                                }`}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                                
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                    {cafe.vibes.map(v => <span key={v.id} className="bg-brand/10 text-brand px-3 py-1 rounded-full text-sm font-semibold dark:bg-brand/20 border border-brand/20">{v.name}</span>)}
-                                    {cafe.amenities.map(a => <span key={a.id} className="bg-gray-100 dark:bg-gray-700/50 px-3 py-1 rounded-full text-sm text-muted border border-border">{a.icon} {a.name}</span>)}
+                                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                                     <div className="flex-grow">
+                                        <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold font-jakarta leading-tight text-primary dark:text-white break-words">
+                                            {cafe.name}
+                                        </h1>
+                                        <p className="text-muted flex items-center justify-center md:justify-start gap-1.5 mt-2 text-base md:text-xl">
+                                           <MapPinIcon className="h-5 w-5 md:h-7 md:w-7"/> {cafe.district}, {cafe.city}
+                                        </p>
+                                     </div>
+                                     
+                                     {/* Big Price Tier with Colors */}
+                                     <div className="flex items-end justify-center md:justify-end mt-2 md:mt-0 flex-shrink-0 bg-soft dark:bg-gray-700/30 px-4 py-2 md:px-6 md:py-4 rounded-2xl border border-border">
+                                         <span className={`text-4xl md:text-6xl font-extrabold tracking-wide ${getPriceColor(cafe.priceTier)}`}>
+                                            {'$'.repeat(cafe.priceTier)}
+                                         </span>
+                                         <span className="text-gray-300 dark:text-gray-600 text-4xl md:text-6xl font-extrabold tracking-wide">
+                                            {'$'.repeat(4 - cafe.priceTier)}
+                                         </span>
+                                     </div>
                                 </div>
                              </div>
                         </div>
 
-                        {/* Responsive Info Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-6 border-t border-border">
-                            <div className="space-y-4">
-                                <div className="flex items-start p-3 rounded-xl bg-soft dark:bg-gray-700/30">
-                                    <MapPinIcon className="h-6 w-6 mr-3 text-brand flex-shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="font-bold text-sm text-primary dark:text-white mb-0.5">Alamat</p>
-                                        <p className="text-muted text-sm">{cafe.address}, {cafe.city}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start p-3 rounded-xl bg-soft dark:bg-gray-700/30">
-                                    <ClockIcon className="h-6 w-6 mr-3 text-brand flex-shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="font-bold text-sm text-primary dark:text-white mb-0.5">Jam Operasional</p>
-                                        <p className="text-muted text-sm">{cafe.openingHours}</p>
-                                        {isClosed && <p className="text-xs text-amber-600 font-bold mt-1">⚠️ Mungkin Tutup</p>}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="flex items-start p-3 rounded-xl bg-soft dark:bg-gray-700/30">
-                                    <PhoneIcon className="h-6 w-6 mr-3 text-brand flex-shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="font-bold text-sm text-primary dark:text-white mb-0.5">Kontak</p>
-                                        {cafe.phoneNumber ? (
-                                            <a href={`tel:${cafe.phoneNumber}`} className="text-muted text-sm hover:text-brand hover:underline transition-colors">{cafe.phoneNumber}</a>
-                                        ) : <p className="text-muted text-sm italic">Tidak tersedia</p>}
-                                    </div>
-                                </div>
-                                <div className="flex items-start p-3 rounded-xl bg-soft dark:bg-gray-700/30">
-                                    <GlobeAltIcon className="h-6 w-6 mr-3 text-brand flex-shrink-0 mt-0.5" />
-                                    <div className="min-w-0">
-                                        <p className="font-bold text-sm text-primary dark:text-white mb-0.5">Website / Sosmed</p>
-                                        {cafe.websiteUrl ? (
-                                            <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-muted text-sm hover:text-brand hover:underline transition-colors block truncate">
-                                                {cafe.websiteUrl.replace(/^https?:\/\//, '')}
-                                            </a>
-                                        ) : <p className="text-muted text-sm italic">Tidak tersedia</p>}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
+                        {/* Description */}
                         {cafe.description && (
-                            <div className="mt-6 pt-6 border-t border-border">
-                                <h3 className="font-bold text-lg mb-2 font-jakarta">Tentang {cafe.name}</h3>
-                                <p className="text-primary dark:text-gray-300 leading-relaxed">
+                            <div className="mt-8 md:mt-10 text-center md:text-left">
+                                <p className="text-primary dark:text-gray-300 leading-relaxed text-lg md:text-xl">
                                     {cafe.description}
                                 </p>
                             </div>
                         )}
+
+                        {/* Tags */}
+                        {currentUser && (
+                             <div className="mt-8 pt-8 border-t border-border">
+                                <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
+                                   <TagIcon className="h-5 w-5 md:h-7 md:w-7 text-brand" />
+                                   <h3 className="text-lg md:text-2xl font-bold font-jakarta">Tag Komunitas</h3>
+                                </div>
+                                <TagManager cafe={cafe} setNotification={setNotification} />
+                            </div>
+                        )}
+
+                        {/* Categorized Grid: Vibes & Amenities */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mt-10">
+                            {/* Vibes Column */}
+                            <div className="bg-soft dark:bg-gray-700/30 p-6 rounded-2xl border border-border h-full">
+                                <div className="flex items-center gap-3 mb-6 border-b border-border/50 pb-3">
+                                    <SparklesIcon className="h-6 w-6 md:h-8 md:w-8 text-accent-pink" />
+                                    <h3 className="font-bold text-xl md:text-2xl text-primary dark:text-white">Vibe & Suasana</h3>
+                                </div>
+                                {cafe.vibes.length > 0 ? (
+                                    <div className="flex flex-wrap gap-3">
+                                        {cafe.vibes.map(v => (
+                                            <span key={v.id} className="bg-white dark:bg-gray-800 text-primary dark:text-gray-200 px-4 py-2 rounded-xl text-base md:text-lg font-semibold border border-border shadow-sm">
+                                                {v.name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-muted text-base italic">Belum ada data vibe.</p>
+                                )}
+                            </div>
+
+                            {/* Amenities Column */}
+                            <div className="bg-soft dark:bg-gray-700/30 p-6 rounded-2xl border border-border h-full">
+                                <div className="flex items-center gap-3 mb-6 border-b border-border/50 pb-3">
+                                    <WifiIcon className="h-6 w-6 md:h-8 md:w-8 text-brand" />
+                                    <h3 className="font-bold text-xl md:text-2xl text-primary dark:text-white">Fasilitas & Kenyamanan</h3>
+                                </div>
+                                {cafe.amenities.length > 0 ? (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {cafe.amenities.map(a => (
+                                            <div key={a.id} className="flex items-center gap-3 text-base md:text-lg text-primary dark:text-gray-200">
+                                                <span className="text-xl md:text-2xl">{a.icon}</span>
+                                                <span>{a.name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-muted text-base italic">Belum ada data fasilitas.</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Info Grid - Tighter padding on mobile */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mt-10 pt-8 border-t border-border">
+                            <div className="space-y-4 md:space-y-6">
+                                <div className="flex items-start p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <MapPinIcon className="h-6 w-6 md:h-8 md:w-8 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                                    <div>
+                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-1">Alamat</p>
+                                        <p className="text-muted text-base md:text-lg">{cafe.address}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <ClockIcon className="h-6 w-6 md:h-8 md:w-8 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                                    <div>
+                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-1">Jam Operasional</p>
+                                        <p className="text-muted text-base md:text-lg">{cafe.openingHours}</p>
+                                        {openingStatus && (
+                                            <div className={`inline-flex items-center px-3 py-1 rounded-lg text-sm md:text-base font-bold mt-2 shadow-sm border border-transparent ${openingStatus.color}`}>
+                                                {openingStatus.message}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-4 md:space-y-6">
+                                <div className="flex items-start p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <PhoneIcon className="h-6 w-6 md:h-8 md:w-8 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                                    <div>
+                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-1">Kontak</p>
+                                        {cafe.phoneNumber ? (
+                                            <a href={`tel:${cafe.phoneNumber}`} className="text-muted text-base md:text-lg hover:text-brand hover:underline transition-colors">{cafe.phoneNumber}</a>
+                                        ) : <p className="text-muted text-base italic">Tidak tersedia</p>}
+                                    </div>
+                                </div>
+                                <div className="flex items-start p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <GlobeAltIcon className="h-6 w-6 md:h-8 md:w-8 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-1">Website / Sosmed</p>
+                                        {cafe.websiteUrl ? (
+                                            <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-muted text-base md:text-lg hover:text-brand hover:underline transition-colors block truncate">
+                                                {cafe.websiteUrl.replace(/^https?:\/\//, '')}
+                                            </a>
+                                        ) : <p className="text-muted text-base italic">Tidak tersedia</p>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    {/* Tags */}
-                    {currentUser && (
-                         <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
-                            <div className="flex items-center gap-3 mb-4">
-                               <TagIcon className="h-6 w-6 text-brand" />
-                               <h2 className="text-2xl font-bold font-jakarta">Tag Komunitas</h2>
-                            </div>
-                            <TagManager cafe={cafe} setNotification={setNotification} />
-                        </div>
-                    )}
-
                     {/* Interactive Map & Action Button */}
-                    <div className="space-y-4">
-                        <div className="relative z-10 rounded-3xl shadow-md overflow-hidden h-72 md:h-96 border border-border">
+                    <div className="space-y-6">
+                        <div className="relative z-10 rounded-3xl shadow-md overflow-hidden h-72 md:h-[500px] border border-border">
                             <InteractiveMap cafe={cafe} theme={theme} showDistanceControl={true} showUserLocation={true} />
                         </div>
-                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full text-center bg-green-600 text-white font-bold py-4 rounded-2xl hover:bg-green-700 transition-all shadow-lg shadow-green-600/20">
-                            <MapPinIcon className="h-5 w-5" />
+                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 w-full text-center bg-green-600 text-white font-bold py-4 md:py-6 rounded-2xl hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 text-lg md:text-xl">
+                            <MapPinIcon className="h-6 w-6 md:h-8 md:w-8" />
                             Buka Navigasi Google Maps
                         </a>
                     </div>
                     
                     {/* Scores */}
-                    <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
-                        <h2 className="text-3xl font-bold font-jakarta text-center mb-8">Skor Nongkrongr</h2>
-                        <div className="flex flex-row justify-around items-start gap-2 sm:gap-4">
+                    <div className="bg-card border border-border p-8 md:p-12 rounded-3xl shadow-sm">
+                        <h2 className="text-3xl md:text-4xl font-bold font-jakarta text-center mb-10">Skor Nongkrongr</h2>
+                        <div className="flex flex-row justify-around items-start gap-4 md:gap-12">
                             <ScoreDisplay label="Aesthetic" score={cafe.avgAestheticScore} max={10} color="#FF4081" />
                             <ScoreDisplay label="Nugas" score={cafe.avgWorkScore} max={10} color="#00E5FF"/>
                             <ScoreDisplay label="Keramaian" score={cafe.avgCrowdEvening} max={5} color="#7C4DFF"/>
@@ -359,11 +386,11 @@ const DetailPage: React.FC = () => {
                     {/* Events */}
                     {cafeEvents.length > 0 && (
                         <div>
-                            <div className="flex items-center gap-3 mb-4">
-                                <CalendarDaysIcon className="h-8 w-8 text-brand" />
-                                <h2 className="text-3xl font-bold font-jakarta">Event & Promo</h2>
+                            <div className="flex items-center gap-4 mb-6">
+                                <CalendarDaysIcon className="h-8 w-8 md:h-10 md:w-10 text-brand" />
+                                <h2 className="text-3xl md:text-4xl font-bold font-jakarta">Event & Promo</h2>
                             </div>
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 {cafeEvents.map(event => (
                                     <EventCard key={event.id} event={event} />
                                 ))}
@@ -374,8 +401,8 @@ const DetailPage: React.FC = () => {
                     {/* Photo Gallery */}
                     {cafe.spots && cafe.spots.length > 0 && (
                         <div>
-                            <h2 className="text-3xl font-bold font-jakarta mb-4">Galeri Foto</h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <h2 className="text-3xl md:text-4xl font-bold font-jakarta mb-6">Galeri Foto</h2>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                                 {cafe.spots.map((spot) => (
                                     <button
                                         key={spot.id}
@@ -398,26 +425,26 @@ const DetailPage: React.FC = () => {
 
                     {/* Reviews */}
                      <div>
-                         <h2 className="text-3xl font-bold font-jakarta mb-4">Reviews ({approvedReviews.length})</h2>
-                         <div className="space-y-4">
+                         <h2 className="text-3xl md:text-4xl font-bold font-jakarta mb-6">Reviews ({approvedReviews.length})</h2>
+                         <div className="space-y-6">
                             {approvedReviews.length > 0 ? visibleReviews.map(review => (
                                 <ReviewCard 
                                     key={review.id} 
                                     review={{...review, cafeName: cafe.name, cafeSlug: cafe.slug}} 
                                 />
-                            )) : <div className="p-6 bg-soft rounded-2xl text-center text-muted">Belum ada review. Jadilah yang pertama!</div>}
+                            )) : <div className="p-8 bg-soft rounded-2xl text-center text-muted text-lg">Belum ada review. Jadilah yang pertama!</div>}
                          </div>
                          
                          {visibleReviewsCount < approvedReviews.length && (
-                            <div className="mt-6 text-center">
+                            <div className="mt-8 text-center">
                                 <button
                                     onClick={handleLoadMoreReviews}
-                                    className="bg-brand/10 text-brand font-bold py-3 px-8 rounded-2xl hover:bg-brand/20 transition-all duration-300 flex items-center justify-center gap-2 mx-auto"
+                                    className="bg-brand/10 text-brand font-bold py-4 px-10 rounded-2xl hover:bg-brand/20 transition-all duration-300 flex items-center justify-center gap-2 mx-auto text-lg"
                                 >
                                     Muat Lebih Banyak
-                                    <ChevronDownIcon className="h-5 w-5" />
+                                    <ChevronDownIcon className="h-6 w-6" />
                                 </button>
-                                <p className="text-xs text-muted mt-2">
+                                <p className="text-sm md:text-base text-muted mt-3">
                                     Menampilkan {visibleReviews.length} dari {approvedReviews.length} ulasan
                                 </p>
                             </div>
@@ -442,22 +469,22 @@ const DetailPage: React.FC = () => {
                     onClick={closeImageModal}
                 >
                     <div 
-                        className="relative max-w-4xl w-full max-h-[90vh] p-4" 
+                        className="relative max-w-6xl w-full max-h-[90vh] p-4 md:p-8" 
                         onClick={(e) => e.stopPropagation()} 
                     >
                         <ImageWithFallback
                             src={selectedImage}
                             alt="Tampilan foto spot yang diperbesar"
-                            className="w-full h-auto max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+                            className="w-full h-auto max-h-[85vh] object-contain rounded-2xl shadow-2xl"
                             width={1920}
                             height={1080}
                         />
                         <button
                             onClick={closeImageModal}
-                            className="absolute -top-2 -right-2 sm:top-4 sm:right-4 text-white bg-black/50 rounded-full p-2 hover:bg-black/80 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                            className="absolute -top-2 -right-2 sm:top-6 sm:right-6 text-white bg-black/50 rounded-full p-3 hover:bg-black/80 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
                             aria-label="Tutup galeri"
                         >
-                            <XMarkIcon className="h-6 w-6" />
+                            <XMarkIcon className="h-8 w-8" />
                         </button>
                     </div>
                 </div>

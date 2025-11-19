@@ -4,7 +4,7 @@ import { Review } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { cloudinaryService } from '../services/cloudinaryService';
 import { fileToBase64 } from '../utils/fileUtils';
-import { PhotoIcon, SparklesIcon, BriefcaseIcon, SunIcon, MoonIcon, UserGroupIcon, CurrencyDollarIcon, XCircleIcon } from '@heroicons/react/24/solid';
+import { PhotoIcon, SparklesIcon, BriefcaseIcon, SunIcon, MoonIcon, UserGroupIcon, CurrencyDollarIcon, XCircleIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 
 interface ReviewFormProps {
     onSubmit: (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => Promise<void>;
@@ -29,6 +29,32 @@ const CrowdSlider: React.FC<{ icon: React.ReactNode, label: string, value: numbe
     </div>
 );
 
+// Helper component for the responsive accordion sections
+const FormSection: React.FC<{ 
+    title: string; 
+    isOpen: boolean; 
+    onToggle: () => void; 
+    children: React.ReactNode;
+    disabled: boolean;
+}> = ({ title, isOpen, onToggle, children, disabled }) => (
+    <div className="border-b border-border last:border-0 pb-4 last:pb-0 md:border-none md:pb-0">
+        <button 
+            type="button" 
+            onClick={onToggle}
+            disabled={disabled}
+            className="w-full flex justify-between items-center py-2 md:py-0 md:cursor-default text-left focus:outline-none group"
+        >
+            <legend className="text-lg font-bold font-jakarta">{title}</legend>
+            {/* Chevron only visible on mobile */}
+            <ChevronDownIcon className={`h-5 w-5 text-muted md:hidden transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+        
+        {/* Content: Hidden on mobile unless open, Always block on desktop */}
+        <div className={`mt-4 space-y-4 transition-all duration-300 ease-in-out ${isOpen ? 'block' : 'hidden'} md:block`}>
+            {children}
+        </div>
+    </div>
+);
 
 const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId }) => {
     const { currentUser } = useAuth();
@@ -45,12 +71,22 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
     const [isDragOver, setIsDragOver] = useState(false);
     const [isConfirming, setIsConfirming] = useState(false);
 
+    // Accordion states for mobile - Default CLOSED
+    const [sectionsOpen, setSectionsOpen] = useState({
+        score: false,
+        crowd: false,
+        details: false
+    });
+
     useEffect(() => {
         if (currentUser) {
             setAuthor(currentUser.username);
         }
     }, [currentUser]);
 
+    const toggleSection = (section: keyof typeof sectionsOpen) => {
+        setSectionsOpen(prev => ({ ...prev, [section]: !prev[section] }));
+    };
 
     const handleFileChange = useCallback(async (file: File | null) => {
         if (file) {
@@ -86,6 +122,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
         setCrowdMorning(3); setCrowdAfternoon(3); setCrowdEvening(3);
         setPriceSpent(''); setPhoto(null);
         setIsConfirming(false);
+        setSectionsOpen({ score: false, crowd: false, details: false });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -118,6 +155,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
         e.preventDefault();
         if (author.trim() && text.trim()) {
             setIsConfirming(true);
+            // Open all sections if they are closed when clicking submit to show review details
+            setSectionsOpen({ score: true, crowd: true, details: true });
         } else {
             // This will trigger the form's native validation hints
             e.currentTarget.form?.requestSubmit();
@@ -129,14 +168,20 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
     const inputClass = "w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white placeholder:text-muted focus:ring-2 focus:ring-brand transition-all disabled:opacity-70";
     
     return (
-        <form onSubmit={handleSubmit} className="bg-card border border-border p-6 rounded-3xl shadow-sm space-y-6">
+        <form onSubmit={handleSubmit} className="bg-card border border-border p-6 rounded-3xl shadow-sm space-y-6 sticky top-24">
             <h3 className="text-xl font-bold font-jakarta text-center">Beri Review Kamu!</h3>
             
-            <input type="text" placeholder="Nama Kamu" value={author} onChange={e => setAuthor(e.target.value)} required readOnly={!!currentUser} className={`${inputClass} ${!!currentUser ? 'font-semibold' : ''}`} disabled={formDisabled}/>
-            <textarea placeholder="Ceritain pengalamanmu di sini..." value={text} onChange={e => setText(e.target.value)} required className={`${inputClass} h-24`} disabled={formDisabled}></textarea>
+            <div className="space-y-4">
+                <input type="text" placeholder="Nama Kamu" value={author} onChange={e => setAuthor(e.target.value)} required readOnly={!!currentUser} className={`${inputClass} ${!!currentUser ? 'font-semibold' : ''}`} disabled={formDisabled}/>
+                <textarea placeholder="Ceritain pengalamanmu di sini..." value={text} onChange={e => setText(e.target.value)} required className={`${inputClass} h-24`} disabled={formDisabled}></textarea>
+            </div>
             
-            <fieldset className="space-y-4" disabled={formDisabled}>
-                <legend className="text-lg font-bold font-jakarta mb-2">Beri Skor</legend>
+            <FormSection 
+                title="Beri Skor" 
+                isOpen={sectionsOpen.score} 
+                onToggle={() => toggleSection('score')}
+                disabled={formDisabled}
+            >
                 <div className="space-y-3">
                      <div>
                         <label className="flex items-center gap-2 font-semibold text-primary">
@@ -151,19 +196,27 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                         <input type="range" min="1" max="10" value={ratingWork} onChange={e => setRatingWork(parseInt(e.target.value))} className="w-full accent-accent-cyan"/>
                     </div>
                 </div>
-            </fieldset>
+            </FormSection>
 
-             <fieldset className="space-y-4" disabled={formDisabled}>
-                <legend className="text-lg font-bold font-jakarta mb-2">Tingkat Keramaian</legend>
+            <FormSection 
+                title="Tingkat Keramaian" 
+                isOpen={sectionsOpen.crowd} 
+                onToggle={() => toggleSection('crowd')}
+                disabled={formDisabled}
+            >
                 <div className="grid grid-cols-3 gap-4 p-2 bg-soft dark:bg-gray-700/50 rounded-xl">
                    <CrowdSlider icon={<SunIcon className="h-5 w-5"/>} label="Pagi" value={crowdMorning} onChange={setCrowdMorning} colorClass="accent-accent-amber" disabled={formDisabled}/>
                    <CrowdSlider icon={<UserGroupIcon className="h-5 w-5"/>} label="Siang" value={crowdAfternoon} onChange={setCrowdAfternoon} colorClass="accent-brand/75" disabled={formDisabled}/>
                    <CrowdSlider icon={<MoonIcon className="h-5 w-5"/>} label="Malam" value={crowdEvening} onChange={setCrowdEvening} colorClass="accent-brand" disabled={formDisabled}/>
                 </div>
-            </fieldset>
+            </FormSection>
 
-            <fieldset className="space-y-4" disabled={formDisabled}>
-                <legend className="text-lg font-bold font-jakarta mb-2">Detail Tambahan</legend>
+            <FormSection 
+                title="Detail Tambahan" 
+                isOpen={sectionsOpen.details} 
+                onToggle={() => toggleSection('details')}
+                disabled={formDisabled}
+            >
                 <div className="space-y-4">
                     <div>
                         <label className="flex items-center gap-2 font-semibold text-primary mb-2">
@@ -209,7 +262,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                         <input id="photo-upload" type="file" accept="image/*" onChange={(e) => handleFileChange(e.target.files ? e.target.files[0] : null)} className="hidden" disabled={formDisabled} />
                     </div>
                 </div>
-            </fieldset>
+            </FormSection>
 
             {isConfirming ? (
                 <div className="flex justify-end gap-4">

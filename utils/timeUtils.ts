@@ -1,3 +1,4 @@
+
 /**
  * Parses a time string "HH:MM" into total minutes from midnight.
  * @param timeStr The time string to parse.
@@ -12,40 +13,73 @@ const parseTime = (timeStr: string): number | null => {
     return hours * 60 + minutes;
 };
 
+export type OpeningStatus = {
+    isOpen: boolean;
+    status: 'open' | 'closed' | 'opening_soon' | 'closing_soon' | 'unknown';
+    message: string;
+    color: string;
+};
+
 /**
- * Checks if a cafe is currently open based on its opening hours string.
- * @param openingHours The opening hours string (e.g., "08:00 - 22:00", "24 Jam").
- * @returns True if the cafe is currently open, false otherwise.
+ * Checks detailed opening status including "Opening Soon" and "Closing Soon".
+ * Buffer time is 60 minutes.
  */
-export const checkIfOpen = (openingHours: string): boolean => {
-    if (!openingHours) return false; // Assume closed if no data
-    if (openingHours.toLowerCase().includes('24')) return true;
+export const getOpeningStatus = (openingHours: string): OpeningStatus => {
+    if (!openingHours) return { isOpen: false, status: 'unknown', message: 'Jam tidak tersedia', color: 'text-gray-500 bg-gray-100 dark:bg-gray-800' };
+    if (openingHours.toLowerCase().includes('24')) return { isOpen: true, status: 'open', message: 'Buka 24 Jam', color: 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300' };
 
     const parts = openingHours.split(' - ');
-    if (parts.length !== 2) return false; // Invalid format, assume closed
+    if (parts.length !== 2) return { isOpen: false, status: 'unknown', message: '', color: 'text-gray-500' };
 
     const openTime = parseTime(parts[0]);
     const closeTime = parseTime(parts[1]);
 
-    if (openTime === null || closeTime === null) return false; // Invalid time format
+    if (openTime === null || closeTime === null) return { isOpen: false, status: 'unknown', message: '', color: 'text-gray-500' };
 
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();
+    const bufferMinutes = 60;
 
-    // Handle overnight case (e.g., 16:00 - 02:00)
+    // Normalize times for calculation
+    let effectiveCloseTime = closeTime;
     if (closeTime < openTime) {
-        return currentTime >= openTime || currentTime < closeTime;
+        effectiveCloseTime += 24 * 60; // Add 24 hours if closing next day
     }
     
-    // Same day case (e.g., 08:00 - 22:00)
-    return currentTime >= openTime && currentTime < closeTime;
+    let effectiveCurrentTime = currentTime;
+    // If currently early morning (e.g. 01:00) and place closes at 02:00, treat current as next day relative to open
+    if (closeTime < openTime && currentTime < closeTime) {
+        effectiveCurrentTime += 24 * 60;
+    }
+
+    const isOpen = effectiveCurrentTime >= openTime && effectiveCurrentTime < effectiveCloseTime;
+    
+    // Check Opening Soon (if not open yet, but within buffer before open)
+    if (!isOpen && effectiveCurrentTime < openTime && (openTime - effectiveCurrentTime) <= bufferMinutes) {
+         const diff = openTime - effectiveCurrentTime;
+         return { isOpen: false, status: 'opening_soon', message: `Buka sebentar lagi (${diff} mnt)`, color: 'text-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300' };
+    }
+
+    // Check Closing Soon (if open, and within buffer before close)
+    if (isOpen && (effectiveCloseTime - effectiveCurrentTime) <= bufferMinutes) {
+        const diff = effectiveCloseTime - effectiveCurrentTime;
+        return { isOpen: true, status: 'closing_soon', message: `Segera Tutup (${diff} mnt)`, color: 'text-orange-700 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-300' };
+    }
+
+    if (isOpen) {
+        return { isOpen: true, status: 'open', message: 'Sedang Buka', color: 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300' };
+    } else {
+        return { isOpen: false, status: 'closed', message: 'Tutup', color: 'text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300' };
+    }
 };
 
 /**
- * Checks if a cafe is open late (closes at or after 11 PM).
- * @param openingHours The opening hours string.
- * @returns True if the cafe closes late, false otherwise.
+ * Legacy check (boolean only), kept for backward compatibility if needed
  */
+export const checkIfOpen = (openingHours: string): boolean => {
+    return getOpeningStatus(openingHours).isOpen;
+};
+
 export const checkIfOpenLate = (openingHours: string): boolean => {
     if (!openingHours) return false;
     if (openingHours.toLowerCase().includes('24')) return true;

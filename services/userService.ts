@@ -60,30 +60,29 @@ export const userService = {
 
   async deleteUserPermanent(userId: string): Promise<{ error: any }> {
     // 1. Attempt to use a Secure RPC function (best practice for deleting from auth.users)
-    // Note: This function 'delete_user' must be created in your Supabase SQL Editor.
-    /* 
-       SQL:
-       create or replace function delete_user()
-       returns void as $$
-       begin
-         delete from auth.users where id = auth.uid(); -- Or pass ID as argument for admin
-       end;
-       $$ language plpgsql security definer;
-    */
-    
-    // Try to call a hypothetical admin deletion function first
     const { error: rpcError } = await supabase.rpc('delete_user_by_id', { user_id: userId });
     
     if (!rpcError) {
         return { error: null };
     }
 
-    // 2. Fallback: Delete from 'profiles' table directly.
-    // If ON DELETE CASCADE is set up in the DB, this handles app data.
-    // Deleting from 'profiles' effectively removes the user from the app logic, 
-    // even if the auth record remains orphaned in Supabase Auth (until admin cleans it).
-    console.warn("RPC delete failed or not found, falling back to profiles deletion:", rpcError.message);
+    console.warn("RPC delete failed or not found, falling back to manual cleanup and profile deletion:", rpcError.message);
 
+    // 2. Manual Cleanup: Set manager_id to NULL for any cafes owned by this user.
+    // This prevents Foreign Key constraint errors when deleting the profile.
+    const { error: unlinkError } = await supabase
+        .from('cafes')
+        .update({ manager_id: null })
+        .eq('manager_id', userId);
+
+    if (unlinkError) {
+        console.error(`Error unlinking cafes for user ${userId}:`, unlinkError);
+        // Even if update fails, we might try deleting profile if it's not a FK issue, 
+        // but usually it is. We return error here to be safe.
+        return { error: unlinkError };
+    }
+
+    // 3. Fallback: Delete from 'profiles' table directly.
     const { error } = await supabase
         .from('profiles')
         .delete()
