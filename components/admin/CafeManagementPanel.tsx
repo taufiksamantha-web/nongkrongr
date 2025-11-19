@@ -255,13 +255,13 @@ const CafeManagementPanel: React.FC = () => {
     const userCanManage = (cafe: Cafe) => currentUser?.role === 'admin' || currentUser?.id === cafe.manager_id;
     const findUserName = (userId: string | undefined) => allUsers.find(u => u.id === userId)?.username || 'N/A';
 
-    // Grid Configuration
+    // Grid Configuration - Using percentages/fractions for fluidity
     const isAdmin = currentUser?.role === 'admin';
-    // Grid Desktop/Tablet: Checkbox | Info | Owner | Status | Sponsor
-    // Admin removed image col, others keep it
-    const gridColsClass = isAdmin 
-        ? 'grid-cols-[40px_2fr_1.5fr_120px_150px]' 
-        : 'grid-cols-[60px_2fr_120px_150px]';
+    
+    // Checkbox (if admin) | Image (if not admin) | Name+Loc | Owner (if admin) | Status | Sponsor
+    const gridTemplateCols = isAdmin 
+        ? '40px minmax(200px, 2fr) minmax(120px, 1.5fr) 120px 150px' 
+        : '60px minmax(200px, 2fr) 120px 150px';
 
     return (
          <>
@@ -274,7 +274,7 @@ const CafeManagementPanel: React.FC = () => {
                 </div>
             </div>
             
-            <div className="relative mb-4">
+            <div className="relative mb-4 w-full max-w-md">
                 <MagnifyingGlassIcon className="h-5 w-5 text-muted absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input type="text" placeholder="Cari cafe berdasarkan nama..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-3 pl-11 rounded-xl border border-border bg-soft dark:bg-gray-700/50 text-primary dark:text-white placeholder-muted focus:ring-2 focus:ring-brand transition-colors"/>
             </div>
@@ -284,9 +284,9 @@ const CafeManagementPanel: React.FC = () => {
             ) : sortedAndFilteredCafes.length === 0 ? (
                 <div className="text-center py-10 bg-soft dark:bg-gray-700/50 rounded-2xl border border-border"><InboxIcon className="mx-auto h-12 w-12 text-muted" /><p className="mt-4 text-xl font-bold font-jakarta text-primary dark:text-gray-200">{searchQuery ? 'Kafe Tidak Ditemukan' : 'Belum Ada Kafe'}</p><p className="text-muted mt-2 max-w-xs mx-auto">{searchQuery ? `Tidak ada hasil yang cocok untuk "${searchQuery}".` : 'Klik tombol "+ Tambah Cafe" untuk memulai.'}</p></div>
             ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 w-full">
                     {/* Table Header (Tablet & Desktop) */}
-                    <div className={`hidden md:grid ${gridColsClass} items-center gap-4 px-6 py-3 border-b-2 border-border bg-soft/30 rounded-t-xl`}>
+                    <div className="hidden md:grid items-center gap-4 px-6 py-3 border-b-2 border-border bg-soft/30 rounded-t-xl w-full" style={{ gridTemplateColumns: gridTemplateCols }}>
                         {isAdmin && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition cursor-pointer" onChange={handleSelectAllOnPage} checked={paginatedCafes.length > 0 && paginatedCafes.every(c => selectedCafeIds.includes(c.id))} aria-label="Pilih semua cafe di halaman ini"/>}
                         {!isAdmin && <span className="text-xs font-bold text-muted uppercase tracking-wider">Gambar</span>}
                         <SortableHeader columnKey="name" title="Informasi Cafe" />
@@ -297,7 +297,7 @@ const CafeManagementPanel: React.FC = () => {
                     </div>
 
                     {paginatedCafes.map(cafe => (
-                        <div key={cafe.id} className="bg-card dark:bg-gray-800/50 rounded-2xl border border-border transition-shadow hover:shadow-lg overflow-hidden">
+                        <div key={cafe.id} className="bg-card dark:bg-gray-800/50 rounded-2xl border border-border transition-shadow hover:shadow-lg overflow-hidden w-full">
                            
                            {/* Mobile View (Simplified List) */}
                            <div className="p-4 md:hidden flex flex-col gap-3">
@@ -404,7 +404,7 @@ const CafeManagementPanel: React.FC = () => {
                             {/* Tablet & Desktop View (Data Grid + Action Footer) */}
                             <div className="hidden md:flex flex-col">
                                 {/* Top Data Row */}
-                                <div className={`grid ${gridColsClass} items-center gap-4 px-6 py-4`}>
+                                <div className="grid items-center gap-4 px-6 py-4 w-full" style={{ gridTemplateColumns: gridTemplateCols }}>
                                      {isAdmin && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition cursor-pointer" checked={selectedCafeIds.includes(cafe.id)} onChange={() => handleSelectOne(cafe.id)} aria-label={`Pilih ${cafe.name}`}/>}
                                     
                                     {/* Image Column - Only for Managers */}
@@ -441,8 +441,8 @@ const CafeManagementPanel: React.FC = () => {
 
                                     {/* Owner Column */}
                                     {isAdmin && (
-                                        <div className="text-sm text-muted break-words flex flex-col items-start">
-                                            <span className="font-medium text-primary dark:text-gray-300 line-clamp-1 text-base">{findUserName(cafe.manager_id)}</span>
+                                        <div className="text-sm text-muted break-words flex flex-col items-start min-w-0">
+                                            <span className="font-medium text-primary dark:text-gray-300 truncate w-full text-base">{findUserName(cafe.manager_id)}</span>
                                             <button onClick={() => handleOpenChangeOwner(cafe)} className="text-blue-500 hover:underline text-xs font-bold mt-0.5">Ubah Owner</button>
                                         </div>
                                     )}

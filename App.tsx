@@ -154,7 +154,7 @@ const Header: React.FC = () => {
 
   return (
     <>
-      <div className="container mx-auto px-4 pt-4 sticky top-4 z-50">
+      <div className="container mx-auto px-4 pt-4 sticky top-4 z-50 w-full max-w-screen-2xl">
         <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 shadow-sm flex items-center justify-between transition-all duration-300">
           <nav className="w-full flex items-center justify-between relative">
             <Link to="/" className="flex items-center mr-6">
@@ -318,10 +318,10 @@ const MainLayout: React.FC = () => {
     };
 
     return (
-        <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col transition-colors duration-300">
+        <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col transition-colors duration-300 w-full">
             {showWelcome && isHomePage && <WelcomeModal onClose={handleCloseWelcome} />}
             <Header />
-            <main className="flex-grow pt-4">
+            <main className="flex-grow pt-4 w-full">
                 <Outlet />
             </main>
             

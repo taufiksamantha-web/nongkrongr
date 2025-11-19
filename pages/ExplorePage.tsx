@@ -453,7 +453,7 @@ const ExplorePage: React.FC = () => {
   const isSpecialView = isFavoritesView || sortParam === 'trending';
 
   return (
-    <div className="container mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
+    <div className="container mx-auto px-4 sm:px-6 py-8 flex flex-col lg:flex-row gap-6 lg:gap-8 w-full max-w-screen-2xl">
       {/* Filter Modal for Mobile */}
       <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[1200] lg:hidden transition-opacity duration-300 ${isFiltersOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsFiltersOpen(false)}>
           <div 
@@ -470,13 +470,13 @@ const ExplorePage: React.FC = () => {
           </div>
       </div>
 
-      {/* Filters Sidebar for Desktop */}
-      <aside className={`hidden lg:block lg:w-1/4 xl:w-1/5 bg-card dark:bg-gray-800 p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-24 transition-opacity ${isSpecialView ? 'opacity-50 pointer-events-none' : ''}`}>
+      {/* Filters Sidebar for Desktop - Fluid width */}
+      <aside className={`hidden lg:block lg:w-1/4 xl:w-1/5 min-w-[250px] bg-card dark:bg-gray-800 p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-24 transition-opacity ${isSpecialView ? 'opacity-50 pointer-events-none' : ''}`}>
         <FilterPanelContent {...filterPanelProps} />
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1">
+      {/* Main Content - Fluid width */}
+      <div className="flex-1 w-full min-w-0">
         {/* Mobile Filter Button */}
         <div className="lg:hidden mb-6">
             <button 

@@ -28,8 +28,8 @@ const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color:
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
     return (
-        <div className="flex flex-col items-center text-center">
-            <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32">
+        <div className="flex flex-col items-center text-center group w-full">
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 transition-all duration-300 ease-in-out transform group-hover:scale-105">
                 <svg className="w-full h-full" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="45" className="stroke-current text-gray-200 dark:text-gray-700" strokeWidth="10" fill="transparent" />
                     <circle
@@ -43,11 +43,11 @@ const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color:
                     />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-lg sm:text-2xl md:text-3xl font-bold font-jakarta" style={{ color }}>{score > 0 ? score.toFixed(1) : 'N/A'}</span>
-                    <span className="text-xs md:text-sm text-muted">/ {max}</span>
+                    <span className="text-lg sm:text-xl md:text-2xl font-bold font-jakarta transition-all duration-300" style={{ color }}>{score > 0 ? score.toFixed(1) : 'N/A'}</span>
+                    <span className="text-[8px] sm:text-[10px] md:text-xs text-muted">/ {max}</span>
                 </div>
             </div>
-            <p className="mt-2 sm:mt-4 text-sm md:text-lg font-semibold">{label}</p>
+            <p className="mt-2 text-xs sm:text-sm font-semibold transition-all duration-300">{label}</p>
         </div>
     );
 };
@@ -168,215 +168,215 @@ const DetailPage: React.FC = () => {
 
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
+        <div className="container mx-auto px-4 sm:px-6 py-6 transition-all duration-300 ease-in-out w-full max-w-screen-2xl">
             <button
                 onClick={() => navigate(-1)}
-                className="mb-6 inline-flex items-center gap-2 text-muted hover:text-brand dark:hover:text-brand-light font-semibold transition-colors duration-300 group md:text-lg"
+                className="mb-4 inline-flex items-center gap-2 text-muted hover:text-brand dark:hover:text-brand-light font-semibold transition-colors duration-300 group text-sm sm:text-base"
                 aria-label="Kembali ke halaman sebelumnya"
             >
-                <ArrowLeftIcon className="h-5 w-5 md:h-6 md:w-6 transform group-hover:-translate-x-1 transition-transform" />
+                <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5 transform group-hover:-translate-x-1 transition-transform" />
                 Kembali
             </button>
             {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
             
-            <div className="relative group">
+            {/* Cover Image with responsive height */}
+            <div className="relative group w-full">
                 <ImageWithFallback 
                     src={cafe.coverUrl} 
                     defaultSrc={DEFAULT_COVER_URL}
                     alt={cafe.name} 
-                    className="w-full h-56 md:h-[550px] object-cover rounded-4xl mb-8 border border-border shadow-sm"
+                    className="w-full h-48 sm:h-64 md:h-80 lg:h-96 object-cover rounded-3xl mb-6 border border-border shadow-sm transition-all duration-500 ease-in-out"
                     width={1280}
                     height={768}
                 />
-                <div className="absolute top-4 right-4 flex gap-3 z-10">
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex gap-2 sm:gap-3 z-10">
                      <ShareButton 
                         cafeName={cafe.name} 
                         cafeDescription={cafe.description} 
-                        className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-all shadow-sm active:scale-90 md:p-4"
+                        className="p-2 sm:p-3 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-all shadow-sm active:scale-90"
                     />
                      <button
                         onClick={handleFavoriteClick}
-                        className={`p-3 md:p-4 rounded-full transition-all duration-300 shadow-sm active:scale-75 bg-black/40 backdrop-blur-md text-white hover:bg-black/60 ${favorited ? 'text-accent-pink' : ''} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`}
+                        className={`p-2 sm:p-3 rounded-full transition-all duration-300 shadow-sm active:scale-75 bg-black/40 backdrop-blur-md text-white hover:bg-black/60 ${favorited ? 'text-accent-pink' : ''} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`}
                         aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
                         title={favorited ? 'Hapus dari favorit' : 'Tambah ke favorit'}
                      >
-                        {favorited ? <HeartIcon className="h-6 w-6 md:h-8 md:w-8 text-accent-pink"/> : <HeartIconOutline className="h-6 w-6 md:h-8 md:w-8" />}
+                        {favorited ? <HeartIcon className="h-5 w-5 sm:h-6 sm:w-6 text-accent-pink"/> : <HeartIconOutline className="h-5 w-5 sm:h-6 sm:w-6" />}
                      </button>
                 </div>
             </div>
 
-            <div className="grid lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8 md:space-y-12">
-                    {/* Header Cafe Improved - Center on Mobile, Left on Desktop */}
-                    <div className="bg-card border border-border p-6 md:p-10 rounded-3xl shadow-sm relative">
-                        <div className="flex flex-col items-center text-center md:flex-row md:items-start md:text-left gap-6 md:gap-8"> 
-                             {/* Logo */}
-                             <div className="flex-shrink-0">
+            {/* Main Layout - Fluid Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                <div className="lg:col-span-2 space-y-6 md:space-y-8 min-w-0">
+                    {/* Header Cafe Improved - Compact & Fluid */}
+                    <div className="bg-card border border-border p-4 sm:p-5 md:p-6 rounded-3xl shadow-sm relative transition-all duration-300">
+                        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-5 lg:gap-6"> 
+                             {/* Logo - Compact size on desktop (w-28) to reduce density */}
+                             <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 md:w-24 md:h-24 lg:w-28 lg:h-28 transition-all duration-300 ease-in-out">
                                 {cafe.logoUrl ? (
                                     <ImageWithFallback 
                                         src={cafe.logoUrl} 
                                         alt={`${cafe.name} logo`} 
-                                        className="w-24 h-24 md:w-44 md:h-44 rounded-3xl object-contain shadow-md bg-soft p-1 border border-border"
-                                        width={176}
-                                        height={176}
+                                        className="w-full h-full rounded-2xl object-contain shadow-md bg-soft p-1 border border-border"
+                                        width={128}
+                                        height={128}
                                     />
                                 ) : (
-                                    <div className="w-24 h-24 md:w-44 md:h-44 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-3xl shadow-md border border-border">
-                                        <BuildingStorefrontIcon className="h-12 w-12 md:h-20 md:w-20 text-muted" />
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-2xl shadow-md border border-border">
+                                        <BuildingStorefrontIcon className="w-1/2 h-1/2 text-muted" />
                                     </div>
                                 )}
                              </div>
 
-                             {/* Name & Location */}
-                             <div className="flex-grow w-full">
-                                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-                                     <div className="flex-grow">
-                                        <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold font-jakarta leading-tight text-primary dark:text-white break-words">
+                             {/* Name & Location & Price - Compact Layout */}
+                             <div className="flex-grow w-full text-center md:text-left">
+                                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
+                                     <div className="flex-grow min-w-0">
+                                        {/* Title shrunk significantly for desktop */}
+                                        <h1 className="text-2xl sm:text-3xl md:text-3xl lg:text-4xl font-extrabold font-jakarta leading-tight text-primary dark:text-white break-words transition-all duration-300">
                                             {cafe.name}
                                         </h1>
-                                        <p className="text-muted flex items-center justify-center md:justify-start gap-1.5 mt-2 text-base md:text-xl md:mt-4">
-                                           <MapPinIcon className="h-5 w-5 md:h-7 md:w-7"/> {cafe.district}, {cafe.city}
-                                        </p>
+                                        <div className="flex items-center justify-center md:justify-start gap-1.5 mt-2 text-sm text-muted">
+                                           <MapPinIcon className="h-4 w-4 flex-shrink-0"/> 
+                                           <span className="truncate max-w-[250px] sm:max-w-md">{cafe.district}, {cafe.city}</span>
+                                        </div>
                                      </div>
                                      
-                                     {/* Big Price Tier with Colors */}
-                                     <div className="flex items-end justify-center md:justify-end mt-2 md:mt-0 flex-shrink-0 bg-soft dark:bg-gray-700/30 px-4 py-2 md:px-6 md:py-4 rounded-2xl border border-border">
-                                         <span className={`text-4xl md:text-6xl font-extrabold tracking-wide ${getPriceColor(cafe.priceTier)}`}>
-                                            {'$'.repeat(cafe.priceTier)}
-                                         </span>
-                                         <span className="text-gray-300 dark:text-gray-600 text-4xl md:text-6xl font-extrabold tracking-wide">
-                                            {'$'.repeat(4 - cafe.priceTier)}
-                                         </span>
+                                     {/* Compact Price Badge */}
+                                     <div className="flex items-center justify-center md:justify-end mt-1 md:mt-0 flex-shrink-0">
+                                         <div className="bg-soft dark:bg-gray-700/30 px-3 py-1.5 rounded-lg border border-border flex items-center gap-0.5">
+                                             <span className={`text-xl sm:text-2xl font-extrabold tracking-wide leading-none ${getPriceColor(cafe.priceTier)}`}>
+                                                {'$'.repeat(cafe.priceTier)}
+                                             </span>
+                                             <span className="text-gray-300 dark:text-gray-600 text-xl sm:text-2xl font-extrabold tracking-wide leading-none">
+                                                {'$'.repeat(4 - cafe.priceTier)}
+                                             </span>
+                                         </div>
                                      </div>
                                 </div>
+                                
+                                {/* Description - Smaller margin */}
+                                {cafe.description && (
+                                    <div className="mt-4 text-sm sm:text-base text-primary dark:text-gray-300 leading-relaxed border-t border-border pt-3">
+                                        {cafe.description}
+                                    </div>
+                                )}
                              </div>
                         </div>
 
-                        {/* Description */}
-                        {cafe.description && (
-                            <div className="mt-8 md:mt-12 text-center md:text-left">
-                                <p className="text-primary dark:text-gray-300 leading-relaxed text-lg md:text-xl">
-                                    {cafe.description}
-                                </p>
-                            </div>
-                        )}
-
                         {/* Tags */}
                         {currentUser && (
-                             <div className="mt-8 pt-8 border-t border-border">
-                                <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
-                                   <TagIcon className="h-5 w-5 md:h-7 md:w-7 text-brand" />
-                                   <h3 className="text-lg md:text-2xl font-bold font-jakarta">Tag Komunitas</h3>
+                             <div className="mt-5 pt-4 border-t border-border">
+                                <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+                                   <TagIcon className="h-4 w-4 text-brand" />
+                                   <h3 className="text-sm font-bold font-jakarta uppercase tracking-wider text-muted">Tag Komunitas</h3>
                                 </div>
                                 <TagManager cafe={cafe} setNotification={setNotification} />
                             </div>
                         )}
 
                         {/* Categorized Grid: Vibes & Amenities */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mt-10">
-                            {/* Vibes Column */}
-                            <div className="bg-soft dark:bg-gray-700/30 p-6 rounded-2xl border border-border h-full">
-                                <div className="flex items-center gap-3 mb-6 border-b border-border/50 pb-3">
-                                    <SparklesIcon className="h-6 w-6 md:h-8 md:w-8 text-accent-pink" />
-                                    <h3 className="font-bold text-xl md:text-2xl text-primary dark:text-white">Vibe & Suasana</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mt-6">
+                            {/* Vibes */}
+                            <div className="bg-soft dark:bg-gray-700/30 p-4 rounded-xl border border-border flex flex-col">
+                                <div className="flex items-center gap-2 mb-3 border-b border-border/50 pb-2">
+                                    <SparklesIcon className="h-5 w-5 text-accent-pink" />
+                                    <h3 className="font-bold text-base text-primary dark:text-white">Vibe</h3>
                                 </div>
                                 {cafe.vibes.length > 0 ? (
-                                    <div className="flex flex-wrap gap-3">
+                                    <div className="flex flex-wrap gap-2">
                                         {cafe.vibes.map(v => (
-                                            <span key={v.id} className="bg-white dark:bg-gray-800 text-primary dark:text-gray-200 px-4 py-2 rounded-xl text-base md:text-lg font-semibold border border-border shadow-sm">
+                                            <span key={v.id} className="bg-white dark:bg-gray-800 text-primary dark:text-gray-200 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-medium border border-border shadow-sm">
                                                 {v.name}
                                             </span>
                                         ))}
                                     </div>
-                                ) : (
-                                    <p className="text-muted text-base italic">Belum ada data vibe.</p>
-                                )}
+                                ) : <p className="text-muted text-xs italic">Belum ada vibe.</p>}
                             </div>
 
-                            {/* Amenities Column */}
-                            <div className="bg-soft dark:bg-gray-700/30 p-6 rounded-2xl border border-border h-full">
-                                <div className="flex items-center gap-3 mb-6 border-b border-border/50 pb-3">
-                                    <WifiIcon className="h-6 w-6 md:h-8 md:w-8 text-brand" />
-                                    <h3 className="font-bold text-xl md:text-2xl text-primary dark:text-white">Fasilitas & Kenyamanan</h3>
+                            {/* Amenities */}
+                            <div className="bg-soft dark:bg-gray-700/30 p-4 rounded-xl border border-border flex flex-col">
+                                <div className="flex items-center gap-2 mb-3 border-b border-border/50 pb-2">
+                                    <WifiIcon className="h-5 w-5 text-brand" />
+                                    <h3 className="font-bold text-base text-primary dark:text-white">Fasilitas</h3>
                                 </div>
                                 {cafe.amenities.length > 0 ? (
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-2">
                                         {cafe.amenities.map(a => (
-                                            <div key={a.id} className="flex items-center gap-3 text-base md:text-lg text-primary dark:text-gray-200">
-                                                <span className="text-xl md:text-2xl">{a.icon}</span>
-                                                <span>{a.name}</span>
+                                            <div key={a.id} className="flex items-center gap-1.5 text-xs sm:text-sm text-primary dark:text-gray-200">
+                                                <span>{a.icon}</span>
+                                                <span className="truncate">{a.name}</span>
                                             </div>
                                         ))}
                                     </div>
-                                ) : (
-                                    <p className="text-muted text-base italic">Belum ada data fasilitas.</p>
-                                )}
+                                ) : <p className="text-muted text-xs italic">Belum ada fasilitas.</p>}
                             </div>
                         </div>
 
-                        {/* Info Grid - Tighter padding on mobile (p-1.5), Larger on Desktop */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-8 mt-6 md:mt-10 pt-4 md:pt-8 border-t border-border">
-                            <div className="space-y-1 sm:space-y-3 md:space-y-6">
-                                <div className="flex items-start p-1.5 sm:p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
-                                    <MapPinIcon className="h-6 w-6 md:h-9 md:w-9 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
-                                    <div>
-                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-0.5 md:mb-1">Alamat</p>
-                                        <p className="text-muted text-sm md:text-lg leading-snug">{cafe.address}</p>
+                        {/* Info Grid - Tighter padding */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-4 border-t border-border">
+                            <div className="space-y-3">
+                                <div className="flex items-start p-2 rounded-lg hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <MapPinIcon className="h-5 w-5 mr-3 text-brand flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-sm text-primary dark:text-white">Alamat</p>
+                                        <p className="text-muted text-xs sm:text-sm leading-snug break-words">{cafe.address}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-start p-1.5 sm:p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
-                                    <ClockIcon className="h-6 w-6 md:h-9 md:w-9 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                                <div className="flex items-start p-2 rounded-lg hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <ClockIcon className="h-5 w-5 mr-3 text-brand flex-shrink-0 mt-0.5" />
                                     <div>
-                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-0.5 md:mb-1">Jam Operasional</p>
-                                        <p className="text-muted text-sm md:text-lg">{cafe.openingHours}</p>
+                                        <p className="font-bold text-sm text-primary dark:text-white">Jam Operasional</p>
+                                        <p className="text-muted text-xs sm:text-sm">{cafe.openingHours}</p>
                                         {openingStatus && (
-                                            <div className={`inline-flex items-center px-2.5 py-1 md:px-3 md:py-1 rounded-lg text-xs md:text-base font-bold mt-1.5 md:mt-2 shadow-sm border border-transparent ${openingStatus.color}`}>
+                                            <div className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold mt-1 border border-transparent ${openingStatus.color}`}>
                                                 {openingStatus.message}
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="space-y-1 sm:space-y-3 md:space-y-6">
-                                <div className="flex items-start p-1.5 sm:p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
-                                    <PhoneIcon className="h-6 w-6 md:h-9 md:w-9 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                            <div className="space-y-3">
+                                <div className="flex items-start p-2 rounded-lg hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <PhoneIcon className="h-5 w-5 mr-3 text-brand flex-shrink-0 mt-0.5" />
                                     <div>
-                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-0.5 md:mb-1">Kontak</p>
+                                        <p className="font-bold text-sm text-primary dark:text-white">Kontak</p>
                                         {cafe.phoneNumber ? (
-                                            <a href={`tel:${cafe.phoneNumber}`} className="text-muted text-sm md:text-lg hover:text-brand hover:underline transition-colors">{cafe.phoneNumber}</a>
-                                        ) : <p className="text-muted text-sm md:text-base italic">Tidak tersedia</p>}
+                                            <a href={`tel:${cafe.phoneNumber}`} className="text-muted text-xs sm:text-sm hover:text-brand hover:underline transition-colors">{cafe.phoneNumber}</a>
+                                        ) : <p className="text-muted text-xs sm:text-sm italic">Tidak tersedia</p>}
                                     </div>
                                 </div>
-                                <div className="flex items-start p-1.5 sm:p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
-                                    <GlobeAltIcon className="h-6 w-6 md:h-9 md:w-9 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                                <div className="flex items-start p-2 rounded-lg hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <GlobeAltIcon className="h-5 w-5 mr-3 text-brand flex-shrink-0 mt-0.5" />
                                     <div className="min-w-0">
-                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-0.5 md:mb-1">Website / Sosmed</p>
+                                        <p className="font-bold text-sm text-primary dark:text-white">Website / Sosmed</p>
                                         {cafe.websiteUrl ? (
-                                            <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-muted text-sm md:text-lg hover:text-brand hover:underline transition-colors block truncate">
+                                            <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-muted text-xs sm:text-sm hover:text-brand hover:underline transition-colors block truncate">
                                                 {cafe.websiteUrl.replace(/^https?:\/\//, '')}
                                             </a>
-                                        ) : <p className="text-muted text-sm md:text-base italic">Tidak tersedia</p>}
+                                        ) : <p className="text-muted text-xs sm:text-sm italic">Tidak tersedia</p>}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    {/* Interactive Map & Action Button */}
-                    <div className="space-y-6">
-                        <div className="relative z-10 rounded-3xl shadow-md overflow-hidden h-72 md:h-[500px] border border-border">
+                    {/* Interactive Map */}
+                    <div className="space-y-4">
+                        <div className="relative z-10 rounded-3xl shadow-md overflow-hidden h-64 sm:h-80 border border-border transition-all duration-300">
                             <InteractiveMap cafe={cafe} theme={theme} showDistanceControl={true} showUserLocation={true} />
                         </div>
-                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 w-full text-center bg-green-600 text-white font-bold py-4 md:py-6 rounded-2xl hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 text-lg md:text-xl">
-                            <MapPinIcon className="h-6 w-6 md:h-8 md:w-8" />
+                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full text-center bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 text-sm sm:text-base">
+                            <MapPinIcon className="h-5 w-5" />
                             Buka Navigasi Google Maps
                         </a>
                     </div>
                     
                     {/* Scores */}
-                    <div className="bg-card border border-border p-8 md:p-12 rounded-3xl shadow-sm">
-                        <h2 className="text-3xl md:text-4xl font-bold font-jakarta text-center mb-10">Skor Nongkrongr</h2>
-                        <div className="flex flex-row justify-around items-start gap-4 md:gap-12">
+                    <div className="bg-card border border-border p-6 rounded-3xl shadow-sm transition-all duration-300">
+                        <h2 className="text-xl sm:text-2xl font-bold font-jakarta text-center mb-6">Skor Nongkrongr</h2>
+                        <div className="flex flex-row justify-between gap-2 sm:gap-4">
                             <ScoreDisplay label="Aesthetic" score={cafe.avgAestheticScore} max={10} color="#FF4081" />
                             <ScoreDisplay label="Nugas" score={cafe.avgWorkScore} max={10} color="#00E5FF"/>
                             <ScoreDisplay label="Keramaian" score={cafe.avgCrowdEvening} max={5} color="#7C4DFF"/>
@@ -386,11 +386,11 @@ const DetailPage: React.FC = () => {
                     {/* Events */}
                     {cafeEvents.length > 0 && (
                         <div>
-                            <div className="flex items-center gap-4 mb-6">
-                                <CalendarDaysIcon className="h-8 w-8 md:h-10 md:w-10 text-brand" />
-                                <h2 className="text-3xl md:text-4xl font-bold font-jakarta">Event & Promo</h2>
+                            <div className="flex items-center gap-3 mb-4">
+                                <CalendarDaysIcon className="h-6 w-6 text-brand" />
+                                <h2 className="text-xl sm:text-2xl font-bold font-jakarta">Event & Promo</h2>
                             </div>
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 {cafeEvents.map(event => (
                                     <EventCard key={event.id} event={event} />
                                 ))}
@@ -401,14 +401,14 @@ const DetailPage: React.FC = () => {
                     {/* Photo Gallery */}
                     {cafe.spots && cafe.spots.length > 0 && (
                         <div>
-                            <h2 className="text-3xl md:text-4xl font-bold font-jakarta mb-6">Galeri Foto</h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                            <h2 className="text-xl sm:text-2xl font-bold font-jakarta mb-4">Galeri Foto</h2>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                                 {cafe.spots.map((spot) => (
                                     <button
                                         key={spot.id}
                                         onClick={() => openImageModal(spot.photoUrl)}
-                                        className="aspect-square block w-full rounded-2xl overflow-hidden group focus:outline-none focus:ring-4 focus:ring-brand/50"
-                                        aria-label={`Lihat foto ${spot.title} lebih besar`}
+                                        className="aspect-square block w-full rounded-xl overflow-hidden group focus:outline-none focus:ring-2 focus:ring-brand/50"
+                                        aria-label={`Lihat foto ${spot.title}`}
                                     >
                                         <ImageWithFallback
                                             src={spot.photoUrl}
@@ -425,36 +425,33 @@ const DetailPage: React.FC = () => {
 
                     {/* Reviews */}
                      <div>
-                         <h2 className="text-3xl md:text-4xl font-bold font-jakarta mb-6">Reviews ({approvedReviews.length})</h2>
-                         <div className="space-y-6">
+                         <h2 className="text-xl sm:text-2xl font-bold font-jakarta mb-4">Reviews ({approvedReviews.length})</h2>
+                         <div className="space-y-4">
                             {approvedReviews.length > 0 ? visibleReviews.map(review => (
                                 <ReviewCard 
                                     key={review.id} 
                                     review={{...review, cafeName: cafe.name, cafeSlug: cafe.slug}} 
                                 />
-                            )) : <div className="p-8 bg-soft rounded-2xl text-center text-muted text-lg">Belum ada review. Jadilah yang pertama!</div>}
+                            )) : <div className="p-6 bg-soft rounded-2xl text-center text-muted">Belum ada review. Jadilah yang pertama!</div>}
                          </div>
                          
                          {visibleReviewsCount < approvedReviews.length && (
-                            <div className="mt-8 text-center">
+                            <div className="mt-6 text-center">
                                 <button
                                     onClick={handleLoadMoreReviews}
-                                    className="bg-brand/10 text-brand font-bold py-4 px-10 rounded-2xl hover:bg-brand/20 transition-all duration-300 flex items-center justify-center gap-2 mx-auto text-lg"
+                                    className="bg-brand/10 text-brand font-bold py-3 px-6 rounded-xl hover:bg-brand/20 transition-all duration-300 flex items-center justify-center gap-2 mx-auto text-sm"
                                 >
                                     Muat Lebih Banyak
-                                    <ChevronDownIcon className="h-6 w-6" />
+                                    <ChevronDownIcon className="h-4 w-4" />
                                 </button>
-                                <p className="text-sm md:text-base text-muted mt-3">
-                                    Menampilkan {visibleReviews.length} dari {approvedReviews.length} ulasan
-                                </p>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Sidebar */}
-                <aside className="lg:sticky lg:top-24 self-start">
-                    <div className="space-y-8">
+                {/* Sidebar (Sticky on Large Screens) */}
+                <aside className="lg:col-span-1 lg:sticky lg:top-24 self-start w-full min-w-0">
+                    <div className="space-y-6">
                         <ReviewForm onSubmit={(review) => handleAddReview({ ...review, cafe_id: cafe.id })} isSubmitting={isSubmitting} cafeId={cafe.id} />
                     </div>
                 </aside>
@@ -465,26 +462,26 @@ const DetailPage: React.FC = () => {
                 <div
                     role="dialog"
                     aria-modal="true"
-                    className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in-up"
+                    className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in-up p-4"
                     onClick={closeImageModal}
                 >
                     <div 
-                        className="relative max-w-6xl w-full max-h-[90vh] p-4 md:p-8" 
+                        className="relative max-w-5xl w-full max-h-full flex items-center justify-center" 
                         onClick={(e) => e.stopPropagation()} 
                     >
                         <ImageWithFallback
                             src={selectedImage}
                             alt="Tampilan foto spot yang diperbesar"
-                            className="w-full h-auto max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+                            className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
                             width={1920}
                             height={1080}
                         />
                         <button
                             onClick={closeImageModal}
-                            className="absolute -top-2 -right-2 sm:top-6 sm:right-6 text-white bg-black/50 rounded-full p-3 hover:bg-black/80 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                            className="absolute -top-12 right-0 sm:top-4 sm:right-4 text-white bg-white/10 backdrop-blur-md rounded-full p-2 hover:bg-white/20 transition-colors"
                             aria-label="Tutup galeri"
                         >
-                            <XMarkIcon className="h-8 w-8" />
+                            <XMarkIcon className="h-6 w-6" />
                         </button>
                     </div>
                 </div>
