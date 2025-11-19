@@ -98,6 +98,9 @@ export interface Cafe {
   avgCrowdMorning: number;
   avgCrowdAfternoon: number;
   avgCrowdEvening: number;
+  // Contact Info
+  phoneNumber?: string;
+  websiteUrl?: string;
 }
 
 // For Supabase 'profiles' table

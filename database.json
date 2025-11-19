@@ -64,7 +64,9 @@
         { "name": "manager_id", "type": "uuid", "references": "profiles(id)", "on_delete": "set null", "is_nullable": true },
         { "name": "created_by", "type": "uuid", "references": "profiles(id)", "on_delete": "set null", "is_nullable": true },
         { "name": "created_at", "type": "timestamptz", "default": "now()" },
-        { "name": "status", "type": "text", "default": "pending" }
+        { "name": "status", "type": "text", "default": "pending" },
+        { "name": "phoneNumber", "type": "text", "is_nullable": true },
+        { "name": "websiteUrl", "type": "text", "is_nullable": true }
       ],
       "csv_file": "cafes.csv"
     },

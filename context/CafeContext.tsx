@@ -47,6 +47,8 @@ const prepareCafeRecordForSupabase = (data: Partial<Cafe> & { created_by?: strin
         sponsoredRank: data.sponsoredRank, logoUrl: data.logoUrl, coverUrl: data.coverUrl, manager_id: data.manager_id, 
         created_by: data.created_by,
         status: data.status,
+        phoneNumber: data.phoneNumber,
+        websiteUrl: data.websiteUrl,
     };
     Object.keys(record).forEach(key => (record as any)[key] === undefined && delete (record as any)[key]);
     return record;

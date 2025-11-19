@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Cafe } from '../types';
-import { StarIcon, UsersIcon, HeartIcon, MapPinIcon } from '@heroicons/react/24/solid';
+import { StarIcon, UsersIcon, HeartIcon, MapPinIcon, PhoneIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ImageWithFallback from './common/ImageWithFallback';
 import { useFavorites } from '../context/FavoriteContext';
@@ -33,6 +33,10 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) =
     } else {
       addFavorite(cafe.id);
     }
+  };
+  
+  const handleLinkClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
   };
 
   return (
@@ -79,9 +83,21 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) =
                     <span>{distance.toFixed(1)} km</span>
                 </div>
             ) : (
-                <div className="text-right">
-                    <span className="text-lg sm:text-xl font-bold text-brand">{'$'.repeat(cafe.priceTier)}</span>
-                    <span className="text-muted/30 text-lg sm:text-xl">{'$'.repeat(4 - cafe.priceTier)}</span>
+                <div className="flex gap-2 items-center">
+                     {cafe.phoneNumber && (
+                        <a href={`tel:${cafe.phoneNumber}`} onClick={handleLinkClick} className="text-muted hover:text-brand p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Telepon">
+                            <PhoneIcon className="h-4 w-4" />
+                        </a>
+                    )}
+                    {cafe.websiteUrl && (
+                        <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" onClick={handleLinkClick} className="text-muted hover:text-brand p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Website">
+                            <GlobeAltIcon className="h-4 w-4" />
+                        </a>
+                    )}
+                    <div className="text-right ml-1">
+                         <span className="text-lg sm:text-xl font-bold text-brand">{'$'.repeat(cafe.priceTier)}</span>
+                         <span className="text-muted/30 text-lg sm:text-xl">{'$'.repeat(4 - cafe.priceTier)}</span>
+                    </div>
                 </div>
             )}
         </div>

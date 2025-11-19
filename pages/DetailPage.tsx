@@ -6,7 +6,7 @@ import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoriteContext';
-import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon, TagIcon, CurrencyDollarIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
+import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon, TagIcon, CurrencyDollarIcon, ChevronDownIcon, PhoneIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
@@ -273,6 +273,20 @@ const DetailPage: React.FC = () => {
                                  <ClockIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
                                 <span>Buka: {cafe.openingHours}</span>
                             </div>
+                            {cafe.phoneNumber && (
+                                <div className="flex items-center">
+                                    <PhoneIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
+                                    <a href={`tel:${cafe.phoneNumber}`} className="hover:text-brand hover:underline transition-colors">{cafe.phoneNumber}</a>
+                                </div>
+                            )}
+                            {cafe.websiteUrl && (
+                                <div className="flex items-center">
+                                    <GlobeAltIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
+                                    <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand hover:underline transition-colors break-all">
+                                        {cafe.websiteUrl.replace(/^https?:\/\//, '')}
+                                    </a>
+                                </div>
+                            )}
                         </div>
 
                         {isClosed && (
