@@ -1,5 +1,4 @@
 
-
 import React, { useContext } from 'react';
 import { CafeContext } from '../../context/CafeContext';
 import { BuildingStorefrontIcon, CheckBadgeIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
@@ -8,6 +7,7 @@ import ReviewManagement from './PendingReviews';
 import UserManagementPanel from './UserManagementPanel';
 import WebsiteSettingsPanel from './WebsiteSettingsPanel';
 import FeedbackPanel from './FeedbackPanel';
+import ArchivePanel from './ArchivePanel';
 import StatCard from './StatCard';
 import StatChart from './StatChart';
 import AdminWelcomeHint from './AdminWelcomeHint';
@@ -16,11 +16,14 @@ import ApprovalHub from './ApprovalHub';
 const AdminDashboard: React.FC = () => {
     const { cafes } = useContext(CafeContext)!;
     
-    const totalCafes = cafes.length;
-    const sponsoredCafes = cafes.filter(cafe => cafe.isSponsored).length;
+    // Filter out archived cafes for general stats
+    const activeCafes = cafes.filter(c => c.status !== 'archived');
+    
+    const totalCafes = activeCafes.length;
+    const sponsoredCafes = activeCafes.filter(cafe => cafe.isSponsored).length;
     const nonSponsoredCafes = totalCafes - sponsoredCafes;
-    const approvedCafes = cafes.filter(cafe => cafe.status === 'approved').length;
-    const pendingCafes = cafes.filter(cafe => cafe.status === 'pending').length;
+    const approvedCafes = activeCafes.filter(cafe => cafe.status === 'approved').length;
+    const pendingCafes = activeCafes.filter(cafe => cafe.status === 'pending').length;
 
     return (
         <div>
@@ -71,6 +74,7 @@ const AdminDashboard: React.FC = () => {
                 <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><ReviewManagement /></div>
                 <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><UserManagementPanel /></div>
                 <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><FeedbackPanel /></div>
+                <div className="bg-card p-6 rounded-3xl shadow-sm border border-border"><ArchivePanel /></div>
               </div>
 
               <div className="lg:col-span-1 space-y-8">

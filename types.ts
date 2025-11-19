@@ -91,7 +91,7 @@ export interface Cafe {
   manager_id?: string; // ID of the user who manages this cafe
   created_by?: string; // ID of the user who created this cafe entry
   created_at?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'archived';
   // Aggregated scores
   avgAestheticScore: number;
   avgWorkScore: number;
@@ -106,7 +106,7 @@ export interface Profile {
   username: string;
   email: string;
   role: 'admin' | 'user' | 'admin_cafe';
-  status: 'active' | 'pending_approval' | 'rejected';
+  status: 'active' | 'pending_approval' | 'rejected' | 'archived';
   updated_at?: string;
   avatar_url?: string;
 }

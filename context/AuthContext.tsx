@@ -46,11 +46,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error("Session validation failed. User profile deleted.", { error });
             await supabase.auth.signOut();
             setCurrentUser(null);
-            // We can't easily throw an error to the UI here because this runs on effect/load.
-            // But for explicit Login action, the login function handles the error throwing.
         } else if (profile.status === 'rejected') {
              // CASE: Admin rejected the manager application
              console.warn("User login attempted but status is rejected.");
+             await supabase.auth.signOut();
+             setCurrentUser(null);
+        } else if (profile.status === 'archived') {
+             // CASE: Account archived (soft deleted)
+             console.warn("User login attempted but status is archived.");
              await supabase.auth.signOut();
              setCurrentUser(null);
         } else {
@@ -137,6 +140,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 await supabase.auth.signOut();
                 return { error: new AuthError("Pendaftaran akun Anda ditolak oleh Admin.") };
             }
+
+            if (profile.status === 'archived') {
+                // User authenticated but status is archived
+                await supabase.auth.signOut();
+                return { error: new AuthError("Akun ini telah diarsipkan. Hubungi admin untuk memulihkan.") };
+            }
         }
 
         return { error: null };
@@ -181,6 +190,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (profileError) {
             console.error("Critical: Failed to create user profile after signup.", profileError);
             return { error: new AuthError(profileError.message) };
+        }
+
+        // 4. FORCE LOGOUT to prevent auto-login
+        // This ensures the user sees the "Success" message and has to login manually.
+        // If session was created (auto-confirm enabled in Supabase), we kill it here.
+        if (signUpData.session) {
+            await supabase.auth.signOut();
         }
         
         return { error: null };

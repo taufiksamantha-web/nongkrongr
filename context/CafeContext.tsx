@@ -113,6 +113,8 @@ interface CafeContextType {
     addCafe: (cafeData: Partial<Cafe>) => Promise<{ data: any, error: any }>;
     updateCafe: (id: string, updatedData: Partial<Cafe>) => Promise<{ data: any, error: any }>;
     deleteCafe: (id: string) => Promise<{ error: any }>;
+    archiveCafe: (id: string) => Promise<{ error: any }>;
+    restoreCafe: (id: string) => Promise<{ error: any }>;
     deleteMultipleCafes: (ids: string[]) => Promise<{ error: any }>;
     addReview: (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => Promise<{ data: any, error: any }>;
     updateReviewStatus: (reviewId: string, status: Review['status']) => Promise<{ error: any }>;
@@ -121,6 +123,8 @@ interface CafeContextType {
     getPendingReviews: () => (Review & { cafeName: string; cafeId: string })[];
     getAllReviews: () => (Review & { cafeName: string; cafeId: string })[];
     getPendingCafes: () => Cafe[];
+    getRejectedCafes: () => Cafe[];
+    getArchivedCafes: () => Cafe[];
     updateCafeStatus: (cafeId: string, status: Cafe['status']) => Promise<{ error: any }>;
     getAllTags: () => Promise<Tag[]>;
     addTagToCafe: (cafeId: string, tagName: string) => Promise<{ data: any, error: any }>;
@@ -288,6 +292,35 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return { error: err };
         }
     };
+
+    const archiveCafe = async (id: string) => {
+        const originalCafes = [...cafes];
+        // Optimistically set status to archived
+        setCafes(prev => prev.map(c => c.id === id ? { ...c, status: 'archived' } : c));
+        try {
+            const { error } = await supabase.from('cafes').update({ status: 'archived' }).eq('id', id);
+            if (error) throw error;
+            return { error: null };
+        } catch (err: any) {
+            setCafes(originalCafes);
+            return { error: err };
+        }
+    };
+
+    const restoreCafe = async (id: string) => {
+        const originalCafes = [...cafes];
+        // Optimistically restore to 'approved' (or 'pending' if desired, but usually admin restores to approved)
+        // Safest bet: set to 'approved' so it shows up.
+        setCafes(prev => prev.map(c => c.id === id ? { ...c, status: 'approved' } : c));
+        try {
+            const { error } = await supabase.from('cafes').update({ status: 'approved' }).eq('id', id);
+            if (error) throw error;
+            return { error: null };
+        } catch (err: any) {
+            setCafes(originalCafes);
+            return { error: err };
+        }
+    };
     
     const deleteMultipleCafes = async (ids: string[]) => {
         const originalCafes = [...cafes];
@@ -435,12 +468,14 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const getPendingReviews = () => cafes.flatMap(c => c.reviews.filter(r => r.status === 'pending').map(r => ({ ...r, cafeName: c.name, cafeId: c.id })));
     const getAllReviews = () => cafes.flatMap(c => c.reviews.map(r => ({ ...r, cafeName: c.name, cafeId: c.id }))).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const getPendingCafes = () => cafes.filter(c => c.status === 'pending');
+    const getRejectedCafes = () => cafes.filter(c => c.status === 'rejected');
+    const getArchivedCafes = () => cafes.filter(c => c.status === 'archived');
 
     return (
         <CafeContext.Provider value={{
-            cafes, loading, error, fetchCafes, addCafe, updateCafe, deleteCafe, deleteMultipleCafes,
+            cafes, loading, error, fetchCafes, addCafe, updateCafe, deleteCafe, archiveCafe, restoreCafe, deleteMultipleCafes,
             addReview, updateReviewStatus, deleteReview, incrementHelpfulCount, getPendingReviews,
-            getAllReviews, getPendingCafes, updateCafeStatus,
+            getAllReviews, getPendingCafes, getRejectedCafes, getArchivedCafes, updateCafeStatus,
             getAllTags, addTagToCafe, removeTagFromCafe
         }}>
             {children}

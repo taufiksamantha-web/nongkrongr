@@ -1,3 +1,4 @@
+
 import { supabase } from '../lib/supabaseClient';
 import { Profile } from '../types';
 
@@ -9,6 +10,18 @@ export const userService = {
       .eq('status', 'pending_approval');
     if (error) {
         console.error("Error fetching pending users:", error);
+        throw error;
+    }
+    return data as Profile[];
+  },
+
+  async getRejectedUsers(): Promise<Profile[]> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('status', 'rejected');
+    if (error) {
+        console.error("Error fetching rejected users:", error);
         throw error;
     }
     return data as Profile[];
@@ -35,5 +48,13 @@ export const userService = {
         console.error(`Error updating status for user ${userId}:`, error);
     }
     return { error };
+  },
+
+  async archiveUser(userId: string): Promise<{ error: any }> {
+    return this.updateUserStatus(userId, 'archived');
+  },
+
+  async restoreUser(userId: string): Promise<{ error: any }> {
+    return this.updateUserStatus(userId, 'active');
   },
 };

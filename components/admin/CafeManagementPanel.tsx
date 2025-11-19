@@ -34,11 +34,13 @@ const StatusBadge: React.FC<{ status: Cafe['status'] }> = ({ status }) => {
         pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-300',
         approved: 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300',
         rejected: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300',
+        archived: 'bg-gray-100 text-gray-800 dark:bg-gray-500/20 dark:text-gray-300',
     };
     const icons = {
         pending: <ClockIcon className="h-4 w-4" />,
         approved: <CheckCircleIcon className="h-4 w-4" />,
         rejected: <XCircleIcon className="h-4 w-4" />,
+        archived: <TrashIcon className="h-4 w-4" />,
     };
     return (
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${styles[status]}`}>
@@ -51,7 +53,7 @@ const StatusBadge: React.FC<{ status: Cafe['status'] }> = ({ status }) => {
 
 const CafeManagementPanel: React.FC = () => {
     const { currentUser } = useAuth();
-    const { cafes, loading, addCafe, updateCafe, deleteCafe, deleteMultipleCafes } = useContext(CafeContext)!;
+    const { cafes, loading, addCafe, updateCafe, archiveCafe, deleteMultipleCafes } = useContext(CafeContext)!;
     
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
@@ -101,9 +103,11 @@ const CafeManagementPanel: React.FC = () => {
     };
 
     const sortedAndFilteredCafes = useMemo(() => {
-        let cafesToDisplay = cafes;
+        // Filter out archived cafes immediately
+        let cafesToDisplay = cafes.filter(c => c.status !== 'archived');
+        
         if (currentUser?.role === 'admin_cafe') {
-            cafesToDisplay = cafes.filter(c => c.manager_id === currentUser.id);
+            cafesToDisplay = cafesToDisplay.filter(c => c.manager_id === currentUser.id);
         }
 
         const filtered = cafesToDisplay.filter(cafe =>
@@ -180,14 +184,15 @@ const CafeManagementPanel: React.FC = () => {
         return await addCafe(data);
     };
 
-    const handleConfirmDeleteCafe = async () => {
+    const handleArchiveCafe = async () => {
         if (cafeToDelete) {
             setIsSaving(true);
-            const { error } = await deleteCafe(cafeToDelete.id);
+            // Perform Soft Delete (Archive)
+            const { error } = await archiveCafe(cafeToDelete.id);
             if (error) {
                 setNotification({ message: `Error: ${error.message}`, type: 'error' });
             } else {
-                setNotification({ message: `"${cafeToDelete.name}" berhasil dihapus.`, type: 'success' });
+                setNotification({ message: `"${cafeToDelete.name}" berhasil diarsipkan.`, type: 'success' });
                 if (paginatedCafes.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
             }
             setCafeToDelete(null);
@@ -233,7 +238,7 @@ const CafeManagementPanel: React.FC = () => {
          <>
             {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-                <h2 className="text-2xl font-bold font-jakarta">Daftar Cafe</h2>
+                <h2 className="text-2xl font-bold font-jakarta">Daftar Cafe <span className="text-muted text-lg font-normal">({sortedAndFilteredCafes.length})</span></h2>
                 <div className="flex items-center gap-4">
                     {selectedCafeIds.length > 0 && currentUser?.role === 'admin' && (<button onClick={() => setIsConfirmingMultiDelete(true)} className="bg-accent-pink text-white font-bold py-2 px-6 rounded-2xl hover:bg-accent-pink/90 transition-colors" disabled={isSaving}>{isSaving ? 'Menghapus...' : `Hapus Terpilih (${selectedCafeIds.length})`}</button>)}
                     <button onClick={() => { setEditingCafe(null); setIsFormOpen(true); }} className="bg-brand text-white font-bold py-2 px-6 rounded-2xl hover:bg-brand/90 transition-colors">+ Tambah Cafe</button>
@@ -287,7 +292,7 @@ const CafeManagementPanel: React.FC = () => {
                                     <div className="flex gap-2">
                                         {currentUser?.role === 'admin' && <button onClick={() => handleOpenChangeOwner(cafe)} className="text-blue-500 p-1 rounded-full hover:bg-blue-100" title="Ubah Owner"><PencilSquareIcon className="h-6 w-6" /></button>}
                                         <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 p-1 rounded-full hover:bg-blue-100" title="Lihat Statistik"><ChartBarSquareIcon className="h-6 w-6" /></button>
-                                        {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink p-1 rounded-full hover:bg-red-100" title="Hapus Cafe"><TrashIcon className="h-6 w-6"/></button>}
+                                        {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink p-1 rounded-full hover:bg-red-100" title="Arsipkan Cafe"><TrashIcon className="h-6 w-6"/></button>}
                                     </div>
                                 </div>
                             </div>
@@ -321,7 +326,7 @@ const CafeManagementPanel: React.FC = () => {
                                 </div>
                                 <div className="text-right flex items-center justify-end gap-3">
                                     <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors" title="Lihat Statistik"><ChartBarSquareIcon className="h-6 w-6" /></button>
-                                    {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink hover:text-red-700 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors" title="Hapus Cafe"><TrashIcon className="h-6 w-6" /></button>}
+                                    {userCanManage(cafe) && <button onClick={() => setCafeToDelete(cafe)} className="text-accent-pink hover:text-red-700 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors" title="Arsipkan Cafe"><TrashIcon className="h-6 w-6" /></button>}
                                 </div>
                             </div>
                         </div>
@@ -356,7 +361,7 @@ const CafeManagementPanel: React.FC = () => {
             />}
             {isStatsModalOpen && statsCafe && <CafeStatisticsModal cafe={statsCafe} onClose={() => setIsStatsModalOpen(false)} />}
             {isChangeOwnerModalOpen && cafeToChangeOwner && <ChangeOwnerModal cafe={cafeToChangeOwner} users={allUsers} onSave={handleSaveOwner} onCancel={() => setIsChangeOwnerModalOpen(false)} isSaving={isSaving}/>}
-            {cafeToDelete && userCanManage(cafeToDelete) && <ConfirmationModal title="Hapus Cafe" message={`Yakin ingin menghapus "${cafeToDelete.name}"? Ini akan menghapus semua data terkait. Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmDeleteCafe} onCancel={() => setCafeToDelete(null)} isConfirming={isSaving}/>}
+            {cafeToDelete && userCanManage(cafeToDelete) && <ConfirmationModal title="Arsipkan Cafe" message={`Apakah Anda ingin mengarsipkan "${cafeToDelete.name}"? Data tidak akan hilang permanen dan dapat dipulihkan nanti.`} onConfirm={handleArchiveCafe} onCancel={() => setCafeToDelete(null)} isConfirming={isSaving} confirmText="Ya, Arsipkan"/>}
             {isConfirmingMultiDelete && currentUser?.role === 'admin' && <ConfirmationModal title={`Hapus ${selectedCafeIds.length} Kafe`} message={`Yakin ingin menghapus ${selectedCafeIds.length} kafe yang dipilih? Tindakan ini tidak dapat diurungkan.`} onConfirm={handleConfirmMultiDelete} onCancel={() => setIsConfirmingMultiDelete(false)} confirmText={`Ya, Hapus (${selectedCafeIds.length})`} isConfirming={isSaving}/>}
         </>
     )

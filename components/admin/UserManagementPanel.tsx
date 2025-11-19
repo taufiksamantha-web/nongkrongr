@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { User } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
+import { userService } from '../../services/userService';
 import UserFormModal from './UserFormModal';
 import FloatingNotification from '../common/FloatingNotification';
 import ConfirmationModal from '../common/ConfirmationModal';
@@ -25,7 +27,7 @@ const UserManagementPanel: React.FC = () => {
 
     const fetchUsers = async () => {
         setLoading(true);
-        const { data, error } = await supabase.from('profiles').select('*').order('username', { ascending: true });
+        const { data, error } = await supabase.from('profiles').select('*').neq('status', 'archived').order('username', { ascending: true });
         if (error) {
             console.error("Error fetching users:", error);
             setNotification({ message: `Error: ${error.message}`, type: 'error' });
@@ -54,6 +56,12 @@ const UserManagementPanel: React.FC = () => {
         (currentPage - 1) * ITEMS_PER_PAGE,
         currentPage * ITEMS_PER_PAGE
     );
+
+    const counts = useMemo(() => ({
+        admin_cafe: users.filter(u => u.role === 'admin_cafe').length,
+        user: users.filter(u => u.role === 'user').length,
+        admin: users.filter(u => u.role === 'admin').length,
+    }), [users]);
     
     const handleSaveUser = async (userData: Partial<User>) => {
         if (!editingUser) {
@@ -77,18 +85,21 @@ const UserManagementPanel: React.FC = () => {
         setEditingUser(null);
     };
 
-    const handleDeleteUser = async () => {
+    const handleArchiveUser = async () => {
         if (!userToDelete || userToDelete.id === currentUser?.id) {
             setNotification({ message: 'Tidak dapat menghapus diri sendiri.', type: 'error' });
             setUserToDelete(null);
             return;
         }
         setIsDeleting(true);
-        const { error } = await supabase.from('profiles').delete().eq('id', userToDelete.id);
+        
+        // Use userService to soft delete (archive)
+        const { error } = await userService.archiveUser(userToDelete.id);
+        
         if (error) {
-            setNotification({ message: `Gagal menghapus profil: ${error.message}`, type: 'error' });
+            setNotification({ message: `Gagal mengarsipkan profil: ${error.message}`, type: 'error' });
         } else {
-            setNotification({ message: `Profil "${userToDelete.username}" telah dihapus.`, type: 'success' });
+            setNotification({ message: `Profil "${userToDelete.username}" telah diarsipkan.`, type: 'success' });
             setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
              if (paginatedUsers.length === 1 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
@@ -103,7 +114,7 @@ const UserManagementPanel: React.FC = () => {
         setIsUserFormOpen(true);
     };
 
-    const TabButton: React.FC<{ role: RoleTab, icon: React.ReactNode, label: string }> = ({ role, icon, label }) => (
+    const TabButton: React.FC<{ role: RoleTab, icon: React.ReactNode, label: string, count: number }> = ({ role, icon, label, count }) => (
         <button
             onClick={() => setActiveTab(role)}
             className={`flex items-center justify-center gap-2 w-full p-3 font-bold border-b-4 transition-colors ${
@@ -114,6 +125,7 @@ const UserManagementPanel: React.FC = () => {
         >
             {icon}
             {label}
+            <span className="px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-xs text-muted font-bold">{count}</span>
         </button>
     );
     
@@ -124,9 +136,9 @@ const UserManagementPanel: React.FC = () => {
                  <h2 className="text-2xl font-bold font-jakarta">Manajemen User</h2>
             </div>
              <div className="flex border-b border-border mb-4">
-                <TabButton role="admin_cafe" icon={<BuildingStorefrontIcon className="h-5 w-5"/>} label="Pengelola" />
-                <TabButton role="user" icon={<UserCircleIcon className="h-5 w-5"/>} label="User" />
-                <TabButton role="admin" icon={<PencilIcon className="h-5 w-5"/>} label="Admin" />
+                <TabButton role="admin_cafe" icon={<BuildingStorefrontIcon className="h-5 w-5"/>} label="Pengelola" count={counts.admin_cafe} />
+                <TabButton role="user" icon={<UserCircleIcon className="h-5 w-5"/>} label="User" count={counts.user} />
+                <TabButton role="admin" icon={<PencilIcon className="h-5 w-5"/>} label="Admin" count={counts.admin} />
             </div>
 
             <div className="relative mb-4">
@@ -175,7 +187,8 @@ const UserManagementPanel: React.FC = () => {
                                                 onClick={() => setUserToDelete(user)} 
                                                 className="p-2 text-accent-pink rounded-full hover:bg-accent-pink/10 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                                 disabled={user.id === currentUser?.id}
-                                                aria-label={`Delete user ${user.username}`}
+                                                aria-label={`Archive user ${user.username}`}
+                                                title="Arsipkan User"
                                             >
                                                 <TrashIcon className="h-5 w-5" />
                                             </button>
@@ -199,11 +212,12 @@ const UserManagementPanel: React.FC = () => {
              {isUserFormOpen && <UserFormModal userToEdit={editingUser} onSave={handleSaveUser} onCancel={() => setIsUserFormOpen(false)} />}
              {userToDelete && (
                 <ConfirmationModal
-                    title="Hapus User Profile"
-                    message={`Yakin ingin menghapus profil "${userToDelete.username}"? Ini hanya akan menghapus data dari tabel profil, bukan akun otentikasi pengguna.`}
-                    onConfirm={handleDeleteUser}
+                    title="Arsipkan User"
+                    message={`Yakin ingin mengarsipkan profil "${userToDelete.username}"? User tidak akan bisa login, tapi data bisa dipulihkan nanti.`}
+                    onConfirm={handleArchiveUser}
                     onCancel={() => setUserToDelete(null)}
                     isConfirming={isDeleting}
+                    confirmText="Ya, Arsipkan"
                 />
              )}
         </div>
