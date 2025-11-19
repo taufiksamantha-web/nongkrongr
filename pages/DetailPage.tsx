@@ -6,7 +6,7 @@ import { CafeContext } from '../context/CafeContext';
 import { ThemeContext } from '../App';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoriteContext';
-import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon, TagIcon, CurrencyDollarIcon } from '@heroicons/react/24/solid';
+import { StarIcon, BriefcaseIcon, UsersIcon, MapPinIcon, ClockIcon, ArrowLeftIcon, HeartIcon, XMarkIcon, BuildingStorefrontIcon, ExclamationTriangleIcon, CalendarDaysIcon, TagIcon, CurrencyDollarIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
 import ReviewForm from '../components/ReviewForm';
 import FloatingNotification from '../components/common/FloatingNotification';
@@ -18,6 +18,8 @@ import EventCard from '../components/EventCard';
 import ReviewCard from '../components/ReviewCard';
 import TagManager from '../components/TagManager';
 import { DEFAULT_COVER_URL } from '../constants';
+
+const INITIAL_REVIEWS_COUNT = 20;
 
 const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color: string }> = ({ label, score, max, color }) => {
     const percentage = max > 0 ? (score / max) * 100 : 0;
@@ -99,7 +101,7 @@ const DetailPage: React.FC = () => {
     const [cafe, setCafe] = useState<Cafe | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
-    const [reviewsExpanded, setReviewsExpanded] = useState(false);
+    const [visibleReviewsCount, setVisibleReviewsCount] = useState(INITIAL_REVIEWS_COUNT);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [isClosed, setIsClosed] = useState(false);
@@ -138,6 +140,10 @@ const DetailPage: React.FC = () => {
         }
         setIsSubmitting(false);
     };
+    
+    const handleLoadMoreReviews = () => {
+        setVisibleReviewsCount(prev => prev + INITIAL_REVIEWS_COUNT);
+    };
 
     if (error) return <DatabaseConnectionError />;
     if (loading && !cafe) return <div className="text-center py-20">Loading...</div>;
@@ -170,13 +176,12 @@ const DetailPage: React.FC = () => {
         } else {
             addFavorite(cafe.id);
         }
-        // Reset animation class after it plays (approx 0.5s)
         setTimeout(() => setIsAnimatingFavorite(false), 500);
     };
 
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${cafe.coords.lat},${cafe.coords.lng}`;
     const approvedReviews = cafe.reviews?.filter(r => r.status === 'approved') || [];
-    const visibleReviews = reviewsExpanded ? approvedReviews : approvedReviews.slice(0, 10);
+    const visibleReviews = approvedReviews.slice(0, visibleReviewsCount);
     const cafeEvents = cafe.events?.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()) || [];
 
 
@@ -370,14 +375,19 @@ const DetailPage: React.FC = () => {
                                 />
                             )) : <p className="text-muted">Belum ada review untuk cafe ini.</p>}
                          </div>
-                         {approvedReviews.length > 10 && !reviewsExpanded && (
+                         
+                         {visibleReviewsCount < approvedReviews.length && (
                             <div className="mt-6 text-center">
                                 <button
-                                    onClick={() => setReviewsExpanded(true)}
-                                    className="bg-brand/10 text-brand font-bold py-3 px-8 rounded-2xl hover:bg-brand/20 transition-all duration-300"
+                                    onClick={handleLoadMoreReviews}
+                                    className="bg-brand/10 text-brand font-bold py-3 px-8 rounded-2xl hover:bg-brand/20 transition-all duration-300 flex items-center justify-center gap-2 mx-auto"
                                 >
-                                    Lebih Banyak ({approvedReviews.length - 10} lagi)
+                                    Muat Lebih Banyak
+                                    <ChevronDownIcon className="h-5 w-5" />
                                 </button>
+                                <p className="text-xs text-muted mt-2">
+                                    Menampilkan {visibleReviews.length} dari {approvedReviews.length} ulasan
+                                </p>
                             </div>
                         )}
                     </div>
@@ -401,7 +411,7 @@ const DetailPage: React.FC = () => {
                 >
                     <div 
                         className="relative max-w-4xl w-full max-h-[90vh] p-4" 
-                        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking on the image container
+                        onClick={(e) => e.stopPropagation()} 
                     >
                         <ImageWithFallback
                             src={selectedImage}

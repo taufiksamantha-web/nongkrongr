@@ -9,10 +9,13 @@ import FloatingNotification from '../common/FloatingNotification';
 import { ArchiveBoxIcon, ArrowPathIcon, TrashIcon, BuildingStorefrontIcon, UserCircleIcon } from '@heroicons/react/24/solid';
 
 const ArchivePanel: React.FC = () => {
-    const { getArchivedCafes, restoreCafe, deleteCafe } = useContext(CafeContext)!;
+    const { getArchivedCafes, restoreCafe, deleteCafe, fetchCafes } = useContext(CafeContext)!;
     
     const [activeTab, setActiveTab] = useState<'cafes' | 'users'>('cafes');
     const [archivedUsers, setArchivedUsers] = useState<Profile[]>([]);
+    // Local state to ensure immediate UI update for cafes without relying solely on context refresh
+    const [archivedCafesList, setArchivedCafesList] = useState<Cafe[]>([]);
+    
     const [isLoading, setIsLoading] = useState(false);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [itemToDelete, setItemToDelete] = useState<{ id: string; type: 'cafe' | 'user'; name: string } | null>(null);
@@ -35,14 +38,20 @@ const ArchivePanel: React.FC = () => {
             setIsLoading(false);
         }
     };
+    
+    // Initial sync of archived cafes from context
+    useEffect(() => {
+        setArchivedCafesList(getArchivedCafes());
+    }, [getArchivedCafes]);
 
     useEffect(() => {
         if (activeTab === 'users') {
             fetchArchivedUsers();
+        } else {
+             setArchivedCafesList(getArchivedCafes());
         }
-    }, [activeTab]);
+    }, [activeTab, getArchivedCafes]);
 
-    const archivedCafes = getArchivedCafes();
 
     const handleRestoreCafe = async (cafe: Cafe) => {
         setIsProcessing(true);
@@ -51,6 +60,10 @@ const ArchivePanel: React.FC = () => {
             setNotification({ message: `Gagal memulihkan kafe: ${error.message}`, type: 'error' });
         } else {
             setNotification({ message: `Kafe "${cafe.name}" berhasil dipulihkan.`, type: 'success' });
+            // Update local list immediately
+            setArchivedCafesList(prev => prev.filter(c => c.id !== cafe.id));
+            // Trigger context refetch
+            fetchCafes();
         }
         setIsProcessing(false);
     };
@@ -62,7 +75,7 @@ const ArchivePanel: React.FC = () => {
             setNotification({ message: `Gagal memulihkan user: ${error.message}`, type: 'error' });
         } else {
             setNotification({ message: `User "${user.username}" berhasil dipulihkan.`, type: 'success' });
-            fetchArchivedUsers();
+            await fetchArchivedUsers();
         }
         setIsProcessing(false);
     };
@@ -77,6 +90,8 @@ const ArchivePanel: React.FC = () => {
                 setNotification({ message: `Gagal menghapus permanen: ${error.message}`, type: 'error' });
             } else {
                 setNotification({ message: `Kafe "${itemToDelete.name}" dihapus permanen.`, type: 'success' });
+                // Update local list immediately
+                setArchivedCafesList(prev => prev.filter(c => c.id !== itemToDelete.id));
             }
         } else {
             const { error } = await supabase.from('profiles').delete().eq('id', itemToDelete.id);
@@ -84,7 +99,7 @@ const ArchivePanel: React.FC = () => {
                  setNotification({ message: `Gagal menghapus permanen: ${error.message}`, type: 'error' });
             } else {
                  setNotification({ message: `User "${itemToDelete.name}" dihapus permanen.`, type: 'success' });
-                 fetchArchivedUsers();
+                 await fetchArchivedUsers();
             }
         }
         setIsProcessing(false);
@@ -107,7 +122,7 @@ const ArchivePanel: React.FC = () => {
                     }`}
                 >
                     <BuildingStorefrontIcon className="h-5 w-5" />
-                    Kafe Terhapus ({archivedCafes.length})
+                    Kafe Terhapus ({archivedCafesList.length})
                 </button>
                 <button
                     onClick={() => setActiveTab('users')}
@@ -122,10 +137,10 @@ const ArchivePanel: React.FC = () => {
 
             <div className="space-y-4">
                 {activeTab === 'cafes' && (
-                    archivedCafes.length === 0 ? (
+                    archivedCafesList.length === 0 ? (
                         <div className="text-center py-8 text-muted">Tidak ada kafe di arsip.</div>
                     ) : (
-                        archivedCafes.map(cafe => (
+                        archivedCafesList.map(cafe => (
                             <div key={cafe.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-xl border border-border flex flex-col sm:flex-row justify-between items-center gap-4">
                                 <div>
                                     <h3 className="font-bold text-lg">{cafe.name}</h3>

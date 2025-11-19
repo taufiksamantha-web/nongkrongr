@@ -57,7 +57,7 @@ const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="absolute top-full right-0 sm:-right-10 mt-3 w-80 sm:w-96 bg-card dark:bg-gray-800 rounded-2xl shadow-2xl border border-border z-50 overflow-hidden animate-fade-in-up origin-top-right">
+        <div className="fixed left-4 right-4 top-20 w-auto sm:absolute sm:top-full sm:right-0 sm:left-auto sm:-right-10 sm:mt-3 sm:w-96 bg-card dark:bg-gray-800 rounded-2xl shadow-2xl border border-border z-50 overflow-hidden animate-fade-in-up origin-top sm:origin-top-right">
             <div className="p-4 border-b border-border flex justify-between items-center bg-soft/50 backdrop-blur-sm">
                 <h3 className="font-bold font-jakarta text-base">Notifikasi</h3>
                 <div className="flex gap-1">

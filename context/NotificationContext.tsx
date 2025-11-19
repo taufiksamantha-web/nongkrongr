@@ -32,20 +32,21 @@ const DELETED_NOTIFS_PREFIX = 'nongkrongr_deleted_notifications';
 interface MinimalFeedback { id: number; name: string; message: string; created_at: string; status: string; }
 interface MinimalProfile { id: string; username: string; role: string; created_at?: string; }
 interface MinimalCafe { id: string; name: string; slug: string; manager_id: string; status: string; created_at: string; }
-interface MinimalReview { id: string; author: string; cafe_id: string; status: string; created_at: string; }
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { cafes } = useContext(CafeContext)!;
     const { currentUser } = useAuth();
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     
-    // Persistence states initialized empty, loaded in useEffect
+    // Persistence states
     const [readIds, setReadIds] = useState<Set<string>>(new Set());
     const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+    // Track if we have successfully loaded state for the current user to prevent overwriting
+    const [isStorageLoaded, setIsStorageLoaded] = useState(false);
 
     // Helper to get user-specific keys
-    const getStorageKeys = () => {
-        const suffix = currentUser ? `_${currentUser.id}` : '_guest';
+    const getStorageKeys = (userId: string | undefined) => {
+        const suffix = userId ? `_${userId}` : '_guest';
         return {
             read: `${READ_NOTIFS_PREFIX}${suffix}`,
             deleted: `${DELETED_NOTIFS_PREFIX}${suffix}`
@@ -54,23 +55,44 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     // Load read/deleted state when currentUser changes
     useEffect(() => {
-        const keys = getStorageKeys();
+        setIsStorageLoaded(false); // Reset loading state on user change
+        
+        const keys = getStorageKeys(currentUser?.id);
         const storedRead = localStorage.getItem(keys.read);
         const storedDeleted = localStorage.getItem(keys.deleted);
         
-        setReadIds(storedRead ? new Set(JSON.parse(storedRead)) : new Set());
-        setDeletedIds(storedDeleted ? new Set(JSON.parse(storedDeleted)) : new Set());
-    }, [currentUser?.id]); // Dependency on ID specifically
+        if (storedRead) {
+            try {
+                setReadIds(new Set(JSON.parse(storedRead)));
+            } catch (e) {
+                setReadIds(new Set());
+            }
+        } else {
+            setReadIds(new Set());
+        }
+        
+        if (storedDeleted) {
+             try {
+                setDeletedIds(new Set(JSON.parse(storedDeleted)));
+             } catch (e) {
+                setDeletedIds(new Set());
+             }
+        } else {
+            setDeletedIds(new Set());
+        }
 
-    // Helper for checking existence (using the state, which is updated by useEffect)
-    // We use refs or direct state access in effect, but here inside render cycle `readIds` is sufficient
-    // However, when calculating notifications, we must ensure `readIds` corresponds to `currentUser`.
+        setIsStorageLoaded(true); // Mark as loaded
+    }, [currentUser?.id]);
+
+    // Helper for checking existence
+    const isDeleted = (id: string) => deletedIds.has(id);
+    const isRead = (id: string) => readIds.has(id);
 
     // Setup Realtime Subscriptions and Notifications
     useEffect(() => {
+        if (!isStorageLoaded) return; // Don't calculate until we know what's read/deleted
+
         const channels: ReturnType<typeof supabase.channel>[] = [];
-        const isDeleted = (id: string) => deletedIds.has(id);
-        const isRead = (id: string) => readIds.has(id);
 
         if (currentUser?.role === 'admin') {
             // --- ADMIN REALTIME NOTIFICATIONS ---
@@ -198,27 +220,32 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             setNotifications(prev => {
                 const existingIds = new Set(prev.map(n => n.id));
                 const newUnique = derivedNotifications.filter(n => !existingIds.has(n.id));
-                // Also filter out any notifications that might be in the 'prev' state but are now deleted/read
-                // based on the updated `readIds` and `deletedIds` dependencies.
-                const allNotifications = [...newUnique, ...prev].filter(n => !isDeleted(n.id));
                 
-                // Re-apply read status (in case it changed)
+                // Combine both lists
+                const allNotifications = [...newUnique, ...prev];
+                
+                // Final filtering: Remove deleted and Update read status from the MASTER SOURCE (readIds)
+                // This ensures that even if 'prev' had old status, the 'readIds' set is the source of truth.
                 return allNotifications
+                    .filter(n => !isDeleted(n.id))
                     .map(n => ({ ...n, isRead: isRead(n.id) }))
                     .sort((a, b) => b.date.getTime() - a.date.getTime());
             });
+        } else {
+            // Reset notifications if no user
+            setNotifications([]);
         }
 
         return () => {
             channels.forEach(channel => supabase.removeChannel(channel));
         };
-    }, [currentUser, cafes, readIds, deletedIds]);
+    }, [currentUser, cafes, readIds, deletedIds, isStorageLoaded]); // Crucial: depends on readIds and isStorageLoaded
 
     const markAsRead = (id: string) => {
         if (!readIds.has(id)) {
             const newReadIds = new Set(readIds).add(id);
             setReadIds(newReadIds);
-            const keys = getStorageKeys();
+            const keys = getStorageKeys(currentUser?.id);
             localStorage.setItem(keys.read, JSON.stringify(Array.from(newReadIds)));
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
         }
@@ -228,7 +255,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         const newReadIds = new Set(readIds);
         notifications.forEach(n => newReadIds.add(n.id));
         setReadIds(newReadIds);
-        const keys = getStorageKeys();
+        const keys = getStorageKeys(currentUser?.id);
         localStorage.setItem(keys.read, JSON.stringify(Array.from(newReadIds)));
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     };
@@ -237,7 +264,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         const newDeletedIds = new Set(deletedIds);
         notifications.forEach(n => newDeletedIds.add(n.id));
         setDeletedIds(newDeletedIds);
-        const keys = getStorageKeys();
+        const keys = getStorageKeys(currentUser?.id);
         localStorage.setItem(keys.deleted, JSON.stringify(Array.from(newDeletedIds)));
         setNotifications([]);
     };

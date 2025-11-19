@@ -30,9 +30,78 @@ interface ThemeContextType {
 }
 
 export const ThemeContext = createContext<ThemeContextType>({
-  theme: 'light', // Changed default to light
+  theme: 'light',
   toggleTheme: () => {},
 });
+
+const NavPill: React.FC = () => {
+    const location = useLocation();
+    const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, opacity: 0 });
+    const navRef = useRef<HTMLDivElement>(null);
+
+    // Map paths to specific indices or verify active state
+    const navLinks = [
+        { path: '/', label: 'Home' },
+        { path: '/explore', label: 'Explore' },
+        { path: '/about', label: 'Tentang Kami' }
+    ];
+
+    useEffect(() => {
+        const updatePill = () => {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+                const activeLink = navRef.current?.querySelector('a.active');
+                if (activeLink instanceof HTMLElement) {
+                    setPillStyle({
+                        left: activeLink.offsetLeft,
+                        width: activeLink.offsetWidth,
+                        opacity: 1
+                    });
+                } else {
+                    // If no active link (e.g. on detail page but strict match required), hide pill or keep at explore
+                    // For simple matching logic:
+                    setPillStyle(prev => ({ ...prev, opacity: 0 }));
+                }
+            }, 50);
+        };
+
+        updatePill();
+        window.addEventListener('resize', updatePill);
+        return () => window.removeEventListener('resize', updatePill);
+    }, [location.pathname]);
+
+    return (
+        <div className="hidden lg:flex relative bg-brand/5 dark:bg-gray-700/50 p-1.5 rounded-2xl border border-brand/10 dark:border-gray-600 items-center" ref={navRef}>
+            {/* Animated Background Pill */}
+            <div 
+                className="absolute bg-brand border border-brand rounded-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-md shadow-brand/20 h-[calc(100%-12px)]"
+                style={{ 
+                    left: pillStyle.left, 
+                    width: pillStyle.width, 
+                    opacity: pillStyle.opacity,
+                    top: '6px',
+                    zIndex: 0
+                }}
+            />
+            
+            {navLinks.map((link) => (
+                <NavLink 
+                    key={link.path} 
+                    to={link.path}
+                    className={({ isActive }) => 
+                        `relative z-10 px-5 py-2 rounded-xl font-bold transition-colors duration-300 text-sm ${
+                            isActive 
+                            ? 'active text-white' 
+                            : 'text-gray-600 hover:text-brand dark:text-gray-300 dark:hover:text-white'
+                        }`
+                    }
+                >
+                    {link.label}
+                </NavLink>
+            ))}
+        </div>
+    );
+};
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
@@ -44,10 +113,6 @@ const Header: React.FC = () => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
-  
-  const activeLinkClass = "bg-brand text-white shadow-md shadow-brand/20";
-  const inactiveLinkClass = "hover:bg-brand/10 dark:hover:bg-brand/20 text-muted hover:text-primary dark:hover:text-white";
-  const linkClass = "px-4 py-2 rounded-xl font-bold transition-all duration-300 text-sm";
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -79,21 +144,31 @@ const Header: React.FC = () => {
   return (
     <>
       <div className="container mx-auto px-4 pt-4 sticky top-4 z-50">
-        <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 shadow-sm flex items-center justify-between">
+        <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 shadow-sm flex items-center justify-between transition-all duration-300">
           <nav className="w-full flex items-center justify-between relative">
             <Link to="/" className="flex items-center mr-6">
-              <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-6 sm:h-6 w-auto" />
+              {/* Mobile Logo - Using the transparent PNG but sized up */}
+              <img 
+                src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" 
+                alt="Nongkrongr Logo" 
+                className="h-12 w-auto block sm:hidden object-contain" 
+              />
+              {/* Desktop Logo */}
+              <img 
+                src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" 
+                alt="Nongkrongr Logo" 
+                className="h-10 w-auto hidden sm:block transition-all" 
+              />
             </Link>
             
-            <div className="hidden lg:flex items-center space-x-2 absolute left-1/2 -translate-x-1/2 bg-gray-100 dark:bg-gray-700/50 p-1.5 rounded-2xl border border-gray-200 dark:border-gray-600">
-              <NavLink to="/" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Home</NavLink>
-              <NavLink to="/explore" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Explore</NavLink>
-              <NavLink to="/about" className={({ isActive }) => `${linkClass} ${isActive ? activeLinkClass : inactiveLinkClass}`}>Tentang Kami</NavLink>
+            {/* Centered Nav with Smooth Animation */}
+            <div className="absolute left-1/2 -translate-x-1/2">
+                <NavPill />
             </div>
 
             <div className="flex items-center gap-3">
               {/* Right Controls Container */}
-              <div className="flex items-center bg-gray-100 dark:bg-gray-700/50 rounded-full p-1.5 border border-gray-200 dark:border-gray-600">
+              <div className="flex items-center bg-brand/5 dark:bg-gray-700/50 rounded-full p-1.5 border border-brand/10 dark:border-gray-600">
                   <button 
                     onClick={toggleTheme} 
                     className="p-2 rounded-full text-muted hover:text-yellow-500 hover:bg-white dark:hover:bg-gray-600 transition-all"
@@ -138,13 +213,13 @@ const Header: React.FC = () => {
                         <button onClick={() => setIsLogoutModalOpen(true)} className="hidden sm:flex p-2 rounded-full text-muted hover:text-red-500 hover:bg-white dark:hover:bg-gray-600 transition-all" title="Logout">
                             <ArrowRightOnRectangleIcon className="h-5 w-5" />
                         </button>
-                        {/* Mobile Trigger - Always Icon */}
-                        <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden flex items-center gap-1 px-2 py-1 rounded-full hover:bg-white dark:hover:bg-gray-600 transition-all" aria-label="Buka menu pengguna">
-                             <UserCircleIcon className="h-7 w-7 text-brand"/>
+                        {/* Mobile Trigger - Solid Brand Color */}
+                        <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden flex items-center gap-1 px-3 py-2 rounded-full bg-brand text-white hover:bg-brand/90 transition-all shadow-lg shadow-brand/20" aria-label="Buka menu pengguna">
+                             <UserCircleIcon className="h-6 w-6 text-white"/>
                         </button>
                     </>
                   ) : (
-                     <Link to="/login" className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-brand hover:bg-white dark:hover:bg-gray-600 transition-all" aria-label="Login">
+                     <Link to="/login" className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold bg-brand text-white hover:bg-brand/90 transition-all shadow-md shadow-brand/20" aria-label="Login">
                         <span className="hidden sm:inline">Login</span>
                         <ArrowRightOnRectangleIcon className="h-5 w-5" />
                     </Link>
@@ -166,9 +241,9 @@ const Header: React.FC = () => {
                           </div>
                       </div>
                       <div className="space-y-1">
-                          <NavLink to="/" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'hover:bg-soft dark:hover:bg-gray-700'}`}>Home</NavLink>
-                          <NavLink to="/explore" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'hover:bg-soft dark:hover:bg-gray-700'}`}>Explore</NavLink>
-                           <NavLink to="/about" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'hover:bg-soft dark:hover:bg-gray-700'}`}>Tentang Kami</NavLink>
+                          <NavLink to="/" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Home</NavLink>
+                          <NavLink to="/explore" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Explore</NavLink>
+                           <NavLink to="/about" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Tentang Kami</NavLink>
                            <div className="border-t border-border my-2"></div>
                           <Link 
                               to="/admin" 
@@ -261,7 +336,6 @@ const App: React.FC = () => {
     if (storedTheme) {
       return storedTheme;
     }
-    // FORCE LIGHT MODE DEFAULT: Ignore system preference unless user manually set dark mode previously.
     return 'light';
   });
   
