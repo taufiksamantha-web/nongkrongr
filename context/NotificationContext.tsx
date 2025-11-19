@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { CafeContext } from './CafeContext';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabaseClient';
@@ -35,7 +35,7 @@ interface MinimalProfile { id: string; username: string; role: string; created_a
 interface MinimalCafe { id: string; name: string; slug: string; manager_id: string; status: string; created_at: string; }
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { cafes, fetchCafes } = useContext(CafeContext)!;
+    const { fetchCafes } = useContext(CafeContext)!;
     const { currentUser } = useAuth();
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     
@@ -56,7 +56,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     // Load read/deleted state when currentUser changes
     useEffect(() => {
-        setIsStorageLoaded(false); // Reset loading state on user change
+        setIsStorageLoaded(false); 
         
         const keys = getStorageKeys(currentUser?.id);
         const storedRead = localStorage.getItem(keys.read);
@@ -82,47 +82,170 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             setDeletedIds(new Set());
         }
 
-        setIsStorageLoaded(true); // Mark as loaded
+        setIsStorageLoaded(true); 
     }, [currentUser?.id]);
 
-    // Helper for checking existence
-    const isDeleted = (id: string) => deletedIds.has(id);
-    const isRead = (id: string) => readIds.has(id);
+    const isDeleted = useCallback((id: string) => deletedIds.has(id), [deletedIds]);
+    const isRead = useCallback((id: string) => readIds.has(id), [readIds]);
 
-    // Setup Realtime Subscriptions and Notifications
+    // --- MAIN FETCHING LOGIC ---
+    const fetchNotifications = useCallback(async () => {
+        if (!isStorageLoaded) return;
+        
+        const fetchedNotifs: NotificationItem[] = [];
+
+        // 1. GLOBAL: New Cafes (Last 7 Days) - For Everyone
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const { data: recentCafes } = await supabase
+            .from('cafes')
+            .select('id, name, slug, created_at, status, isSponsored')
+            .eq('status', 'approved')
+            .gt('created_at', sevenDaysAgo.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(5); // Top 5 newest
+
+        recentCafes?.forEach(cafe => {
+            const id = `new-cafe-${cafe.id}`;
+            if (!isDeleted(id)) {
+                fetchedNotifs.push({
+                    id,
+                    title: 'Cafe Baru!',
+                    message: `${cafe.name} baru saja hadir di Nongkrongr. Cek sekarang!`,
+                    type: 'success',
+                    date: new Date(cafe.created_at),
+                    link: `/cafe/${cafe.slug}`,
+                    isRead: isRead(id)
+                });
+            }
+        });
+
+        // 2. PERSONAL: User & Manager Specifics
+        if (currentUser) {
+            // A. Review Status (For Users)
+            const { data: myReviews } = await supabase
+                .from('reviews')
+                .select('id, status, created_at, cafes(name, slug)')
+                .eq('author', currentUser.username)
+                .neq('status', 'pending') // Only care about resolved reviews
+                .order('created_at', { ascending: false })
+                .limit(10);
+            
+            myReviews?.forEach((r: any) => {
+                // Create a unique ID based on status to allow re-notification if status changes again
+                const id = `review-${r.id}-${r.status}`;
+                if (!isDeleted(id)) {
+                    const isApproved = r.status === 'approved';
+                    fetchedNotifs.push({
+                        id,
+                        title: isApproved ? 'Review Disetujui' : 'Review Ditolak',
+                        message: isApproved 
+                            ? `Ulasanmu di ${r.cafes?.name || 'cafe'} telah ditayangkan.` 
+                            : `Ulasanmu di ${r.cafes?.name || 'cafe'} tidak dapat ditayangkan.`,
+                        type: isApproved ? 'success' : 'alert',
+                        date: new Date(r.created_at),
+                        link: isApproved ? `/cafe/${r.cafes?.slug}` : undefined,
+                        isRead: isRead(id)
+                    });
+                }
+            });
+
+            // B. Cafe Status (For Managers)
+            if (currentUser.role === 'admin_cafe') {
+                const { data: myCafes } = await supabase
+                    .from('cafes')
+                    .select('id, name, slug, status, created_at')
+                    .eq('manager_id', currentUser.id)
+                    .in('status', ['approved', 'rejected'])
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+
+                myCafes?.forEach(cafe => {
+                     const id = `cafe-status-${cafe.id}-${cafe.status}`;
+                     if (!isDeleted(id)) {
+                        const isApproved = cafe.status === 'approved';
+                        fetchedNotifs.push({
+                            id,
+                            title: isApproved ? 'Cafe Disetujui' : 'Cafe Ditolak',
+                            message: isApproved 
+                                ? `Selamat! ${cafe.name} telah disetujui.` 
+                                : `Maaf, pendaftaran ${cafe.name} ditolak.`,
+                            type: isApproved ? 'success' : 'alert',
+                            date: new Date(cafe.created_at),
+                            link: isApproved ? `/cafe/${cafe.slug}` : '/dashboard-pengelola',
+                            isRead: isRead(id)
+                        });
+                     }
+                });
+            }
+        }
+
+        setNotifications(prev => {
+            // Preserve existing realtime notifications (start with 'rt-' or 'admin-')
+            const existingPreserved = prev.filter(n => n.id.startsWith('rt-') || n.id.startsWith('admin-'));
+            // Merge and Deduplicate
+            const combined = [...fetchedNotifs, ...existingPreserved];
+            const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+            return unique.sort((a, b) => b.date.getTime() - a.date.getTime());
+        });
+    }, [currentUser, isStorageLoaded, isDeleted, isRead]);
+
+    // Initial Fetch
     useEffect(() => {
-        if (!isStorageLoaded) return; // Don't calculate until we know what's read/deleted
+        fetchNotifications();
+    }, [fetchNotifications]);
+
+    // --- REALTIME SUBSCRIPTIONS ---
+    useEffect(() => {
+        if (!isStorageLoaded) return;
 
         const channels: ReturnType<typeof supabase.channel>[] = [];
 
+        // 1. GLOBAL LISTENER: New Cafe Approved
+        // Note: Supabase realtime filtering is limited. We listen to UPDATEs where status changes to approved.
+        const globalChannel = supabase.channel('global-cafe-updates')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cafes', filter: 'status=eq.approved' }, (payload) => {
+                const cafe = payload.new as MinimalCafe;
+                const id = `new-cafe-${cafe.id}`; // Use consistent ID
+                if (!isDeleted(id)) {
+                    setNotifications(prev => [{
+                        id,
+                        title: 'Cafe Baru!',
+                        message: `${cafe.name} baru saja hadir di Nongkrongr.`,
+                        type: 'success',
+                        date: new Date(),
+                        link: `/cafe/${cafe.slug}`,
+                        isRead: false
+                    }, ...prev]); // Add to top
+                }
+            })
+            .subscribe();
+        channels.push(globalChannel);
+
+        // 2. ADMIN LISTENERS
         if (currentUser?.role === 'admin') {
-            // --- ADMIN REALTIME NOTIFICATIONS ---
             const adminChannel = supabase.channel('admin-notifications')
-                // 1. New User Registration
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, (payload) => {
                     const user = payload.new as MinimalProfile;
                     const notifId = `admin-new-user-${user.id}`;
-                    
                     if (!isDeleted(notifId)) {
-                        const newItem: NotificationItem = {
+                        setNotifications(prev => [{
                             id: notifId,
                             title: 'Pendaftaran User Baru',
                             message: `${user.username} mendaftar sebagai ${user.role === 'admin_cafe' ? 'Pengelola' : 'User'}.`,
                             type: 'info',
-                            date: new Date(), // Use current time for realtime
+                            date: new Date(),
                             link: '/dashboard-admin',
                             isRead: false
-                        };
-                        setNotifications(prev => [newItem, ...prev]);
+                        }, ...prev]);
                     }
                 })
-                // 2. New Feedback
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedback' }, (payload) => {
                     const fb = payload.new as MinimalFeedback;
                     const notifId = `admin-feedback-${fb.id}`;
-
                     if (!isDeleted(notifId)) {
-                        const newItem: NotificationItem = {
+                        setNotifications(prev => [{
                             id: notifId,
                             title: 'Masukan Baru',
                             message: `Dari ${fb.name}: "${fb.message.substring(0, 40)}..."`,
@@ -130,17 +253,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                             date: new Date(),
                             link: '/dashboard-admin',
                             isRead: false
-                        };
-                        setNotifications(prev => [newItem, ...prev]);
+                        }, ...prev]);
                     }
                 })
-                // 3. New Cafe (Pending)
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cafes' }, (payload) => {
                     const cafe = payload.new as MinimalCafe;
                     if (cafe.status === 'pending') {
                         const notifId = `admin-new-cafe-${cafe.id}`;
                         if (!isDeleted(notifId)) {
-                            const newItem: NotificationItem = {
+                            setNotifications(prev => [{
                                 id: notifId,
                                 title: 'Cafe Baru Menunggu Review',
                                 message: `${cafe.name} perlu persetujuan untuk ditayangkan.`,
@@ -148,99 +269,74 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                                 date: new Date(),
                                 link: '/dashboard-admin',
                                 isRead: false
-                            };
-                            setNotifications(prev => [newItem, ...prev]);
+                            }, ...prev]);
                         }
                     }
                 })
                 .subscribe();
-            
             channels.push(adminChannel);
-        } 
-        
+        }
+
+        // 3. PERSONAL LISTENERS (User/Manager)
         if (currentUser) {
-            // --- USER/MANAGER NOTIFICATIONS (Existing Logic + Realtime) ---
-            const derivedNotifications: NotificationItem[] = [];
-            
-            // 1. Check Loaded Data for notifications
-            cafes.forEach(cafe => {
-                // Check for Review Status (User)
-                cafe.reviews.forEach(review => {
-                    if (review.author === currentUser.username && review.status !== 'pending') {
-                        const id = `review-status-${review.id}-${review.status}`;
-                        if (!isDeleted(id)) {
-                            const isApproved = review.status === 'approved';
-                            derivedNotifications.push({
-                                id,
-                                title: isApproved ? 'Review Disetujui' : 'Review Ditolak',
-                                message: isApproved 
-                                    ? `Ulasanmu untuk ${cafe.name} telah ditayangkan.` 
-                                    : `Ulasanmu untuk ${cafe.name} tidak dapat ditayangkan.`,
-                                type: isApproved ? 'success' : 'alert',
-                                date: new Date(review.createdAt),
-                                link: isApproved ? `/cafe/${cafe.slug}` : undefined,
-                                isRead: isRead(id)
-                            });
-                        }
-                    }
-                });
+            const userChannel = supabase.channel(`user-personal-${currentUser.id}`)
+                // Listen for Review Updates
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reviews', filter: `author=eq.${currentUser.username}` }, async (payload) => {
+                    const r = payload.new as any;
+                    if (r.status === 'pending') return;
 
-                // Check for Cafe Approval (Manager)
-                if (cafe.manager_id === currentUser.id) {
-                    if (cafe.status === 'approved') {
-                        const id = `cafe-approved-${cafe.id}`;
-                         if (!isDeleted(id)) {
-                            derivedNotifications.push({
-                                id,
-                                title: 'Cafe Anda Disetujui!',
-                                message: `Selamat! ${cafe.name} telah disetujui dan sekarang tayang di publik.`,
-                                type: 'success',
-                                date: cafe.created_at ? new Date(cafe.created_at) : new Date(), // Approximate
-                                link: `/cafe/${cafe.slug}`,
-                                isRead: isRead(id)
-                            });
-                         }
-                    } else if (cafe.status === 'rejected') {
-                        const id = `cafe-rejected-${cafe.id}`;
-                        if (!isDeleted(id)) {
-                            derivedNotifications.push({
-                                id,
-                                title: 'Pendaftaran Cafe Ditolak',
-                                message: `Maaf, ${cafe.name} belum memenuhi kriteria kami. Silakan cek kembali data Anda.`,
-                                type: 'alert',
-                                date: cafe.created_at ? new Date(cafe.created_at) : new Date(),
-                                link: '/dashboard-pengelola',
-                                isRead: isRead(id)
-                            });
-                        }
-                    }
-                }
-            });
+                    // Fetch cafe details for better message
+                    const { data: cafe } = await supabase.from('cafes').select('name, slug').eq('id', r.cafe_id).single();
+                    
+                    const id = `rt-review-${r.id}-${r.status}-${Date.now()}`; // Realtime unique ID
+                    const isApproved = r.status === 'approved';
+                    
+                    setNotifications(prev => [{
+                        id,
+                        title: isApproved ? 'Review Disetujui' : 'Review Ditolak',
+                        message: isApproved 
+                            ? `Ulasanmu di ${cafe?.name || 'cafe'} telah ditayangkan.` 
+                            : `Ulasanmu di ${cafe?.name || 'cafe'} tidak dapat ditayangkan.`,
+                        type: isApproved ? 'success' : 'alert',
+                        date: new Date(),
+                        link: isApproved ? `/cafe/${cafe?.slug}` : undefined,
+                        isRead: false
+                    }, ...prev]);
+                })
+                .subscribe();
+            channels.push(userChannel);
 
-            // Merge derived with existing (avoid duplicates)
-            setNotifications(prev => {
-                const existingIds = new Set(prev.map(n => n.id));
-                const newUnique = derivedNotifications.filter(n => !existingIds.has(n.id));
-                
-                // Combine both lists
-                const allNotifications = [...newUnique, ...prev];
-                
-                // Final filtering: Remove deleted and Update read status from the MASTER SOURCE (readIds)
-                // This ensures that even if 'prev' had old status, the 'readIds' set is the source of truth.
-                return allNotifications
-                    .filter(n => !isDeleted(n.id))
-                    .map(n => ({ ...n, isRead: isRead(n.id) }))
-                    .sort((a, b) => b.date.getTime() - a.date.getTime());
-            });
-        } else {
-            // Reset notifications if no user
-            setNotifications([]);
+            if (currentUser.role === 'admin_cafe') {
+                 const managerChannel = supabase.channel(`manager-personal-${currentUser.id}`)
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cafes', filter: `manager_id=eq.${currentUser.id}` }, (payload) => {
+                        const cafe = payload.new as MinimalCafe;
+                        if (cafe.status === 'pending') return;
+
+                        const id = `rt-cafe-${cafe.id}-${cafe.status}-${Date.now()}`;
+                        const isApproved = cafe.status === 'approved';
+
+                        setNotifications(prev => [{
+                            id,
+                            title: isApproved ? 'Cafe Disetujui' : 'Cafe Ditolak',
+                            message: isApproved 
+                                ? `Selamat! ${cafe.name} telah disetujui.` 
+                                : `Maaf, pendaftaran ${cafe.name} ditolak.`,
+                            type: isApproved ? 'success' : 'alert',
+                            date: new Date(),
+                            link: isApproved ? `/cafe/${cafe.slug}` : '/dashboard-pengelola',
+                            isRead: false
+                        }, ...prev]);
+                    })
+                    .subscribe();
+                 channels.push(managerChannel);
+            }
         }
 
         return () => {
             channels.forEach(channel => supabase.removeChannel(channel));
         };
-    }, [currentUser, cafes, readIds, deletedIds, isStorageLoaded]); // Crucial: depends on readIds and isStorageLoaded
+    }, [currentUser, isStorageLoaded, isDeleted]);
+
 
     const markAsRead = (id: string) => {
         if (!readIds.has(id)) {
@@ -271,7 +367,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     };
 
     const refresh = async () => {
-        await fetchCafes();
+        await fetchCafes(); // Update global data
+        await fetchNotifications(); // Re-run notification logic
     };
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
