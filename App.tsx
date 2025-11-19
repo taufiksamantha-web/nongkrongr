@@ -52,7 +52,6 @@ const Header: React.FC = () => {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     const { error } = await logout();
-    // Selalu tutup modal dan reset status loading setelah percobaan logout.
     setIsLogoutModalOpen(false);
     setIsLoggingOut(false);
 
@@ -60,7 +59,6 @@ const Header: React.FC = () => {
         console.error("Logout failed:", error.message);
         alert(`Gagal untuk logout: ${error.message}`);
     }
-    // Jika berhasil, UI akan diperbarui melalui AuthContext, dan modal sudah ditutup.
   };
 
   useEffect(() => {
@@ -83,7 +81,7 @@ const Header: React.FC = () => {
       <header className="bg-card/80 backdrop-blur-lg sticky top-0 z-50 border-b border-border">
         <nav className="container mx-auto px-4 py-2 flex items-center justify-between relative">
           <Link to="/" className="flex items-center py-2">
-            <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-8 w-auto" />
+            <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-5 sm:h-7 w-auto" />
           </Link>
           
           <div className="hidden lg:flex items-center space-x-4 absolute left-1/2 -translate-x-1/2">
@@ -103,7 +101,6 @@ const Header: React.FC = () => {
             
             {currentUser ? (
               <div className="flex items-center gap-2">
-                   {/* Notification Icon - Only for logged in users */}
                    <div className="relative" ref={notifRef}>
                         <button
                             onClick={() => setIsNotifOpen(!isNotifOpen)}
@@ -112,7 +109,7 @@ const Header: React.FC = () => {
                         >
                             <BellIcon className="h-6 w-6" />
                             {unreadCount > 0 && (
-                                <span className="absolute top-1 right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-card"></span>
+                                <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-card"></span>
                             )}
                         </button>
                         <NotificationPanel isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
@@ -124,7 +121,7 @@ const Header: React.FC = () => {
                       ) : (
                           <UserCircleIcon className="h-6 w-6 text-brand" />
                       )}
-                      <span>{currentUser.username}</span>
+                      <span className="text-sm max-w-[100px] truncate">{currentUser.username}</span>
                   </Link>
                   <button onClick={() => setIsLogoutModalOpen(true)} className="hidden sm:flex p-2 rounded-full text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Logout">
                       <ArrowRightOnRectangleIcon className="h-6 w-6" />
@@ -152,9 +149,9 @@ const Header: React.FC = () => {
                         ) : (
                             <UserCircleIcon className="h-10 w-10 text-brand" />
                         )}
-                        <div>
+                        <div className="overflow-hidden">
                             <p className="font-bold text-primary truncate" title={currentUser.username}>{currentUser.username}</p>
-                            <p className="text-sm text-muted truncate" title={currentUser.email}>{currentUser.email}</p>
+                            <p className="text-xs text-muted truncate" title={currentUser.email}>{currentUser.email}</p>
                         </div>
                     </div>
                     <Link 
@@ -213,10 +210,8 @@ const MainLayout: React.FC = () => {
     const [showWelcome, setShowWelcome] = useState(false);
 
     useEffect(() => {
-      // Hanya jalankan pengecekan ini sekali setelah status otentikasi diketahui
       if (!authLoading) {
         const welcomeSeen = localStorage.getItem('nongkrongr_welcome_seen');
-        // Tampilkan jika belum pernah dilihat DAN pengguna tidak login
         if (!welcomeSeen && !currentUser) {
           setShowWelcome(true);
         }

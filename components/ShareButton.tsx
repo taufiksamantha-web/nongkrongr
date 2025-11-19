@@ -5,9 +5,10 @@ import { ShareIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/solid
 interface ShareButtonProps {
   cafeName: string;
   cafeDescription: string;
+  className?: string;
 }
 
-const ShareButton: React.FC<ShareButtonProps> = ({ cafeName, cafeDescription }) => {
+const ShareButton: React.FC<ShareButtonProps> = ({ cafeName, cafeDescription, className }) => {
   const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
@@ -17,7 +18,6 @@ const ShareButton: React.FC<ShareButtonProps> = ({ cafeName, cafeDescription }) 
       url: window.location.href,
     };
 
-    // Use Web Share API if available (mostly on mobile)
     if (navigator.share) {
       try {
         await navigator.share(shareData);
@@ -25,11 +25,10 @@ const ShareButton: React.FC<ShareButtonProps> = ({ cafeName, cafeDescription }) 
         console.error('Error sharing:', error);
       }
     } else {
-      // Fallback to copy to clipboard for desktop
       try {
         await navigator.clipboard.writeText(window.location.href);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2500); // Reset feedback after 2.5 seconds
+        setTimeout(() => setCopied(false), 2500);
       } catch (error) {
         console.error('Failed to copy link:', error);
         alert('Gagal menyalin link.');
@@ -37,10 +36,12 @@ const ShareButton: React.FC<ShareButtonProps> = ({ cafeName, cafeDescription }) 
     }
   };
 
+  const buttonClass = className || `inline-flex items-center justify-center p-3 rounded-full transition-all duration-300 shadow-sm active:scale-90 ${copied ? 'bg-green-100 text-green-700 border-2 border-green-200' : 'bg-soft border-2 border-border hover:bg-brand/10 hover:text-brand hover:border-brand/20 text-muted'}`;
+
   return (
     <button
       onClick={handleShare}
-      className={`inline-flex items-center justify-center p-3 rounded-full transition-all duration-300 shadow-sm ${copied ? 'bg-green-100 text-green-700 border-2 border-green-200' : 'bg-soft border-2 border-border hover:bg-brand/10 hover:text-brand hover:border-brand/20'}`}
+      className={buttonClass}
       aria-label="Bagikan kafe ini"
       title="Bagikan"
     >

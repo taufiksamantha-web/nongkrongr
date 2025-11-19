@@ -21,7 +21,7 @@ import { DEFAULT_COVER_URL } from '../constants';
 
 const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color: string }> = ({ label, score, max, color }) => {
     const percentage = max > 0 ? (score / max) * 100 : 0;
-    const circumference = 2 * Math.PI * 45; // radius = 45
+    const circumference = 2 * Math.PI * 45;
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
     return (
@@ -51,7 +51,7 @@ const ScoreDisplay: React.FC<{ label: string, score: number, max: number, color:
 
 const checkCafeOpenStatus = (openingHours: string): boolean => {
     if (!openingHours || openingHours.toLowerCase().includes('24')) {
-        return false; // Not closed
+        return false;
     }
 
     const now = new Date();
@@ -59,7 +59,7 @@ const checkCafeOpenStatus = (openingHours: string): boolean => {
 
     const parts = openingHours.split(' - ');
     if (parts.length !== 2) {
-        return false; // Invalid format, assume open
+        return false;
     }
 
     const [openTimeStr, closeTimeStr] = parts;
@@ -77,15 +77,12 @@ const checkCafeOpenStatus = (openingHours: string): boolean => {
     const closeTime = parseTime(closeTimeStr);
 
     if (openTime === null || closeTime === null) {
-        return false; // Invalid time format, assume open
+        return false;
     }
 
-    // Handle overnight case (e.g., 16:00 - 02:00)
     if (closeTime < openTime) {
-        // It's open if current time is after open time OR before close time
         return !(currentTime >= openTime || currentTime < closeTime);
     } else {
-        // Same day case (e.g., 08:00 - 22:00)
         return !(currentTime >= openTime && currentTime < closeTime);
     }
 };
@@ -121,7 +118,7 @@ const DetailPage: React.FC = () => {
     const openImageModal = (imageUrl: string) => {
         setSelectedImage(imageUrl);
         setIsModalOpen(true);
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        document.body.style.overflow = 'hidden';
     };
 
     const closeImageModal = () => {
@@ -173,7 +170,8 @@ const DetailPage: React.FC = () => {
         } else {
             addFavorite(cafe.id);
         }
-        setTimeout(() => setIsAnimatingFavorite(false), 300);
+        // Reset animation class after it plays (approx 0.5s)
+        setTimeout(() => setIsAnimatingFavorite(false), 500);
     };
 
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${cafe.coords.lat},${cafe.coords.lng}`;
@@ -193,68 +191,77 @@ const DetailPage: React.FC = () => {
                 Kembali
             </button>
             {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
-            <ImageWithFallback 
-                src={cafe.coverUrl} 
-                defaultSrc={DEFAULT_COVER_URL}
-                alt={cafe.name} 
-                className="w-full h-96 object-cover rounded-4xl mb-8 border border-border"
-                width={1280}
-                height={768}
-            />
+            
+            <div className="relative group">
+                <ImageWithFallback 
+                    src={cafe.coverUrl} 
+                    defaultSrc={DEFAULT_COVER_URL}
+                    alt={cafe.name} 
+                    className="w-full h-64 md:h-96 object-cover rounded-4xl mb-8 border border-border"
+                    width={1280}
+                    height={768}
+                />
+                <div className="absolute top-4 right-4 flex gap-3 z-10">
+                     <ShareButton 
+                        cafeName={cafe.name} 
+                        cafeDescription={cafe.description} 
+                        className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-all shadow-sm active:scale-90"
+                    />
+                     <button
+                        onClick={handleFavoriteClick}
+                        className={`p-3 rounded-full transition-all duration-300 shadow-sm active:scale-75 bg-black/40 backdrop-blur-md text-white hover:bg-black/60 ${favorited ? 'text-accent-pink' : ''} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`}
+                        aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+                        title={favorited ? 'Hapus dari favorit' : 'Tambah ke favorit'}
+                     >
+                        {favorited ? <HeartIcon className="h-6 w-6 text-accent-pink"/> : <HeartIconOutline className="h-6 w-6" />}
+                     </button>
+                </div>
+            </div>
+
             <div className="grid lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
-                    {/* Header */}
-                    <div className="bg-card border border-border p-8 rounded-3xl shadow-sm">
-                        <div className="flex flex-col md:flex-row justify-between gap-6 mb-4">
-                             <div className="flex items-center md:items-start gap-5 flex-1">
-                                {/* Logo with Fixed Size for Proportion */}
+                    {/* Header Cafe */}
+                    <div className="bg-card border border-border p-6 md:p-8 rounded-3xl shadow-sm relative">
+                        <div className="flex flex-row items-start gap-5"> 
+                             {/* Logo */}
+                             <div className="flex-shrink-0">
                                 {cafe.logoUrl ? (
                                     <ImageWithFallback 
                                         src={cafe.logoUrl} 
                                         alt={`${cafe.name} logo`} 
-                                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl object-contain shadow-md bg-soft p-1 border border-border flex-shrink-0"
+                                        className="w-20 h-20 md:w-24 md:h-24 rounded-3xl object-contain shadow-md bg-soft p-1 border border-border"
                                         width={100}
                                         height={100}
                                     />
                                 ) : (
-                                    <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-3xl shadow-md border border-border">
+                                    <div className="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-3xl shadow-md border border-border">
                                         <BuildingStorefrontIcon className="h-10 w-10 text-muted" />
                                     </div>
                                 )}
-                                <div>
-                                    <h1 className="text-3xl md:text-4xl font-extrabold font-jakarta leading-tight">
-                                        {cafe.name}
-                                    </h1>
-                                    {/* Price Tier Below Name */}
-                                    <div className="flex items-center mt-2">
-                                        <span className="sr-only">Price tier {cafe.priceTier} out of 4</span>
-                                        {[1, 2, 3, 4].map((tier) => (
-                                            <CurrencyDollarIcon
-                                                key={tier}
-                                                aria-hidden="true"
-                                                className={`h-6 w-6 ${
-                                                    tier <= cafe.priceTier ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600'
-                                                }`}
-                                            />
-                                        ))}
-                                    </div>
+                             </div>
+
+                             {/* Name & Price */}
+                             <div className="flex flex-col justify-center min-h-[5rem] md:min-h-[6rem] flex-grow min-w-0">
+                                <h1 className="text-2xl md:text-4xl font-extrabold font-jakarta leading-tight text-primary dark:text-white break-words">
+                                    {cafe.name}
+                                </h1>
+                                <div className="flex items-center mt-2">
+                                    {[1, 2, 3, 4].map((tier) => (
+                                        <CurrencyDollarIcon
+                                            key={tier}
+                                            aria-hidden="true"
+                                            className={`h-5 w-5 ${
+                                                tier <= cafe.priceTier ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600'
+                                            }`}
+                                        />
+                                    ))}
                                 </div>
                              </div>
-                             <div className="flex gap-3 self-start md:self-center justify-end w-full md:w-auto">
-                                 <ShareButton cafeName={cafe.name} cafeDescription={cafe.description} />
-                                 <button
-                                    onClick={handleFavoriteClick}
-                                    className={`p-3 rounded-full transition-all duration-300 shadow-sm active:scale-75 ${favorited ? 'bg-accent-pink text-white hover:bg-accent-pink/90' : 'bg-soft border-2 border-border text-muted hover:bg-accent-pink/10 hover:text-accent-pink hover:border-accent-pink/20'} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`}
-                                    aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
-                                    title={favorited ? 'Hapus dari favorit' : 'Tambah ke favorit'}
-                                 >
-                                    {favorited ? <HeartIcon className="h-6 w-6"/> : <HeartIconOutline className="h-6 w-6" />}
-                                 </button>
-                            </div>
                         </div>
-                        <div className="flex flex-col gap-2 mt-4 text-muted">
-                            <div className="flex items-center">
-                                <MapPinIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
+
+                        <div className="flex flex-col gap-2 mt-6 text-muted">
+                            <div className="flex items-start">
+                                <MapPinIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0 mt-0.5" />
                                 <span>{cafe.address}</span>
                             </div>
                             <div className="flex items-center">

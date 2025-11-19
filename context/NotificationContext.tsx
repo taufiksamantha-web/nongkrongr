@@ -70,7 +70,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 // A. For Review Authors: Review Status Changes
                 cafe.reviews.forEach(review => {
                     if (review.author === currentUser.username && review.status !== 'pending') {
-                        // Create unique ID based on status to re-notify if status changes again (rare but possible)
+                        // Create unique ID based on status to re-notify if status changes again
                         const id = `review-status-${review.id}-${review.status}`;
                         if (!deletedIds.has(id)) {
                             const isApproved = review.status === 'approved';
@@ -81,7 +81,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                                     ? `Ulasanmu untuk ${cafe.name} telah ditayangkan.` 
                                     : `Ulasanmu untuk ${cafe.name} tidak dapat ditayangkan.`,
                                 type: isApproved ? 'success' : 'alert',
-                                date: new Date(review.createdAt), // Using review date as proxy
+                                date: new Date(review.createdAt),
                                 link: isApproved ? `/cafe/${cafe.slug}` : undefined,
                                 isRead: readIds.has(id)
                             });
@@ -103,9 +103,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                                     id,
                                     title: 'Ulasan Baru Masuk',
                                     message: `${review.author} baru saja mengulas ${cafe.name}.`,
-                                    type: 'warning', // Using warning color for attention (yellow/orange)
+                                    type: 'warning',
                                     date: reviewDate,
-                                    link: `/admin`, // Direct to dashboard
+                                    link: `/admin`,
                                     isRead: readIds.has(id)
                                 });
                             }

@@ -138,8 +138,6 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const fetchCafes = useCallback(async (showLoader = false) => {
         if (showLoader) setLoading(true);
-        // Keep previous error if any, unless specifically cleared.
-        // Don't clear error immediately to avoid flickering if retrying.
         
         try {
             const { data: profilesData, error: profilesError } = await supabase.from('profiles').select('username, avatar_url');
@@ -182,11 +180,11 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
-    // Visibility Change Handler for "Continuous Sync" when returning to tab
+    // Continuous Sync: "Soft Refresh" when tab becomes visible
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                // Silence logging for clean console
+                // Do a silent fetch to update data without showing a loading spinner
                 fetchCafes(false);
             }
         };
@@ -207,12 +205,11 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             })
             .subscribe((status, err) => {
                 if (status === 'SUBSCRIBED') {
-                     // Connected
                      setError(null);
                 }
                 if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                    // Suppress alerting user for background disconnects, 
-                    // visibility handler will catch up when user returns.
+                    // Suppress alerting user for background disconnects.
+                    // The visibility change handler acts as a robust fallback.
                     console.warn(`Realtime connection status: ${status}`, err);
                 }
             });
