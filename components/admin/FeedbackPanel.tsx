@@ -90,12 +90,15 @@ const FeedbackPanel: React.FC = () => {
     return (
         <div>
             {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
-            <h2 className="text-2xl font-bold font-jakarta mb-4">Saran & Masukan</h2>
+            
+            <h2 className="text-2xl font-bold font-jakarta mb-4 text-center bg-gradient-to-r from-brand to-purple-600 bg-clip-text text-transparent">
+                Saran & Masukan
+            </h2>
 
             {isLoading ? (
-                <p className="text-muted">Memuat...</p>
+                <p className="text-muted text-center">Memuat...</p>
             ) : error ? (
-                <p className="text-accent-pink">{error}</p>
+                <p className="text-accent-pink text-center">{error}</p>
             ) : feedbackList.length === 0 ? (
                 <div className="text-center py-6 bg-soft dark:bg-gray-700/50 rounded-2xl border border-border">
                     <EnvelopeIcon className="mx-auto h-10 w-10 text-muted" />

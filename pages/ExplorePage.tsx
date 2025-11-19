@@ -476,18 +476,17 @@ const ExplorePage: React.FC = () => {
       </aside>
 
       {/* Main Content - Fluid width */}
-      <div className="flex-1 w-full min-w-0">
-        {/* Mobile Filter Button */}
-        <div className="lg:hidden mb-6">
-            <button 
-                onClick={() => setIsFiltersOpen(true)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-card dark:bg-gray-800 border border-border rounded-2xl font-bold shadow-sm active:scale-95 transition-transform disabled:opacity-50 text-primary dark:text-white"
-                disabled={isSpecialView}
-            >
-                <AdjustmentsHorizontalIcon className="h-6 w-6 text-brand" />
-                <span>Filter & Urutkan</span>
-            </button>
-        </div>
+      <div className="flex-1 w-full min-w-0 pb-20">
+        {/* Mobile Filter Floating Button - Restored */}
+        <button 
+            onClick={() => setIsFiltersOpen(true)}
+            className="lg:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 py-3 px-6 bg-card/90 dark:bg-gray-800/90 backdrop-blur-md border border-brand/50 text-primary dark:text-white rounded-full font-bold shadow-2xl active:scale-95 transition-all hover:bg-brand/5 disabled:opacity-50 ring-1 ring-white/20"
+            disabled={isSpecialView}
+        >
+            <AdjustmentsHorizontalIcon className="h-6 w-6 text-brand" />
+            <span>Filter & Urutkan</span>
+        </button>
+
         <div className="relative mb-8">
             <MagnifyingGlassIcon className="h-6 w-6 text-muted absolute left-4 top-1/2 -translate-y-1/2" />
             <input

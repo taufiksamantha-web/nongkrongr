@@ -97,16 +97,16 @@ const ApprovalHub: React.FC = () => {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
-                 <h2 className="text-2xl font-bold font-jakarta">Pusat Persetujuan</h2>
-            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold font-jakarta text-center mb-6 bg-gradient-to-r from-brand to-purple-600 bg-clip-text text-transparent">
+                Pusat Persetujuan
+            </h2>
            
-            <div className="flex border-b border-border mb-6">
+            <div className="flex border-b border-border mb-6 justify-center">
                 <TabButton type="users" icon={<UserGroupIcon className="h-6 w-6"/>} label="Pengelola" count={pendingUsers.length} />
                 <TabButton type="cafes" icon={<BuildingStorefrontIcon className="h-6 w-6"/>} label="Kafe Baru" count={pendingCafes.length} />
             </div>
 
-            <div className="flex gap-2 mb-6">
+            <div className="flex gap-2 mb-6 justify-center">
                 <button 
                     onClick={() => setFilterStatus('pending')} 
                     className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${filterStatus === 'pending' ? 'bg-brand text-white shadow-md shadow-brand/20' : 'bg-gray-100 dark:bg-gray-700 text-muted hover:bg-gray-200'}`}

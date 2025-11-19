@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Cafe, Amenity, Vibe, Spot, Event } from '../../types';
 import { cloudinaryService } from '../../services/cloudinaryService';
-import { geminiService } from '../../services/geminiService';
 import { AMENITIES, VIBES, SOUTH_SUMATRA_CITIES } from '../../constants';
 import { PriceTier } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
@@ -14,6 +13,18 @@ import {
     MapIcon, BuildingOffice2Icon, WifiIcon, CameraIcon, LightBulbIcon,
     CalendarDaysIcon, TicketIcon, StarIcon
 } from '@heroicons/react/24/solid';
+
+// Declare global OpenLocationCode
+declare global {
+    interface Window {
+        OpenLocationCode: {
+            decode: (code: string) => {
+                latitudeCenter: number;
+                longitudeCenter: number;
+            };
+        };
+    }
+}
 
 interface AdminCafeFormProps {
     cafe?: Cafe | null;
@@ -229,20 +240,31 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
 
         if (plusCodeDebounceRef.current) clearTimeout(plusCodeDebounceRef.current);
         plusCodeDebounceRef.current = window.setTimeout(async () => {
-            // A basic regex to check if it looks like a plus code
-            if (!/^[2-9CFGHJMPQRVWX]{4}\+[2-9CFGHJMPQRVWX]{2,}/i.test(code)) {
+            const cleanCode = code.trim().toUpperCase();
+            
+            if (cleanCode.length < 8 || !cleanCode.includes('+')) {
                 return;
             }
             
             setIsConvertingPlusCode(true);
             setNotification(null);
+            
             try {
-                const coords = await geminiService.convertPlusCodeToCoords(code);
-                setCoordsInput(`${coords.lat}, ${coords.lng}`);
-                setFormData(prev => ({ ...prev, lat: String(coords.lat), lng: String(coords.lng) }));
-                markDirty();
+                if (window.OpenLocationCode) {
+                    // Use the client-side library instead of API calls
+                    const decoded = window.OpenLocationCode.decode(cleanCode);
+                    const lat = decoded.latitudeCenter;
+                    const lng = decoded.longitudeCenter;
+                    
+                    setCoordsInput(`${lat}, ${lng}`);
+                    setFormData(prev => ({ ...prev, lat: String(lat), lng: String(lng) }));
+                    markDirty();
+                } else {
+                     throw new Error("Library Open Location Code belum dimuat. Silakan refresh halaman.");
+                }
             } catch (error: any) {
-                setNotification({ message: error.message || "Gagal mengonversi Plus Code.", type: 'error' });
+                console.error("Plus Code Error:", error);
+                setNotification({ message: "Kode Plus tidak valid atau library belum siap.", type: 'error' });
             } finally {
                 setIsConvertingPlusCode(false);
             }
@@ -511,7 +533,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                             <fieldset className={fieldsetStyles}> 
                                 <legend className={legendStyles}><MapIcon className="h-5 w-5 text-brand"/> Lokasi</legend> 
                                 {!isEditMode && ( <div className="flex bg-soft dark:bg-gray-700/50 p-1 rounded-xl mb-4"> <button type="button" onClick={() => setLocationInputType('coords')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'coords' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Koordinat Peta</button> <button type="button" onClick={() => setLocationInputType('plusCode')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'plusCode' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Plus Code</button> </div> )} 
-                                {locationInputType === 'coords' || isEditMode ? ( <FormGroup> <FormLabel htmlFor="coords" icon={<MapPinIcon className="h-4 w-4" />}>Koordinat Peta<span className="text-accent-pink ml-1">*</span></FormLabel> <input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /> <FormHelperText>Salin & tempel koordinat dari Google Maps. {isEditMode ? '' : 'Alamat akan terisi otomatis.'}</FormHelperText> </FormGroup> ) : ( <FormGroup> <FormLabel htmlFor="plusCode" icon={<MapPinIcon className="h-4 w-4" />}>Google Maps Plus Code<span className="text-accent-pink ml-1">*</span></FormLabel> <div className="relative"> <input id="plusCode" name="plusCode" type="text" value={plusCodeInput} onChange={handlePlusCodeInputChange} placeholder="Contoh: 6P5G2QG8+R8" className={`${inputClass} pr-10`} /> {isConvertingPlusCode && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>} </div> <FormHelperText>Masukkan Plus Code, maka koordinat & alamat akan terisi otomatis via AI.</FormHelperText> </FormGroup> )} 
+                                {locationInputType === 'coords' || isEditMode ? ( <FormGroup> <FormLabel htmlFor="coords" icon={<MapPinIcon className="h-4 w-4" />}>Koordinat Peta<span className="text-accent-pink ml-1">*</span></FormLabel> <input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /> <FormHelperText>Salin & tempel koordinat dari Google Maps. {isEditMode ? '' : 'Alamat akan terisi otomatis.'}</FormHelperText> </FormGroup> ) : ( <FormGroup> <FormLabel htmlFor="plusCode" icon={<MapPinIcon className="h-4 w-4" />}>Google Maps Plus Code<span className="text-accent-pink ml-1">*</span></FormLabel> <div className="relative"> <input id="plusCode" name="plusCode" type="text" value={plusCodeInput} onChange={handlePlusCodeInputChange} placeholder="Contoh: 6P5G2QG8+R8" className={`${inputClass} pr-10`} /> {isConvertingPlusCode && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>} </div> <FormHelperText>Masukkan Full Plus Code (minimal 8 karakter, contoh: 6P5G2QG8+R8). Koordinat akan terisi otomatis.</FormHelperText> </FormGroup> )} 
                                 <FormGroup><FormLabel htmlFor="address" icon={<MapPinIcon className="h-4 w-4" />}>Alamat {isEditMode ? '' : '(Otomatis)'}<span className="text-accent-pink ml-1">*</span></FormLabel><div className="relative"><input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Menunggu koordinat..." className={`${inputClass} pr-10`} required />{isGeocoding && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>}</div><FormHelperText>Pastikan alamat lengkap dan jelas.</FormHelperText></FormGroup> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <FormGroup> <FormLabel htmlFor="city" icon={<BuildingOffice2Icon className="h-4 w-4" />}>Kota / Kabupaten<span className="text-accent-pink ml-1">*</span></FormLabel> <select id="city" name="city" value={formData.city} onChange={handleChange} className={inputClass}> {SOUTH_SUMATRA_CITIES.map(city => (<option key={city} value={city}>{city}</option>))} </select> </FormGroup> <FormGroup> <FormLabel htmlFor="district" icon={<BuildingOffice2Icon className="h-4 w-4" />}>Kecamatan<span className="text-accent-pink ml-1">*</span></FormLabel> <input id="district" name="district" value={formData.district} onChange={handleChange} placeholder="Contoh: Ilir Barat I" className={inputClass} required /> </FormGroup> </div> 
                             </fieldset> 
                         </div>

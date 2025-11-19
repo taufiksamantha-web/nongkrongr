@@ -19,7 +19,6 @@ const UserManagementPanel: React.FC = () => {
     const [isUserFormOpen, setIsUserFormOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     
-    // Action states
     const [userToArchive, setUserToArchive] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
     
@@ -31,7 +30,6 @@ const UserManagementPanel: React.FC = () => {
 
     const fetchUsers = async () => {
         setLoading(true);
-        // Fetch only active/pending/rejected users (exclude archived)
         const { data, error } = await supabase.from('profiles').select('*').neq('status', 'archived').order('username', { ascending: true });
         if (error) {
             console.error("Error fetching users:", error);
@@ -75,7 +73,6 @@ const UserManagementPanel: React.FC = () => {
              return;
         }
 
-        // Optimistic Update
         const oldUsers = [...users];
         setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...userData } as User : u));
 
@@ -85,7 +82,7 @@ const UserManagementPanel: React.FC = () => {
             .eq('id', editingUser.id);
 
         if (error) {
-            setUsers(oldUsers); // Revert
+            setUsers(oldUsers);
             setNotification({ message: `Error: ${error.message}`, type: 'error' });
         } else {
             setNotification({ message: 'Profil user berhasil diperbarui!', type: 'success' });
@@ -94,7 +91,6 @@ const UserManagementPanel: React.FC = () => {
         setEditingUser(null);
     };
 
-    // SOFT DELETE (Archive)
     const handleArchiveUser = async () => {
         if (!userToArchive || userToArchive.id === currentUser?.id) {
             setNotification({ message: 'Tidak dapat mengarsipkan diri sendiri.', type: 'error' });
@@ -109,7 +105,6 @@ const UserManagementPanel: React.FC = () => {
             setNotification({ message: `Gagal mengarsipkan profil: ${error.message}`, type: 'error' });
         } else {
             setNotification({ message: `Profil "${userToArchive.username}" telah diarsipkan.`, type: 'success' });
-            // Remove from local list
             setUsers(prev => prev.filter(u => u.id !== userToArchive.id));
             if (paginatedUsers.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
         }
@@ -117,7 +112,6 @@ const UserManagementPanel: React.FC = () => {
         setIsProcessing(false);
     };
     
-    // HARD DELETE (Permanent)
     const handlePermanentDelete = async () => {
         if (!userToDelete || userToDelete.id === currentUser?.id) {
              setNotification({ message: 'Tidak dapat menghapus diri sendiri.', type: 'error' });
@@ -155,36 +149,38 @@ const UserManagementPanel: React.FC = () => {
         >
             <div className="hidden sm:block">{icon}</div>
             <span className="text-xs sm:text-base">{label}</span>
-            <span className="px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-xs text-muted font-bold">{count}</span>
+            <span className="px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-[10px] sm:text-xs text-muted font-bold">{count}</span>
         </button>
     );
     
     return (
-        <div>
+        <div className="w-full">
              {notification && <FloatingNotification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
-            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-                 <h2 className="text-2xl font-bold font-jakarta">Manajemen User</h2>
-            </div>
-             <div className="flex border-b border-border mb-4">
+            
+            <h2 className="text-2xl sm:text-3xl font-extrabold font-jakarta text-center mb-4 bg-gradient-to-r from-brand to-purple-600 bg-clip-text text-transparent">
+                Manajemen User
+            </h2>
+
+             <div className="flex border-b border-border mb-4 overflow-x-auto justify-center">
                 <TabButton role="admin_cafe" icon={<BuildingStorefrontIcon className="h-5 w-5"/>} label="Pengelola" count={counts.admin_cafe} />
                 <TabButton role="user" icon={<UserCircleIcon className="h-5 w-5"/>} label="User" count={counts.user} />
                 <TabButton role="admin" icon={<PencilIcon className="h-5 w-5"/>} label="Admin" count={counts.admin} />
             </div>
 
-            <div className="relative mb-4">
+            <div className="relative mb-4 w-full max-w-md mx-auto">
                 <MagnifyingGlassIcon className="h-5 w-5 text-muted absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                     type="text"
                     placeholder="Cari username..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full p-3 pl-11 rounded-xl border border-border bg-soft dark:bg-gray-700/50 text-primary dark:text-white placeholder-muted focus:ring-2 focus:ring-brand transition-colors"
+                    className="w-full p-3 pl-11 rounded-xl border border-border bg-soft dark:bg-gray-700/50 text-primary dark:text-white placeholder-muted focus:ring-2 focus:ring-brand transition-colors text-sm"
                 />
             </div>
 
-             {/* Desktop Table View */}
-             <div className="hidden md:block bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border overflow-x-auto">
-                <table className="w-full text-left min-w-[580px]">
+             {/* Desktop Table View (Horizontal Scroll Enabled) */}
+             <div className="hidden md:block bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border mb-4 w-full overflow-x-auto">
+                <table className="w-full text-left min-w-[600px]">
                     <thead>
                         <tr className="border-b-2 border-border">
                             <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider w-1/3">Username</th>
@@ -203,8 +199,8 @@ const UserManagementPanel: React.FC = () => {
                         ) : (
                             paginatedUsers.map(user => (
                                 <tr key={user.id} className="border-b border-border last:border-0 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                    <td className="p-4 font-semibold text-primary dark:text-gray-200">{user.username}</td>
-                                    <td className="p-4 text-muted text-sm truncate">{user.email}</td>
+                                    <td className="p-4 font-semibold text-primary dark:text-gray-200 truncate max-w-[200px]" title={user.username}>{user.username}</td>
+                                    <td className="p-4 text-muted text-sm truncate max-w-[250px]" title={user.email}>{user.email}</td>
                                     <td className="p-4 text-right">
                                         <div className="inline-flex items-center gap-2 justify-end">
                                             <button 
@@ -245,8 +241,8 @@ const UserManagementPanel: React.FC = () => {
                 </table>
              </div>
 
-             {/* Mobile Card View */}
-             <div className="md:hidden space-y-3">
+             {/* Mobile Card View (Full Width Stack) */}
+             <div className="md:hidden space-y-3 mb-4">
                 {loading ? (
                      <p className="text-center text-muted">Memuat user...</p>
                 ) : paginatedUsers.length === 0 ? (
@@ -266,31 +262,31 @@ const UserManagementPanel: React.FC = () => {
                                     </span>
                                 </div>
                             </div>
-                             <div className="flex gap-2 pt-2 border-t border-border justify-end">
+                             <div className="flex gap-2 pt-2 border-t border-border justify-end flex-wrap">
                                      <button 
                                         onClick={() => handleOpenEditForm(user)} 
-                                        className="p-2 bg-brand/10 text-brand rounded-full border border-brand/20 disabled:opacity-50"
+                                        className="flex-1 p-2 bg-brand/10 text-brand rounded-lg border border-brand/20 disabled:opacity-50 flex items-center justify-center gap-1"
                                         disabled={user.id === currentUser?.id}
                                         aria-label="Edit"
                                     >
-                                        <PencilIcon className="h-5 w-5" />
+                                        <PencilIcon className="h-4 w-4" /> <span className="text-xs font-bold">Edit</span>
                                     </button>
                                     <button 
                                         onClick={() => setUserToArchive(user)} 
-                                        className="p-2 bg-amber-100 dark:bg-amber-500/20 text-amber-600 rounded-full border border-amber-200 disabled:opacity-50"
+                                        className="flex-1 p-2 bg-amber-100 dark:bg-amber-500/20 text-amber-600 rounded-lg border border-amber-200 disabled:opacity-50 flex items-center justify-center gap-1"
                                         disabled={user.id === currentUser?.id}
                                         aria-label="Archive"
                                     >
-                                        <ArchiveBoxArrowDownIcon className="h-5 w-5" />
+                                        <ArchiveBoxArrowDownIcon className="h-4 w-4" /> <span className="text-xs font-bold">Arsip</span>
                                     </button>
                                      {currentUser?.role === 'admin' && (
                                         <button 
                                             onClick={() => setUserToDelete(user)} 
-                                            className="p-2 bg-red-100 dark:bg-red-500/20 text-red-600 rounded-full border border-red-200 disabled:opacity-50"
+                                            className="flex-1 p-2 bg-red-100 dark:bg-red-500/20 text-red-600 rounded-lg border border-red-200 disabled:opacity-50 flex items-center justify-center gap-1"
                                             disabled={user.id === currentUser?.id}
                                             aria-label="Delete"
                                         >
-                                            <TrashIcon className="h-5 w-5" />
+                                            <TrashIcon className="h-4 w-4" /> <span className="text-xs font-bold">Hapus</span>
                                         </button>
                                     )}
                                 </div>
@@ -300,10 +296,10 @@ const UserManagementPanel: React.FC = () => {
              </div>
 
              {totalPages > 1 && (
-                <div className="flex justify-between items-center mt-6">
-                    <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold enabled:hover:bg-gray-300 dark:enabled:hover:bg-gray-500 disabled:opacity-50"><ChevronLeftIcon className="h-5 w-5"/> <span className="hidden sm:inline">Sebelumnya</span></button>
-                    <span className="font-semibold text-muted text-sm">Hal {currentPage} / {totalPages}</span>
-                    <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold enabled:hover:bg-gray-300 dark:enabled:hover:bg-gray-500 disabled:opacity-50"><span className="hidden sm:inline">Selanjutnya</span> <ChevronRightIcon className="h-5 w-5"/></button>
+                <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4 w-full">
+                    <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold enabled:hover:bg-gray-300 dark:enabled:hover:bg-gray-500 disabled:opacity-50 text-sm"><ChevronLeftIcon className="h-4 w-4"/> <span className="inline">Sebelumnya</span></button>
+                    <span className="font-semibold text-muted text-xs sm:text-sm order-first sm:order-none">Hal {currentPage} / {totalPages}</span>
+                    <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold enabled:hover:bg-gray-300 dark:enabled:hover:bg-gray-500 disabled:opacity-50 text-sm"><span className="inline">Selanjutnya</span> <ChevronRightIcon className="h-4 w-4"/></button>
                 </div>
             )}
 

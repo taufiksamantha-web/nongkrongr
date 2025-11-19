@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { settingsService } from '../../services/settingsService';
 import { cloudinaryService } from '../../services/cloudinaryService';
@@ -92,7 +93,10 @@ const WebsiteSettingsPanel: React.FC = () => {
   return (
     <div className="space-y-6">
       {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
-      <h2 className="text-2xl font-bold font-jakarta">Pengaturan Website</h2>
+      
+      <h2 className="text-2xl font-bold font-jakarta text-center bg-gradient-to-r from-brand to-purple-600 bg-clip-text text-transparent">
+          Pengaturan Website
+      </h2>
       
       {isLoading ? (
         <div className="space-y-4">

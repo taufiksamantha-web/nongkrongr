@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowLeftIcon } from '@heroicons/react/24/solid';
+import { ArrowLeftIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
 
 type FormMode = 'login' | 'signup' | 'forgot';
 
@@ -18,6 +18,7 @@ const LoginForm: React.FC = () => {
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     
     const loginInputRef = useRef<HTMLInputElement>(null);
     const usernameInputRef = useRef<HTMLInputElement>(null);
@@ -31,8 +32,10 @@ const LoginForm: React.FC = () => {
              setEmail('');
              setPassword('');
              setConfirmPassword('');
+             setShowPassword(false);
              setTimeout(() => usernameInputRef.current?.focus(), 100);
         } else if (mode === 'login') {
+             setShowPassword(false);
              // Focus on login input when switching to login
              setTimeout(() => loginInputRef.current?.focus(), 100);
         } else if (mode === 'forgot') {
@@ -201,30 +204,46 @@ const LoginForm: React.FC = () => {
                                         <button type="button" onClick={() => setMode('forgot')} className="text-xs text-brand font-bold hover:underline">Lupa password?</button>
                                     )}
                                 </div>
-                                <input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
-                                    required
-                                    placeholder={mode === 'login' ? 'Masukkan password' : 'Password (minimal 6 karakter)'}
-                                />
+                                <div className="relative mt-2">
+                                    <input
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full p-3 pr-10 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
+                                        required
+                                        placeholder={mode === 'login' ? 'Masukkan password' : 'Password (minimal 6 karakter)'}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-brand focus:outline-none"
+                                        aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                                    >
+                                        {showPassword ? (
+                                            <EyeSlashIcon className="h-5 w-5" />
+                                        ) : (
+                                            <EyeIcon className="h-5 w-5" />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         )}
 
                         {mode === 'signup' && (
                             <div>
                                 <label htmlFor="confirmPassword" className="font-semibold">Konfirmasi Password</label>
-                                <input
-                                    id="confirmPassword"
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="mt-2 w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
-                                    required
-                                    placeholder="Konfirmasi password"
-                                />
+                                <div className="relative mt-2">
+                                    <input
+                                        id="confirmPassword"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="w-full p-3 pr-10 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-primary dark:text-white"
+                                        required
+                                        placeholder="Konfirmasi password"
+                                    />
+                                </div>
                             </div>
                         )}
 

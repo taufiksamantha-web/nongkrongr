@@ -109,14 +109,16 @@ const ArchivePanel: React.FC = () => {
     return (
         <div>
             {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
-            <div className="flex items-center gap-3 mb-6">
-                <h2 className="text-2xl font-bold font-jakarta">Arsip Data</h2>
+            <div className="text-center mb-6">
+                <h2 className="text-2xl sm:text-3xl font-extrabold font-jakarta bg-gradient-to-r from-brand to-purple-600 bg-clip-text text-transparent inline-block">
+                    Arsip Data
+                </h2>
             </div>
 
-            <div className="flex border-b border-border mb-6">
+            <div className="flex border-b border-border mb-6 justify-center">
                 <button
                     onClick={() => setActiveTab('cafes')}
-                    className={`flex items-center justify-center gap-2 w-full p-3 font-bold border-b-4 transition-colors ${
+                    className={`flex items-center justify-center gap-2 w-full max-w-xs p-3 font-bold border-b-4 transition-colors ${
                         activeTab === 'cafes' ? 'text-brand border-brand' : 'text-muted border-transparent hover:bg-soft dark:hover:bg-gray-700/50'
                     }`}
                 >
@@ -125,7 +127,7 @@ const ArchivePanel: React.FC = () => {
                 </button>
                 <button
                     onClick={() => setActiveTab('users')}
-                    className={`flex items-center justify-center gap-2 w-full p-3 font-bold border-b-4 transition-colors ${
+                    className={`flex items-center justify-center gap-2 w-full max-w-xs p-3 font-bold border-b-4 transition-colors ${
                         activeTab === 'users' ? 'text-brand border-brand' : 'text-muted border-transparent hover:bg-soft dark:hover:bg-gray-700/50'
                     }`}
                 >

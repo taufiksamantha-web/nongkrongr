@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowUpIcon } from '@heroicons/react/24/solid';
 
@@ -31,8 +30,9 @@ const ScrollToTopButton: React.FC = () => {
     <button
       type="button"
       onClick={scrollToTop}
-      className={`fixed bottom-8 right-8 z-50 p-3 rounded-full bg-brand text-white shadow-lg shadow-brand/30 hover:bg-brand/90 focus:outline-none transition-all duration-300 ${
-        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+      // Adjusted position: bottom-24 on mobile to clear the floating explore button (bottom-8), bottom-8 on desktop
+      className={`fixed bottom-24 right-4 lg:bottom-8 lg:right-8 z-[90] p-3.5 rounded-full bg-brand/90 dark:bg-brand/80 backdrop-blur-md text-white shadow-2xl shadow-brand/40 hover:bg-brand focus:outline-none transition-all duration-500 transform hover:scale-110 border border-white/20 ${
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
       }`}
       aria-label="Go to top"
     >

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review, User } from '../types';
@@ -10,7 +9,7 @@ import CafeCard from '../components/CafeCard';
 import FeaturedCafeCard from '../components/FeaturedCafeCard';
 import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
-import { FireIcon, ChatBubbleBottomCenterTextIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon, MapPinIcon, RocketLaunchIcon, TrophyIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
+import { FireIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon, MapPinIcon, RocketLaunchIcon, TrophyIcon, ChatBubbleBottomCenterTextIcon, GlobeAltIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/solid';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonFeaturedCard from '../components/SkeletonFeaturedCard';
@@ -23,21 +22,24 @@ type TopReview = Review & { cafeName: string; cafeSlug: string };
 type CafeWithDistance = Cafe & { distance: number };
 
 
-const SectionHeader: React.FC<{ icon?: React.ReactNode; title: string; subtitle: string; link?: string; }> = ({ icon, title, subtitle, link }) => (
-  <div className="text-center mb-8 sm:mb-10">
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-2">
-      {icon && <div className="inline-block p-3 sm:p-4 bg-brand/10 rounded-2xl sm:rounded-3xl text-brand transition-transform hover:scale-110">{icon}</div>}
-      <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold font-jakarta text-primary dark:text-white">{title}</h2>
+const SectionHeader: React.FC<{ icon?: React.ReactNode; title: string; subtitle?: string; link?: string; className?: string; center?: boolean }> = ({ icon, title, subtitle, link, className, center = true }) => (
+  <div className={`mb-8 ${center ? 'text-center flex flex-col items-center' : ''} ${className}`}>
+    <div className={`flex items-center gap-2 mb-2 ${center ? 'justify-center' : ''}`}>
+      {icon && <div className="text-brand animate-pulse">{icon}</div>}
+      <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold font-jakarta text-primary dark:text-white tracking-tight">
+        {title}
+      </h2>
     </div>
-    <p className="text-muted max-w-2xl mx-auto text-sm sm:text-base px-4">{subtitle}</p>
+    {center && <div className="h-1.5 w-24 bg-gradient-to-r from-brand to-accent-pink rounded-full mb-3 shadow-sm"></div>}
+    {subtitle && <p className="text-muted text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
     {link && (
-      <div className="mt-4 sm:mt-6">
+      <div className="mt-3">
         <Link 
           to={link} 
-          className="inline-flex items-center gap-2 bg-brand/10 text-brand font-bold py-2 px-5 rounded-xl hover:bg-brand/20 transition-colors duration-300 group text-sm sm:text-base"
+          className="inline-flex items-center gap-1 text-brand font-bold hover:underline text-sm transition-all hover:translate-x-1"
         >
           Lihat Semua
-          <ArrowRightIcon className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+          <ArrowRightIcon className="h-4 w-4" />
         </Link>
       </div>
     )}
@@ -68,8 +70,8 @@ const rotatingPlaceholders = [
 ];
 
 const EmptyState: React.FC<{ title: string; message: string }> = ({ title, message }) => (
-    <div className="text-center py-10 bg-card dark:bg-card/50 rounded-3xl border border-border col-span-full">
-        <InboxIcon className="mx-auto h-12 w-12 text-muted" />
+    <div className="text-center py-10 bg-card dark:bg-card/50 rounded-3xl border border-border col-span-full shadow-sm">
+        <InboxIcon className="mx-auto h-12 w-12 text-muted/50" />
         <p className="mt-4 text-xl font-bold font-jakarta">{title}</p>
         <p className="text-muted mt-2 max-w-xs mx-auto">{message}</p>
     </div>
@@ -77,7 +79,7 @@ const EmptyState: React.FC<{ title: string; message: string }> = ({ title, messa
 
 const HomePage: React.FC = () => {
   const cafeContext = useContext(CafeContext);
-  const { cafes, loading, error } = cafeContext!;
+  const { cafes, loading, error, getAllReviews } = cafeContext!;
   const { currentUser } = useAuth();
   const { favoriteIds } = useFavorites();
   
@@ -86,7 +88,7 @@ const HomePage: React.FC = () => {
   const [favoriteCafes, setFavoriteCafes] = useState<Cafe[]>([]);
   const [newcomerCafes, setNewcomerCafes] = useState<Cafe[]>([]);
   const [nearestCafes, setNearestCafes] = useState<CafeWithDistance[]>([]);
-  const [topReviews, setTopReviews] = useState<TopReview[]>([]);
+  const [recentReviews, setRecentReviews] = useState<TopReview[]>([]);
   const [cafeOfTheWeek, setCafeOfTheWeek] = useState<Cafe | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Cafe[]>([]);
@@ -164,6 +166,12 @@ const HomePage: React.FC = () => {
       const sortedByAesthetic = [...approvedCafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
       setTrendingCafes(sortedByAesthetic.slice(0, 4));
 
+      // Recent Reviews (Restored)
+      const allReviewsData = getAllReviews(); // This returns TopReview[]
+      // Filter only reviews for approved cafes
+      const validReviews = allReviewsData.filter(r => approvedCafes.some(c => c.id === r.cafeId && c.status === 'approved'));
+      setRecentReviews(validReviews.slice(0, 3));
+
       // --- Smart Recommendations ---
       const calculateSmartScore = (cafe: Cafe, user: User | null, allUserReviews: Review[], location: { lat: number; lng: number } | null): number => {
           // Base score
@@ -228,22 +236,6 @@ const HomePage: React.FC = () => {
           })).sort((a, b) => a.distance - b.distance);
           setNearestCafes(cafesWithDistance.slice(0, 4));
       }
-
-      // Top Reviews
-      const allApprovedReviews = approvedCafes.flatMap(cafe =>
-        cafe.reviews
-          .filter(review => review.status === 'approved' && review.text.length > 20)
-          .map(review => ({ ...review, cafeName: cafe.name, cafeSlug: cafe.slug }))
-      );
-      
-      allApprovedReviews.sort((a, b) => {
-        const scoreA = (a.ratingAesthetic + a.ratingWork) + (a.helpful_count || 0);
-        const scoreB = (b.ratingAesthetic + b.ratingWork) + (b.helpful_count || 0);
-        if (scoreB !== scoreA) return scoreB - scoreA;
-        return b.text.length - a.text.length;
-      });
-
-      setTopReviews(allApprovedReviews.slice(0, 4));
       
       // Favorites
       const userFavorites = approvedCafes.filter(cafe => favoriteIds.includes(cafe.id));
@@ -253,11 +245,11 @@ const HomePage: React.FC = () => {
         setRecommendedCafes([]);
         setNewcomerCafes([]);
         setNearestCafes([]);
-        setTopReviews([]);
         setFavoriteCafes([]);
+        setRecentReviews([]);
         setCafeOfTheWeek(null);
     }
-  }, [cafes, favoriteIds, userLocation, currentUser]);
+  }, [cafes, favoriteIds, userLocation, currentUser, getAllReviews]);
   
   const resetInterval = useCallback(() => {
     if (slideIntervalRef.current) clearInterval(slideIntervalRef.current);
@@ -312,6 +304,11 @@ const HomePage: React.FC = () => {
   
   if (error) return <DatabaseConnectionError />;
 
+  // Determines if the COTW section should be shown. 
+  // We show it if data exists OR if it's loading (to show skeleton).
+  // If loaded and null, we hide it.
+  const showCotwSection = loading || cafeOfTheWeek !== null;
+
   return (
     <div className="relative">
       <div className="relative bg-gray-900 overflow-hidden -mt-32">
@@ -330,7 +327,8 @@ const HomePage: React.FC = () => {
            )}
             <div className="absolute inset-0 bg-black/60"></div>
         </div>
-        <div className="relative z-10 container mx-auto px-4 sm:px-6 pt-32 pb-16 sm:pt-40 sm:pb-20 text-center">
+        {/* Updated padding-top to push text down */}
+        <div className="relative z-10 container mx-auto px-4 sm:px-6 pt-40 sm:pt-48 pb-16 sm:pb-20 text-center">
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-jakarta text-white leading-tight sm:leading-snug drop-shadow-lg">
             Temukan Spot Nongkrong<br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-accent-pink to-brand-light">Estetikmu</span>
@@ -360,24 +358,92 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      <div className="relative py-12 overflow-hidden transition-all duration-500 bg-gradient-to-br from-brand/10 to-transparent dark:from-brand/20 dark:to-transparent">
-        <div className="relative z-10 container mx-auto px-4 sm:px-6">
-          {loading ? (<div className="max-w-4xl mx-auto"><SkeletonFeaturedCard /></div>) : recommendedCafes.length > 0 ? (<div className="max-w-4xl mx-auto relative"><div className="overflow-hidden"><div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>{recommendedCafes.map(cafe => (<div key={cafe.id} className="w-full flex-shrink-0 px-1"><FeaturedCafeCard cafe={cafe} /></div>))}</div></div>{recommendedCafes.length > 1 && (<><button onClick={prevSlide} className="absolute top-1/2 -translate-y-1/2 left-0 sm:-left-4 lg:-left-16 p-2 sm:p-3 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all duration-300 shadow-md z-20" aria-label="Previous recommendation"><ChevronLeftIcon className="h-5 w-5 sm:h-6 sm:w-6" /></button><button onClick={nextSlide} className="absolute top-1/2 -translate-y-1/2 right-0 sm:-right-4 lg:-right-16 p-2 sm:p-3 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all duration-300 shadow-md z-20" aria-label="Next recommendation"><ChevronRightIcon className="h-5 w-5 sm:h-6 sm:w-6" /></button></>)}</div>) : (<div className="max-w-4xl mx-auto"><EmptyState title="Rekomendasi Belum Tersedia" message="Saat ini belum ada kafe yang bisa kami rekomendasikan secara spesial. Cek lagi nanti ya!" /></div>)}
+      {/* Featured & COTW Split Section */}
+      <div className="py-10 overflow-hidden transition-all duration-500 bg-gradient-to-b from-brand/5 to-transparent">
+        <div className="container mx-auto px-4 sm:px-6">
+            <div className={`grid grid-cols-1 ${showCotwSection ? 'lg:grid-cols-2' : 'max-w-4xl mx-auto'} gap-8 items-stretch`}>
+                
+                {/* Left Column: Recommended Slider */}
+                <div className="w-full h-full flex flex-col min-w-0">
+                     <SectionHeader 
+                        icon={<SparklesIcon className="h-6 w-6"/>} 
+                        title="Rekomendasi Spesial" 
+                        subtitle="Pilihan cerdas berdasarkan popularitas dan rating."
+                        center
+                     />
+                     
+                     <div className="flex-grow relative rounded-3xl">
+                        {loading ? (<SkeletonFeaturedCard />) : recommendedCafes.length > 0 ? (
+                            <div className="relative h-full">
+                                <div className="overflow-hidden h-full rounded-3xl">
+                                    <div className="flex transition-transform duration-500 ease-in-out h-full" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                                        {recommendedCafes.map(cafe => (
+                                            <div key={cafe.id} className="w-full flex-shrink-0 px-1 h-full">
+                                                <FeaturedCafeCard cafe={cafe} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {recommendedCafes.length > 1 && (
+                                    <>
+                                        <button onClick={prevSlide} className="absolute top-1/2 -translate-y-1/2 left-2 sm:-left-4 p-2 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all shadow-md z-20">
+                                            <ChevronLeftIcon className="h-5 w-5" />
+                                        </button>
+                                        <button onClick={nextSlide} className="absolute top-1/2 -translate-y-1/2 right-2 sm:-right-4 p-2 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all shadow-md z-20">
+                                            <ChevronRightIcon className="h-5 w-5" />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        ) : (
+                             <EmptyState title="Belum Ada Rekomendasi" message="Data rekomendasi belum tersedia." />
+                        )}
+                     </div>
+                </div>
+
+                {/* Right Column: Cafe of The Week - Only rendered if showCotwSection is true */}
+                {showCotwSection && (
+                    <div className="w-full h-full flex flex-col min-w-0">
+                         <SectionHeader 
+                            icon={<TrophyIcon className="h-6 w-6 text-accent-amber"/>} 
+                            title="Cafe of The Week" 
+                            subtitle="Sorotan minggu ini. Wajib dikunjungi!"
+                            center
+                         />
+                         
+                         <div className="flex-grow h-full">
+                             {!loading && cafeOfTheWeek ? (
+                                  <CafeOfTheWeekCard cafe={cafeOfTheWeek} />
+                             ) : loading ? (
+                                 <SkeletonFeaturedCard />
+                             ) : (
+                                 // Fallback just in case, though logic above should prevent this
+                                 <div className="h-full flex items-center justify-center bg-card/50 rounded-3xl border border-border p-10 text-center">
+                                     <div>
+                                         <TrophyIcon className="h-12 w-12 mx-auto text-muted/30 mb-4" />
+                                         <p className="text-muted font-bold">Belum ada Cafe of The Week</p>
+                                     </div>
+                                 </div>
+                             )}
+                         </div>
+                    </div>
+                )}
+
+            </div>
         </div>
       </div>
 
-      {!loading && cafeOfTheWeek && (
-          <div className="py-12">
-              <div className="container mx-auto px-4 sm:px-6">
-                  <CafeOfTheWeekCard cafe={cafeOfTheWeek} />
-              </div>
-          </div>
-      )}
+      {/* Center Content Header & Sections */}
+      <div className="text-center my-10 px-4 max-w-3xl mx-auto">
+         <h2 className="text-3xl sm:text-4xl font-bold font-jakarta">Eksplorasi Lebih Jauh</h2>
+         <div className="h-1 w-20 bg-brand rounded-full mx-auto my-4"></div>
+         <p className="text-muted text-lg">Temukan lebih banyak tempat seru di sekitarmu berdasarkan lokasi dan preferensi komunitas.</p>
+      </div>
 
       {!isLocating && userLocation && nearestCafes.length > 0 && (
-        <div className="py-12">
+        <div className="py-10 bg-gradient-to-b from-transparent to-gray-50 dark:to-white/5">
             <div className="container mx-auto px-4 sm:px-6">
-                <SectionHeader icon={<MapPinIcon className="h-6 w-6 sm:h-8 sm:w-8" />} title="Terdekat Denganmu" subtitle="Kafe-kafe paling dekat dari lokasimu saat ini. Makin gampang buat nentuin tujuan!" />
+                <SectionHeader center icon={<MapPinIcon className="h-6 w-6 sm:h-8 sm:w-8" />} title="Terdekat Denganmu" subtitle="Kafe-kafe paling dekat dari lokasimu saat ini." />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                     {nearestCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} distance={cafe.distance} animationDelay={`${i * 75}ms`} />))}
                 </div>
@@ -385,9 +451,9 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
-      <div className="py-12 bg-brand/5 dark:bg-brand/10">
+      <div className="py-10 bg-brand/5 dark:bg-brand/10">
         <div className="container mx-auto px-4 sm:px-6">
-          <SectionHeader icon={<RocketLaunchIcon className="h-6 w-6 sm:h-8 sm:w-8" />} title="Pendatang Baru" subtitle="Kafe-kafe paling fresh yang baru aja gabung di Nongkrongr." />
+          <SectionHeader center icon={<RocketLaunchIcon className="h-6 w-6 sm:h-8 sm:w-8" />} title="Pendatang Baru" subtitle="Kafe-kafe paling fresh yang baru aja gabung." />
             {loading ? (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">{[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}</div>
             ) : newcomerCafes.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
@@ -398,17 +464,17 @@ const HomePage: React.FC = () => {
       </div>
 
       {favoriteIds.length > 0 && !loading && (
-        <div className="py-12">
+        <div className="py-10">
           <div className="container mx-auto px-4 sm:px-6">
-            <SectionHeader icon={<HeartIcon className="h-6 w-6 sm:h-8 sm:w-8"/>} title="Kafe Favoritmu" subtitle="Tempat-tempat spesial yang sudah kamu tandai." link="/explore?favorites=true" />
+            <SectionHeader center icon={<HeartIcon className="h-6 w-6 sm:h-8 sm:w-8"/>} title="Kafe Favoritmu" subtitle="Tempat-tempat spesial yang sudah kamu tandai." link="/explore?favorites=true" />
             {favoriteCafes.length > 0 ? (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">{favoriteCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}</div>) : (<div className="text-center py-10 text-muted"><p>Kafe favoritmu akan muncul di sini setelah kamu menambahkannya.</p></div>)}
           </div>
         </div>
       )}
 
-      <div className="py-12">
+      <div className="py-10 bg-gradient-to-b from-transparent to-yellow-50 dark:to-yellow-900/5">
         <div className="container mx-auto px-4 sm:px-6">
-          <SectionHeader icon={<FireIcon className="h-6 w-6 sm:h-8 sm:w-8"/>} title="Lagi Trending Nih!" subtitle="Cafe dengan skor aesthetic tertinggi pilihan warga Nongkrongr." link="/explore?sort=trending" />
+          <SectionHeader center icon={<FireIcon className="h-6 w-6 sm:h-8 sm:w-8"/>} title="Lagi Trending Nih!" subtitle="Cafe dengan skor aesthetic tertinggi." link="/explore?sort=trending" />
             {loading ? (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">{[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}</div>
             ) : trendingCafes.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">{trendingCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}
@@ -416,6 +482,36 @@ const HomePage: React.FC = () => {
             ) : (<EmptyState title="Belum Ada Cafe" message="Saat ini belum ada data cafe yang bisa ditampilkan. Cek lagi nanti ya!" />)}
         </div>
       </div>
+
+      {/* Reviews Section - Restored & Centered */}
+      <div className="py-10 border-t border-border/50 bg-gradient-to-b from-soft to-transparent">
+        <div className="container mx-auto px-4 sm:px-6">
+            <SectionHeader center icon={<ChatBubbleBottomCenterTextIcon className="h-6 w-6 sm:h-8 sm:w-8"/>} title="Kata Mereka" subtitle="Apa kata para Nongkrongers tentang tempat favorit mereka?" />
+             {loading ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{[...Array(3)].map((_, i) => <SkeletonReviewCard key={i} />)}</div>
+             ) : recentReviews.length > 0 ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                     {recentReviews.map((review, i) => (
+                         <ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />
+                     ))}
+                 </div>
+             ) : (
+                 <EmptyState title="Belum Ada Review" message="Jadilah yang pertama memberikan ulasan!" />
+             )}
+        </div>
+      </div>
+
+      {/* Mobile Floating Explore Button - Adjusted to match Filter Button style and centered */}
+      <div className="lg:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-max animate-fade-in-up">
+         <Link 
+            to="/explore" 
+            className="flex items-center gap-2 py-3 px-6 bg-card/90 dark:bg-gray-800/90 backdrop-blur-md border border-brand/50 text-primary dark:text-white rounded-full font-bold shadow-2xl active:scale-95 transition-all hover:bg-brand/5 ring-1 ring-white/20 group"
+         >
+            <GlobeAltIcon className="h-6 w-6 text-brand group-hover:animate-spin" />
+            <span>Mulai Jelajah</span>
+         </Link>
+      </div>
+
     </div>
   );
 };
