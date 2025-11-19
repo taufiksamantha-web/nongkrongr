@@ -2,10 +2,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useNotifications, NotificationItem } from '../context/NotificationContext';
-import { BellIcon, CheckCircleIcon, XCircleIcon, InformationCircleIcon, ExclamationTriangleIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/solid';
+import { BellIcon, CheckCircleIcon, XCircleIcon, InformationCircleIcon, ExclamationTriangleIcon, TrashIcon, CheckIcon, EnvelopeIcon, UserPlusIcon } from '@heroicons/react/24/solid';
 
 const NotificationItemComp: React.FC<{ item: NotificationItem, onRead: () => void, onClose: () => void }> = ({ item, onRead, onClose }) => {
     const getIcon = () => {
+        // Custom icons based on ID patterns or Types
+        if (item.id.includes('feedback')) return <EnvelopeIcon className="h-5 w-5 text-purple-500" />;
+        if (item.id.includes('new-user')) return <UserPlusIcon className="h-5 w-5 text-blue-500" />;
+
         switch (item.type) {
             case 'success': return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
             case 'alert': return <XCircleIcon className="h-5 w-5 text-red-500" />;

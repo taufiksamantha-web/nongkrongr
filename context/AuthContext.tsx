@@ -34,8 +34,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        // A session exists, now verify we can access protected data (the user's own profile).
-        // This is the most reliable way to check if the token is actually valid.
+        // Fetch profile to validate account status
         const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -43,12 +42,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .single();
 
         if (error || !profile) {
-            // If this fails, the token is likely invalid. Sign out to clear the bad session.
-            console.error("Session validation failed. User profile inaccessible. Signing out.", { error });
+            // CASE: Admin deleted the user from 'profiles' table
+            console.error("Session validation failed. User profile deleted.", { error });
             await supabase.auth.signOut();
-            setCurrentUser(null); // Explicitly set user to null immediately.
+            setCurrentUser(null);
+            // We can't easily throw an error to the UI here because this runs on effect/load.
+            // But for explicit Login action, the login function handles the error throwing.
+        } else if (profile.status === 'rejected') {
+             // CASE: Admin rejected the manager application
+             console.warn("User login attempted but status is rejected.");
+             await supabase.auth.signOut();
+             setCurrentUser(null);
         } else {
-            // All good.
+            // All good
             setCurrentUser(profile as User);
         }
         setLoading(false);
@@ -64,19 +70,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // The listener handles subsequent changes like login, logout.
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                // We only need to react to explicit sign-in/out events here.
-                // The visibility check will handle expired sessions.
                 if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
                     fetchUserAndSetState(session);
                 }
             }
         );
         
-        // Set up a periodic check every time the tab becomes visible.
-        // This is more robust than a one-time focus event for handling long inactivity.
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                // When tab becomes visible, re-validate the session.
                 supabase.auth.getSession().then(({ data: { session } }) => {
                    fetchUserAndSetState(session);
                 });
@@ -103,20 +104,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 .single();
 
             if (profileError || !profile) {
-                console.error("Username lookup failed:", profileError);
                 return { error: new AuthError("Username/email atau password salah.") };
             }
             emailToLogin = profile.email;
         }
 
-        const { error } = await supabase.auth.signInWithPassword({ email: emailToLogin, password });
-        if (error && error.message === 'Invalid login credentials') {
-             return { error: new AuthError("Username/email atau password salah.") };
+        const { data, error } = await supabase.auth.signInWithPassword({ email: emailToLogin, password });
+        
+        if (error) {
+            if (error.message === 'Invalid login credentials') {
+                return { error: new AuthError("Username/email atau password salah.") };
+            }
+            return { error };
         }
-        return { error };
+
+        // Post-Login Validation: Check Profile Status
+        if (data.user) {
+            const { data: profile, error: profileFetchError } = await supabase
+                .from('profiles')
+                .select('status')
+                .eq('id', data.user.id)
+                .single();
+            
+            if (profileFetchError || !profile) {
+                // User authenticated but profile is gone (Deleted by Admin)
+                await supabase.auth.signOut();
+                return { error: new AuthError("Akun Anda telah dihapus oleh Admin.") };
+            }
+
+            if (profile.status === 'rejected') {
+                // User authenticated but status is rejected
+                await supabase.auth.signOut();
+                return { error: new AuthError("Pendaftaran akun Anda ditolak oleh Admin.") };
+            }
+        }
+
+        return { error: null };
     };
 
     const signup = async (username: string, email: string, password: string, isCafeAdmin: boolean = false) => {
+        // 1. Pre-check Username Uniqueness
+        const { count, error: checkError } = await supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .eq('username', username);
+        
+        if (checkError) {
+             return { error: new AuthError("Gagal memvalidasi username. Silakan coba lagi.") };
+        }
+        
+        if (count !== null && count > 0) {
+            return { error: new AuthError("Username sudah digunakan. Silakan pilih yang lain.") };
+        }
+
+        // 2. Proceed with Auth Signup
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
@@ -132,16 +173,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const role = isCafeAdmin ? 'admin_cafe' : 'user';
         const status = isCafeAdmin ? 'pending_approval' : 'active';
 
+        // 3. Create Profile
         const { error: profileError } = await supabase
             .from('profiles')
             .insert({ id: signUpData.user.id, username, email, role, status });
         
         if (profileError) {
             console.error("Critical: Failed to create user profile after signup.", profileError);
-            // Attempt to delete the auth user if profile creation fails to avoid orphaned auth accounts.
-            // This requires admin privileges and is best done in a server environment (e.g., Edge Function).
-            // For client-side, this is a best-effort that might fail.
-            // await supabase.auth.admin.deleteUser(signUpData.user.id);
             return { error: new AuthError(profileError.message) };
         }
         
@@ -151,7 +189,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateUserProfile = async (updates: Partial<User>) => {
         if (!currentUser) return { error: new AuthError("No user is logged in") };
         
-        // Prevent updating primary key or other restricted fields if passed
         const { id, role, status, ...updateData } = updates;
 
         const { data, error } = await supabase
@@ -175,14 +212,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const logout = async () => {
         const { error } = await supabase.auth.signOut();
-        
-        // Always clear the user state locally, regardless of server response.
-        // This ensures the user is visually logged out even if the server session is already gone/invalid.
         setCurrentUser(null);
 
         if (error) {
-            // If the error indicates the session is missing or invalid, treat it as a successful logout.
-            // "Auth session missing!" or 403/401 means the user is effectively already logged out on the server.
             const isSessionError = 
                 error.message.includes('Auth session missing') || 
                 error.message.includes('session_not_found') ||
@@ -190,7 +222,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 error.status === 403;
             
             if (isSessionError) {
-                console.warn("Logout warning (safe to ignore):", error.message);
                 return { error: null };
             }
         }

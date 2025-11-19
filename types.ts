@@ -1,3 +1,4 @@
+
 export enum PriceTier {
   BUDGET = 1,
   STANDARD = 2,
@@ -105,7 +106,7 @@ export interface Profile {
   username: string;
   email: string;
   role: 'admin' | 'user' | 'admin_cafe';
-  status: 'active' | 'pending_approval';
+  status: 'active' | 'pending_approval' | 'rejected';
   updated_at?: string;
   avatar_url?: string;
 }

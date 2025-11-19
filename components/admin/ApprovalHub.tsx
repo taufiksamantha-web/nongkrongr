@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { Profile, Cafe } from '../../types';
 import { CafeContext } from '../../context/CafeContext';
@@ -36,7 +37,8 @@ const ApprovalHub: React.FC = () => {
 
     const handleUserApproval = async (userId: string, isApproved: boolean) => {
         setProcessingId(userId);
-        const newStatus = isApproved ? 'active' : 'active'; // Note: Rejecting currently just sets them to active too, can be changed to a 'rejected' status later.
+        // Change: On rejection, set status to 'rejected' so AuthContext can block login with specific message.
+        const newStatus = isApproved ? 'active' : 'rejected'; 
         const { error } = await userService.updateUserStatus(userId, newStatus);
         if (error) {
             setError(`Gagal memperbarui status user: ${error.message}`);
@@ -53,7 +55,7 @@ const ApprovalHub: React.FC = () => {
         if (error) {
             setError(`Gagal memperbarui status kafe: ${error.message}`);
         }
-        // No need to manually refetch or update state, optimistic update and real-time handle it.
+        // No need to manually refetch or update state, optimistic update and real-time handle it via Context
         setProcessingId(null);
     };
 
@@ -95,8 +97,8 @@ const ApprovalHub: React.FC = () => {
                                         <div key={user.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-xl flex justify-between items-center">
                                             <p className="font-semibold text-primary dark:text-gray-200">{user.username}</p>
                                             <div className="flex gap-2">
-                                                <button onClick={() => handleUserApproval(user.id, true)} disabled={processingId === user.id} className="p-2 bg-green-100 dark:bg-green-500/20 text-green-600 rounded-full hover:bg-green-200 disabled:opacity-50"><CheckCircleIcon className="h-5 w-5"/></button>
-                                                <button onClick={() => handleUserApproval(user.id, false)} disabled={processingId === user.id} className="p-2 bg-red-100 dark:bg-red-500/20 text-red-600 rounded-full hover:bg-red-200 disabled:opacity-50"><XCircleIcon className="h-5 w-5"/></button>
+                                                <button onClick={() => handleUserApproval(user.id, true)} disabled={processingId === user.id} className="p-2 bg-green-100 dark:bg-green-500/20 text-green-600 rounded-full hover:bg-green-200 disabled:opacity-50" title="Setujui"><CheckCircleIcon className="h-5 w-5"/></button>
+                                                <button onClick={() => handleUserApproval(user.id, false)} disabled={processingId === user.id} className="p-2 bg-red-100 dark:bg-red-500/20 text-red-600 rounded-full hover:bg-red-200 disabled:opacity-50" title="Tolak"><XCircleIcon className="h-5 w-5"/></button>
                                             </div>
                                         </div>
                                     ))
@@ -115,8 +117,8 @@ const ApprovalHub: React.FC = () => {
                                                 <p className="text-sm text-muted">{cafe.city}</p>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button onClick={() => handleCafeApproval(cafe.id, true)} disabled={processingId === cafe.id} className="p-2 bg-green-100 dark:bg-green-500/20 text-green-600 rounded-full hover:bg-green-200 disabled:opacity-50"><CheckCircleIcon className="h-5 w-5"/></button>
-                                                <button onClick={() => handleCafeApproval(cafe.id, false)} disabled={processingId === cafe.id} className="p-2 bg-red-100 dark:bg-red-500/20 text-red-600 rounded-full hover:bg-red-200 disabled:opacity-50"><XCircleIcon className="h-5 w-5"/></button>
+                                                <button onClick={() => handleCafeApproval(cafe.id, true)} disabled={processingId === cafe.id} className="p-2 bg-green-100 dark:bg-green-500/20 text-green-600 rounded-full hover:bg-green-200 disabled:opacity-50" title="Setujui"><CheckCircleIcon className="h-5 w-5"/></button>
+                                                <button onClick={() => handleCafeApproval(cafe.id, false)} disabled={processingId === cafe.id} className="p-2 bg-red-100 dark:bg-red-500/20 text-red-600 rounded-full hover:bg-red-200 disabled:opacity-50" title="Tolak"><XCircleIcon className="h-5 w-5"/></button>
                                             </div>
                                         </div>
                                     ))
