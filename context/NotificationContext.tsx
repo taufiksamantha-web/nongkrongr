@@ -109,7 +109,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                             message: `${user.username} mendaftar sebagai ${user.role === 'admin_cafe' ? 'Pengelola' : 'User'}.`,
                             type: 'info',
                             date: new Date(), // Use current time for realtime
-                            link: '/admin',
+                            link: '/dashboard-admin',
                             isRead: false
                         };
                         setNotifications(prev => [newItem, ...prev]);
@@ -127,7 +127,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                             message: `Dari ${fb.name}: "${fb.message.substring(0, 40)}..."`,
                             type: 'warning',
                             date: new Date(),
-                            link: '/admin',
+                            link: '/dashboard-admin',
                             isRead: false
                         };
                         setNotifications(prev => [newItem, ...prev]);
@@ -145,7 +145,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                                 message: `${cafe.name} perlu persetujuan untuk ditayangkan.`,
                                 type: 'info',
                                 date: new Date(),
-                                link: '/admin',
+                                link: '/dashboard-admin',
                                 isRead: false
                             };
                             setNotifications(prev => [newItem, ...prev]);
@@ -208,7 +208,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                                 message: `Maaf, ${cafe.name} belum memenuhi kriteria kami. Silakan cek kembali data Anda.`,
                                 type: 'alert',
                                 date: cafe.created_at ? new Date(cafe.created_at) : new Date(),
-                                link: '/admin',
+                                link: '/dashboard-pengelola',
                                 isRead: isRead(id)
                             });
                         }

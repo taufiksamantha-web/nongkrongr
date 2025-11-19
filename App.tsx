@@ -34,12 +34,20 @@ export const ThemeContext = createContext<ThemeContextType>({
   toggleTheme: () => {},
 });
 
+// Helper to determine dashboard path based on role
+const getDashboardPath = (role?: string) => {
+    switch (role) {
+        case 'admin': return '/dashboard-admin';
+        case 'admin_cafe': return '/dashboard-pengelola';
+        default: return '/dashboard-profile';
+    }
+};
+
 const NavPill: React.FC = () => {
     const location = useLocation();
     const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, opacity: 0 });
     const navRef = useRef<HTMLDivElement>(null);
 
-    // Map paths to specific indices or verify active state
     const navLinks = [
         { path: '/', label: 'Home' },
         { path: '/explore', label: 'Explore' },
@@ -48,7 +56,6 @@ const NavPill: React.FC = () => {
 
     useEffect(() => {
         const updatePill = () => {
-            // Small delay to ensure DOM is ready
             setTimeout(() => {
                 const activeLink = navRef.current?.querySelector('a.active');
                 if (activeLink instanceof HTMLElement) {
@@ -58,8 +65,6 @@ const NavPill: React.FC = () => {
                         opacity: 1
                     });
                 } else {
-                    // If no active link (e.g. on detail page but strict match required), hide pill or keep at explore
-                    // For simple matching logic:
                     setPillStyle(prev => ({ ...prev, opacity: 0 }));
                 }
             }, 50);
@@ -72,7 +77,6 @@ const NavPill: React.FC = () => {
 
     return (
         <div className="hidden lg:flex relative bg-brand/5 dark:bg-gray-700/50 p-1.5 rounded-2xl border border-brand/10 dark:border-gray-600 items-center" ref={navRef}>
-            {/* Animated Background Pill */}
             <div 
                 className="absolute bg-brand border border-brand rounded-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-md shadow-brand/20 h-[calc(100%-12px)]"
                 style={{ 
@@ -153,13 +157,11 @@ const Header: React.FC = () => {
         <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 shadow-sm flex items-center justify-between transition-all duration-300">
           <nav className="w-full flex items-center justify-between relative">
             <Link to="/" className="flex items-center mr-6">
-              {/* Mobile Logo - Using the transparent PNG but sized up */}
               <img 
                 src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" 
                 alt="Nongkrongr Logo" 
                 className="h-12 w-auto block sm:hidden object-contain" 
               />
-              {/* Desktop Logo */}
               <img 
                 src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" 
                 alt="Nongkrongr Logo" 
@@ -167,13 +169,11 @@ const Header: React.FC = () => {
               />
             </Link>
             
-            {/* Centered Nav with Smooth Animation */}
             <div className="absolute left-1/2 -translate-x-1/2">
                 <NavPill />
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Right Controls Container */}
               <div className="flex items-center bg-brand/5 dark:bg-gray-700/50 rounded-full p-1.5 border border-brand/10 dark:border-gray-600">
                   <button 
                     onClick={toggleTheme} 
@@ -206,7 +206,7 @@ const Header: React.FC = () => {
                   
                   {currentUser ? (
                     <>
-                        <Link to="/admin" className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold text-primary dark:text-white hover:bg-white dark:hover:bg-gray-600 transition-all">
+                        <Link to={getDashboardPath(currentUser.role)} className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold text-primary dark:text-white hover:bg-white dark:hover:bg-gray-600 transition-all">
                             {currentUser.avatar_url ? (
                                 <img src={currentUser.avatar_url} alt="Profile" className="h-6 w-6 rounded-full object-cover border border-brand/20" />
                             ) : (
@@ -219,7 +219,6 @@ const Header: React.FC = () => {
                         <button onClick={() => setIsLogoutModalOpen(true)} className="hidden sm:flex p-2 rounded-full text-muted hover:text-red-500 hover:bg-white dark:hover:bg-gray-600 transition-all" title="Logout">
                             <ArrowRightOnRectangleIcon className="h-5 w-5" />
                         </button>
-                        {/* Mobile Trigger - Solid Brand Color */}
                         <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden flex items-center gap-1 px-3 py-2 rounded-full bg-brand text-white hover:bg-brand/90 transition-all shadow-lg shadow-brand/20" aria-label="Buka menu pengguna">
                              <UserCircleIcon className="h-6 w-6 text-white"/>
                         </button>
@@ -235,7 +234,7 @@ const Header: React.FC = () => {
             
              {isMobileMenuOpen && currentUser && (
                   <div ref={mobileMenuRef} className="absolute top-full right-0 mt-4 w-64 bg-card dark:bg-gray-800 rounded-3xl shadow-xl border border-border p-3 z-50 sm:hidden animate-fade-in-down">
-                      <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block">
+                      <Link to={getDashboardPath(currentUser.role)} onClick={() => setIsMobileMenuOpen(false)} className="block">
                         <div className="flex items-center gap-3 px-4 py-4 border-b border-border mb-2 bg-soft dark:bg-gray-700/30 rounded-2xl hover:bg-brand/5 transition-colors group cursor-pointer">
                             {currentUser.avatar_url ? (
                                 <img src={currentUser.avatar_url} alt="Profile" className="h-12 w-12 rounded-full object-cover" />
@@ -381,7 +380,18 @@ const App: React.FC = () => {
                             </GuestRoute>
                         } />
                         
-                        <Route path="/admin" element={
+                        {/* Role-based routes mapping to AdminPage */}
+                        <Route path="/dashboard-admin" element={
+                            <ProtectedRoute>
+                                <AdminPage />
+                            </ProtectedRoute>
+                        } />
+                         <Route path="/dashboard-pengelola" element={
+                            <ProtectedRoute>
+                                <AdminPage />
+                            </ProtectedRoute>
+                        } />
+                         <Route path="/dashboard-profile" element={
                             <ProtectedRoute>
                                 <AdminPage />
                             </ProtectedRoute>

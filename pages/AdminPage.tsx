@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserDashboard from '../components/admin/UserDashboard';
@@ -36,6 +36,25 @@ const AdminPage: React.FC = () => {
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // Enforce correct URL for role
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const path = location.pathname;
+        const role = currentUser.role;
+        
+        let correctPath = '/dashboard-profile';
+        if (role === 'admin') correctPath = '/dashboard-admin';
+        if (role === 'admin_cafe') correctPath = '/dashboard-pengelola';
+        
+        if (path !== correctPath) {
+            navigate(correctPath, { replace: true });
+        }
+    }, [currentUser, location.pathname, navigate]);
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
