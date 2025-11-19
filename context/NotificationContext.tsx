@@ -83,10 +83,41 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
 
         setIsStorageLoaded(true); 
+        
+        // Request Notification Permission on login
+        if (currentUser && 'Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().catch(console.error);
+        }
     }, [currentUser?.id]);
 
     const isDeleted = useCallback((id: string) => deletedIds.has(id), [deletedIds]);
     const isRead = useCallback((id: string) => readIds.has(id), [readIds]);
+
+    // Helper to send Browser Push Notification
+    const sendBrowserNotification = useCallback((title: string, body: string, link?: string) => {
+        // Check if browser supports notifications
+        if (!('Notification' in window)) return;
+
+        // Only send if permission is granted
+        if (Notification.permission === 'granted') {
+            try {
+                const notification = new Notification(title, {
+                    body: body,
+                    icon: 'https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png', // App Icon
+                    tag: 'nongkrongr-notification', // Tag prevents notification spam stacking
+                });
+
+                if (link) {
+                    notification.onclick = () => {
+                        window.location.href = `#${link}`;
+                        window.focus();
+                    };
+                }
+            } catch (e) {
+                console.error("Notification Error:", e);
+            }
+        }
+    }, []);
 
     // --- MAIN FETCHING LOGIC ---
     const fetchNotifications = useCallback(async () => {
@@ -182,11 +213,26 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
 
         setNotifications(prev => {
-            // Preserve existing realtime notifications (start with 'rt-' or 'admin-')
-            const existingPreserved = prev.filter(n => n.id.startsWith('rt-') || n.id.startsWith('admin-'));
-            // Merge and Deduplicate
-            const combined = [...fetchedNotifs, ...existingPreserved];
-            const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+            // We now rely fully on fetched data + new deterministic realtime pushes.
+            // We filter out previous realtime items that might have old non-deterministic IDs to avoid duplicates.
+            // However, for smooth UX, we'll merge based on the deterministic ID.
+            const combined = [...fetchedNotifs];
+            
+            // Merge logic: if ID exists in fetched, take fetched (it has db time).
+            // If it's a new realtime one not in DB fetch yet, keep it.
+            const uniqueMap = new Map();
+            combined.forEach(item => uniqueMap.set(item.id, item));
+            
+            // Add any existing notifications that are NOT in the new fetch (e.g. very recent realtime ones not yet in 'recent' queries or limit constraints)
+            // BUT since we standardized IDs, we can just trust the fetch mostly.
+            // For safety, we merge 'prev' but only if not present.
+            prev.forEach(item => {
+                if (!uniqueMap.has(item.id)) {
+                     uniqueMap.set(item.id, item);
+                }
+            });
+
+            const unique = Array.from(uniqueMap.values());
             return unique.sort((a, b) => b.date.getTime() - a.date.getTime());
         });
     }, [currentUser, isStorageLoaded, isDeleted, isRead]);
@@ -203,21 +249,31 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         const channels: ReturnType<typeof supabase.channel>[] = [];
 
         // 1. GLOBAL LISTENER: New Cafe Approved
-        // Note: Supabase realtime filtering is limited. We listen to UPDATEs where status changes to approved.
         const globalChannel = supabase.channel('global-cafe-updates')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cafes', filter: 'status=eq.approved' }, (payload) => {
                 const cafe = payload.new as MinimalCafe;
-                const id = `new-cafe-${cafe.id}`; // Use consistent ID
+                const id = `new-cafe-${cafe.id}`; // Consistent ID with fetchNotifications
                 if (!isDeleted(id)) {
-                    setNotifications(prev => [{
-                        id,
-                        title: 'Cafe Baru!',
-                        message: `${cafe.name} baru saja hadir di Nongkrongr.`,
-                        type: 'success',
-                        date: new Date(),
-                        link: `/cafe/${cafe.slug}`,
-                        isRead: false
-                    }, ...prev]); // Add to top
+                    const title = 'Cafe Baru!';
+                    const msg = `${cafe.name} baru saja hadir di Nongkrongr.`;
+                    const link = `/cafe/${cafe.slug}`;
+                    
+                    setNotifications(prev => {
+                        // Remove duplicates if exists
+                        const filtered = prev.filter(n => n.id !== id);
+                        return [{
+                            id,
+                            title,
+                            message: msg,
+                            type: 'success',
+                            date: new Date(),
+                            link,
+                            isRead: isRead(id) // Check if already read (e.g. persistence)
+                        }, ...filtered];
+                    });
+
+                    // Trigger Browser Notification
+                    sendBrowserNotification(title, msg, link);
                 }
             })
             .subscribe();
@@ -230,30 +286,42 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     const user = payload.new as MinimalProfile;
                     const notifId = `admin-new-user-${user.id}`;
                     if (!isDeleted(notifId)) {
+                        const title = 'Pendaftaran User Baru';
+                        const msg = `${user.username} mendaftar sebagai ${user.role === 'admin_cafe' ? 'Pengelola' : 'User'}.`;
+                        const link = '/dashboard-admin';
+                        
                         setNotifications(prev => [{
                             id: notifId,
-                            title: 'Pendaftaran User Baru',
-                            message: `${user.username} mendaftar sebagai ${user.role === 'admin_cafe' ? 'Pengelola' : 'User'}.`,
+                            title,
+                            message: msg,
                             type: 'info',
                             date: new Date(),
-                            link: '/dashboard-admin',
-                            isRead: false
+                            link,
+                            isRead: isRead(notifId)
                         }, ...prev]);
+
+                        sendBrowserNotification(title, msg, link);
                     }
                 })
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedback' }, (payload) => {
                     const fb = payload.new as MinimalFeedback;
                     const notifId = `admin-feedback-${fb.id}`;
                     if (!isDeleted(notifId)) {
+                        const title = 'Masukan Baru';
+                        const msg = `Dari ${fb.name}: "${fb.message.substring(0, 40)}..."`;
+                        const link = '/dashboard-admin';
+                        
                         setNotifications(prev => [{
                             id: notifId,
-                            title: 'Masukan Baru',
-                            message: `Dari ${fb.name}: "${fb.message.substring(0, 40)}..."`,
+                            title,
+                            message: msg,
                             type: 'warning',
                             date: new Date(),
-                            link: '/dashboard-admin',
-                            isRead: false
+                            link,
+                            isRead: isRead(notifId)
                         }, ...prev]);
+
+                        sendBrowserNotification(title, msg, link);
                     }
                 })
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cafes' }, (payload) => {
@@ -261,15 +329,21 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     if (cafe.status === 'pending') {
                         const notifId = `admin-new-cafe-${cafe.id}`;
                         if (!isDeleted(notifId)) {
+                            const title = 'Cafe Baru Menunggu Review';
+                            const msg = `${cafe.name} perlu persetujuan untuk ditayangkan.`;
+                            const link = '/dashboard-admin';
+
                             setNotifications(prev => [{
                                 id: notifId,
-                                title: 'Cafe Baru Menunggu Review',
-                                message: `${cafe.name} perlu persetujuan untuk ditayangkan.`,
+                                title,
+                                message: msg,
                                 type: 'info',
                                 date: new Date(),
-                                link: '/dashboard-admin',
-                                isRead: false
+                                link,
+                                isRead: isRead(notifId)
                             }, ...prev]);
+
+                            sendBrowserNotification(title, msg, link);
                         }
                     }
                 })
@@ -288,20 +362,34 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     // Fetch cafe details for better message
                     const { data: cafe } = await supabase.from('cafes').select('name, slug').eq('id', r.cafe_id).single();
                     
-                    const id = `rt-review-${r.id}-${r.status}-${Date.now()}`; // Realtime unique ID
+                    // Use deterministic ID (same as fetchNotifications)
+                    const id = `review-${r.id}-${r.status}`; 
                     const isApproved = r.status === 'approved';
+                    const title = isApproved ? 'Review Disetujui' : 'Review Ditolak';
+                    const msg = isApproved 
+                        ? `Ulasanmu di ${cafe?.name || 'cafe'} telah ditayangkan.` 
+                        : `Ulasanmu di ${cafe?.name || 'cafe'} tidak dapat ditayangkan.`;
+                    const link = isApproved ? `/cafe/${cafe?.slug}` : undefined;
                     
-                    setNotifications(prev => [{
-                        id,
-                        title: isApproved ? 'Review Disetujui' : 'Review Ditolak',
-                        message: isApproved 
-                            ? `Ulasanmu di ${cafe?.name || 'cafe'} telah ditayangkan.` 
-                            : `Ulasanmu di ${cafe?.name || 'cafe'} tidak dapat ditayangkan.`,
-                        type: isApproved ? 'success' : 'alert',
-                        date: new Date(),
-                        link: isApproved ? `/cafe/${cafe?.slug}` : undefined,
-                        isRead: false
-                    }, ...prev]);
+                    if (!isDeleted(id)) {
+                         setNotifications(prev => {
+                             const filtered = prev.filter(n => n.id !== id);
+                             return [{
+                                id,
+                                title,
+                                message: msg,
+                                type: isApproved ? 'success' : 'alert',
+                                date: new Date(),
+                                link,
+                                isRead: isRead(id)
+                            }, ...filtered];
+                        });
+                        
+                        // Send browser notification only if we haven't seen this exact status before (approximated check)
+                        if (!isRead(id)) {
+                            sendBrowserNotification(title, msg, link);
+                        }
+                    }
                 })
                 .subscribe();
             channels.push(userChannel);
@@ -312,20 +400,33 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                         const cafe = payload.new as MinimalCafe;
                         if (cafe.status === 'pending') return;
 
-                        const id = `rt-cafe-${cafe.id}-${cafe.status}-${Date.now()}`;
+                        // Use deterministic ID
+                        const id = `cafe-status-${cafe.id}-${cafe.status}`;
                         const isApproved = cafe.status === 'approved';
+                        const title = isApproved ? 'Cafe Disetujui' : 'Cafe Ditolak';
+                        const msg = isApproved 
+                            ? `Selamat! ${cafe.name} telah disetujui.` 
+                            : `Maaf, pendaftaran ${cafe.name} ditolak.`;
+                        const link = isApproved ? `/cafe/${cafe.slug}` : '/dashboard-pengelola';
 
-                        setNotifications(prev => [{
-                            id,
-                            title: isApproved ? 'Cafe Disetujui' : 'Cafe Ditolak',
-                            message: isApproved 
-                                ? `Selamat! ${cafe.name} telah disetujui.` 
-                                : `Maaf, pendaftaran ${cafe.name} ditolak.`,
-                            type: isApproved ? 'success' : 'alert',
-                            date: new Date(),
-                            link: isApproved ? `/cafe/${cafe.slug}` : '/dashboard-pengelola',
-                            isRead: false
-                        }, ...prev]);
+                         if (!isDeleted(id)) {
+                             setNotifications(prev => {
+                                 const filtered = prev.filter(n => n.id !== id);
+                                 return [{
+                                    id,
+                                    title,
+                                    message: msg,
+                                    type: isApproved ? 'success' : 'alert',
+                                    date: new Date(),
+                                    link,
+                                    isRead: isRead(id)
+                                }, ...filtered];
+                            });
+
+                            if (!isRead(id)) {
+                                sendBrowserNotification(title, msg, link);
+                            }
+                         }
                     })
                     .subscribe();
                  channels.push(managerChannel);
@@ -335,7 +436,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         return () => {
             channels.forEach(channel => supabase.removeChannel(channel));
         };
-    }, [currentUser, isStorageLoaded, isDeleted]);
+    }, [currentUser, isStorageLoaded, isDeleted, isRead, sendBrowserNotification]);
 
 
     const markAsRead = (id: string) => {

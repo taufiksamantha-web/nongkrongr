@@ -10,6 +10,8 @@ import FloatingNotification from '../common/FloatingNotification';
 import AdminCafeForm from './AdminCafeForm';
 import CafeStatisticsModal from './CafeStatisticsModal';
 import ChangeOwnerModal from './ChangeOwnerModal';
+import ImageWithFallback from '../common/ImageWithFallback';
+import { DEFAULT_COVER_URL } from '../../constants';
 import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, ArrowUpIcon, ArrowDownIcon, TrophyIcon, ClockIcon, ChartBarSquareIcon, TrashIcon, PencilSquareIcon, ArchiveBoxArrowDownIcon, MapPinIcon } from '@heroicons/react/24/solid';
 
 const ITEMS_PER_PAGE = 10;
@@ -255,11 +257,11 @@ const CafeManagementPanel: React.FC = () => {
 
     // Grid Configuration
     const isAdmin = currentUser?.role === 'admin';
-    // Grid Desktop/Tablet: Checkbox | Info(2fr) | Owner(1.5fr) | Status(120px) | Sponsor(150px)
-    // Actions are now in a separate row below
+    // Grid Desktop/Tablet: Checkbox | Info | Owner | Status | Sponsor
+    // Admin removed image col, others keep it
     const gridColsClass = isAdmin 
         ? 'grid-cols-[40px_2fr_1.5fr_120px_150px]' 
-        : 'grid-cols-[2fr_120px_150px]';
+        : 'grid-cols-[60px_2fr_120px_150px]';
 
     return (
          <>
@@ -286,6 +288,7 @@ const CafeManagementPanel: React.FC = () => {
                     {/* Table Header (Tablet & Desktop) */}
                     <div className={`hidden md:grid ${gridColsClass} items-center gap-4 px-6 py-3 border-b-2 border-border bg-soft/30 rounded-t-xl`}>
                         {isAdmin && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition cursor-pointer" onChange={handleSelectAllOnPage} checked={paginatedCafes.length > 0 && paginatedCafes.every(c => selectedCafeIds.includes(c.id))} aria-label="Pilih semua cafe di halaman ini"/>}
+                        {!isAdmin && <span className="text-xs font-bold text-muted uppercase tracking-wider">Gambar</span>}
                         <SortableHeader columnKey="name" title="Informasi Cafe" />
                         {isAdmin && <SortableHeader columnKey="manager_id" title="Owner" />}
                         <div className="flex justify-center"><SortableHeader columnKey="status" title="Status" /></div>
@@ -298,41 +301,75 @@ const CafeManagementPanel: React.FC = () => {
                            
                            {/* Mobile View (Simplified List) */}
                            <div className="p-4 md:hidden flex flex-col gap-3">
-                                {/* Row 1: Name & COTW */}
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="flex items-start gap-3 flex-1">
-                                        {userCanManage(cafe) && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition mt-1 flex-shrink-0" checked={selectedCafeIds.includes(cafe.id)} onChange={() => handleSelectOne(cafe.id)} aria-label={`Pilih ${cafe.name}`}/>}
-                                        <button onClick={() => { if (userCanManage(cafe)) { setEditingCafe(cafe); setIsFormOpen(true); }}} className="text-left group disabled:cursor-default" disabled={!userCanManage(cafe)}>
-                                            <p className="font-bold text-lg text-primary dark:text-white break-words whitespace-normal leading-tight group-hover:underline">{cafe.name}</p>
-                                        </button>
-                                    </div>
-                                    {/* COTW Icon placed at top right for mobile */}
-                                    {isAdmin && (
-                                        <button onClick={() => handleSetCafeOfTheWeek(cafe.id)} disabled={isSaving || cafe.status !== 'approved'} className={`p-1 rounded-full transition-colors flex-shrink-0 ${cafeOfTheWeekId === cafe.id ? 'bg-accent-amber/20 text-accent-amber' : 'text-muted/30'}`} title="Cafe of the Week">
-                                            <TrophyIcon className="h-5 w-5" />
-                                        </button>
-                                    )}
-                                </div>
+                                {/* Row 1: Image (Only for Managers), Name & COTW */}
+                                <div className="flex items-start gap-3">
+                                     {!isAdmin && (
+                                         <div className="flex-shrink-0 relative">
+                                            <ImageWithFallback 
+                                                src={cafe.coverUrl} 
+                                                defaultSrc={DEFAULT_COVER_URL} 
+                                                alt={cafe.name} 
+                                                className="w-20 h-20 object-cover rounded-lg border border-border"
+                                                width={80}
+                                                height={80}
+                                            />
+                                            {cafeOfTheWeekId === cafe.id && (
+                                                <div className="absolute -top-2 -right-2 bg-accent-amber text-white p-1 rounded-full shadow-md" title="Cafe of The Week">
+                                                    <TrophyIcon className="h-4 w-4" />
+                                                </div>
+                                            )}
+                                         </div>
+                                     )}
+                                     
+                                     <div className="flex-grow min-w-0">
+                                        <div className="flex justify-between items-start gap-2">
+                                            <div className="flex items-center gap-2">
+                                                {userCanManage(cafe) && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition flex-shrink-0" checked={selectedCafeIds.includes(cafe.id)} onChange={() => handleSelectOne(cafe.id)} aria-label={`Pilih ${cafe.name}`}/>}
+                                                <button onClick={() => { if (userCanManage(cafe)) { setEditingCafe(cafe); setIsFormOpen(true); }}} className="text-left group disabled:cursor-default" disabled={!userCanManage(cafe)}>
+                                                    <p className="font-bold text-lg text-primary dark:text-white break-words whitespace-normal leading-tight group-hover:underline line-clamp-2">{cafe.name}</p>
+                                                </button>
+                                            </div>
+                                            {isAdmin ? (
+                                                <button onClick={() => handleSetCafeOfTheWeek(cafe.id)} disabled={isSaving || cafe.status !== 'approved'} className={`p-1 rounded-full transition-colors flex-shrink-0 ${cafeOfTheWeekId === cafe.id ? 'bg-accent-amber/20 text-accent-amber' : 'text-muted/30'}`} title="Set as Cafe of the Week">
+                                                    <TrophyIcon className="h-5 w-5" />
+                                                </button>
+                                            ) : (
+                                                 /* Only show icon on mobile for managers if their cafe is COTW, but positioned relative to name since image might be present */
+                                                 cafeOfTheWeekId === cafe.id && (
+                                                    <div className="bg-accent-amber text-white p-1 rounded-full shadow-md flex-shrink-0" title="Cafe of The Week">
+                                                        <TrophyIcon className="h-4 w-4" />
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
 
-                                {/* Row 2: Location */}
-                                <div className="flex items-center gap-1 text-sm text-muted ml-8">
-                                    <MapPinIcon className="h-3.5 w-3.5 flex-shrink-0" /> 
-                                    <span className="truncate">{cafe.district}, {cafe.city}</span>
+                                        <div className="flex items-center gap-1 text-sm text-muted mt-1">
+                                            <MapPinIcon className="h-3.5 w-3.5 flex-shrink-0" /> 
+                                            <span className="truncate">{cafe.district}, {cafe.city}</span>
+                                        </div>
+                                        
+                                        {/* Cafe of the week label for managers visual */}
+                                        {cafeOfTheWeekId === cafe.id && (
+                                            <span className="inline-block mt-1 text-[10px] font-bold bg-gradient-to-r from-accent-amber to-yellow-400 text-white px-2 py-0.5 rounded-full shadow-sm">
+                                                🏆 Cafe of The Week
+                                            </span>
+                                        )}
+                                     </div>
                                 </div>
                                 
-                                {/* Row 3: Owner (Admin Only) */}
+                                {/* Row 2: Owner (Admin Only) */}
                                 {isAdmin && (
-                                    <div className="ml-8 flex items-center gap-2 text-sm bg-soft dark:bg-gray-700/30 p-2 rounded-lg w-fit">
+                                    <div className="flex items-center gap-2 text-sm bg-soft dark:bg-gray-700/30 p-2 rounded-lg w-full">
                                         <span className="text-muted text-xs">Owner:</span>
-                                        <span className="font-semibold text-primary dark:text-gray-300">{findUserName(cafe.manager_id)}</span>
-                                        <button onClick={() => handleOpenChangeOwner(cafe)} className="ml-2 text-blue-500 hover:underline text-xs font-bold">
+                                        <span className="font-semibold text-primary dark:text-gray-300 truncate flex-1">{findUserName(cafe.manager_id)}</span>
+                                        <button onClick={() => handleOpenChangeOwner(cafe)} className="text-blue-500 hover:underline text-xs font-bold flex-shrink-0">
                                             Ubah
                                         </button>
                                     </div>
                                 )}
 
-                                {/* Row 4: Status & Sponsor */}
-                                <div className="flex items-center justify-between mt-1 ml-8">
+                                {/* Row 3: Status & Sponsor */}
+                                <div className="flex items-center justify-between">
                                     <StatusBadge status={cafe.status} />
                                     {isAdmin ? (
                                         <div className="flex items-center gap-2">
@@ -344,7 +381,7 @@ const CafeManagementPanel: React.FC = () => {
                                     )}
                                 </div>
 
-                                {/* Row 5: Actions (Footer) */}
+                                {/* Row 4: Actions (Footer) */}
                                 <div className="flex items-center justify-end gap-2 pt-3 border-t border-border mt-2">
                                      <button onClick={() => { setStatsCafe(cafe); setIsStatsModalOpen(true); }} className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg font-bold" title="Statistik">
                                         <ChartBarSquareIcon className="h-4 w-4" /> Stats
@@ -370,11 +407,32 @@ const CafeManagementPanel: React.FC = () => {
                                 <div className={`grid ${gridColsClass} items-center gap-4 px-6 py-4`}>
                                      {isAdmin && <input type="checkbox" className="h-5 w-5 rounded border-gray-400 text-brand focus:ring-brand transition cursor-pointer" checked={selectedCafeIds.includes(cafe.id)} onChange={() => handleSelectOne(cafe.id)} aria-label={`Pilih ${cafe.name}`}/>}
                                     
+                                    {/* Image Column - Only for Managers */}
+                                    {!isAdmin && (
+                                        <div className="w-12 h-12 flex-shrink-0">
+                                            <ImageWithFallback 
+                                                src={cafe.coverUrl} 
+                                                defaultSrc={DEFAULT_COVER_URL} 
+                                                alt={cafe.name} 
+                                                className="w-full h-full object-cover rounded-lg border border-border"
+                                                width={48}
+                                                height={48}
+                                            />
+                                        </div>
+                                    )}
+
                                     {/* Name & Location Combined */}
                                     <div className="min-w-0 flex flex-col justify-center">
-                                        <button onClick={() => { if(userCanManage(cafe)) { setEditingCafe(cafe); setIsFormOpen(true); }}} className="text-left group disabled:cursor-default mb-1" disabled={!userCanManage(cafe)}>
-                                            <p className="font-bold text-lg text-primary dark:text-gray-200 break-words whitespace-normal leading-tight group-hover:underline line-clamp-2">{cafe.name}</p>
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={() => { if(userCanManage(cafe)) { setEditingCafe(cafe); setIsFormOpen(true); }}} className="text-left group disabled:cursor-default mb-0.5" disabled={!userCanManage(cafe)}>
+                                                <p className="font-bold text-lg text-primary dark:text-gray-200 break-words whitespace-normal leading-tight group-hover:underline line-clamp-2">{cafe.name}</p>
+                                            </button>
+                                            {cafeOfTheWeekId === cafe.id && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-accent-amber to-yellow-400 text-white text-[10px] font-bold shadow-sm flex-shrink-0">
+                                                    <TrophyIcon className="h-3 w-3" /> COTW
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="flex items-center gap-1 text-xs text-muted">
                                             <MapPinIcon className="h-3 w-3 flex-shrink-0" />
                                             <span className="truncate">{cafe.district}, {cafe.city}</span>
@@ -397,7 +455,7 @@ const CafeManagementPanel: React.FC = () => {
                                         {isAdmin ? (
                                             <>
                                                 <SponsorToggle cafe={cafe} onToggle={handleToggleSponsor} disabled={isSaving} />
-                                                <button onClick={() => handleSetCafeOfTheWeek(cafe.id)} disabled={isSaving || cafe.status !== 'approved'} title={cafe.status !== 'approved' ? 'Hanya kafe yang disetujui bisa jadi Cafe of the Week' : 'Set as Cafe of the Week'} className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${cafeOfTheWeekId === cafe.id ? 'bg-accent-amber/20 text-accent-amber' : 'text-muted hover:text-accent-amber hover:bg-accent-amber/10'}`}>
+                                                <button onClick={() => handleSetCafeOfTheWeek(cafe.id)} disabled={isSaving || cafe.status !== 'approved'} title={cafe.status !== 'approved' ? 'Hanya kafe yang disetujui bisa jadi Cafe of The Week' : 'Set as Cafe of the Week'} className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${cafeOfTheWeekId === cafe.id ? 'bg-accent-amber/20 text-accent-amber' : 'text-muted hover:text-accent-amber hover:bg-accent-amber/10'}`}>
                                                     <TrophyIcon className="h-5 w-5" />
                                                 </button>
                                             </>
