@@ -44,8 +44,8 @@ const FormSection: React.FC<{
             disabled={disabled}
             className="w-full flex justify-between items-center py-2 md:py-0 md:cursor-default text-left focus:outline-none group"
         >
-            <legend className="text-lg font-bold font-jakarta">{title}</legend>
-            {/* Chevron only visible on mobile */}
+            <legend className="text-lg font-bold font-jakarta text-primary dark:text-white">{title}</legend>
+            {/* Chevron only visible on mobile to indicate toggle */}
             <ChevronDownIcon className={`h-5 w-5 text-muted md:hidden transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
         </button>
         
@@ -184,13 +184,13 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
             >
                 <div className="space-y-3">
                      <div>
-                        <label className="flex items-center gap-2 font-semibold text-primary">
+                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white">
                            <SparklesIcon className="h-5 w-5 text-accent-pink"/> Estetik ({ratingAesthetic})
                         </label>
                         <input type="range" min="1" max="10" value={ratingAesthetic} onChange={e => setRatingAesthetic(parseInt(e.target.value))} className="w-full accent-accent-pink"/>
                     </div>
                     <div>
-                        <label className="flex items-center gap-2 font-semibold text-primary">
+                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white">
                            <BriefcaseIcon className="h-5 w-5 text-accent-cyan"/> Nugas / Kerja ({ratingWork})
                         </label>
                         <input type="range" min="1" max="10" value={ratingWork} onChange={e => setRatingWork(parseInt(e.target.value))} className="w-full accent-accent-cyan"/>
@@ -219,7 +219,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
             >
                 <div className="space-y-4">
                     <div>
-                        <label className="flex items-center gap-2 font-semibold text-primary mb-2">
+                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white mb-2">
                            <CurrencyDollarIcon className="h-5 w-5 text-green-500"/> Total Jajan (per orang)
                         </label>
                         <div className="flex flex-wrap gap-2">
@@ -228,7 +228,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                                     type="button"
                                     key={opt.value}
                                     onClick={() => setPriceSpent(prev => prev === opt.value ? '' : opt.value)}
-                                    className={`px-4 py-2 rounded-full font-semibold text-sm border-2 transition-all disabled:opacity-70 ${priceSpent === opt.value ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50'}`}
+                                    className={`px-4 py-2 rounded-full font-semibold text-sm border-2 transition-all disabled:opacity-70 ${priceSpent === opt.value ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}
                                 >
                                     {opt.label}
                                 </button>
@@ -236,7 +236,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                         </div>
                     </div>
                     <div>
-                        <label className="flex items-center gap-2 font-semibold text-primary mb-2">
+                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white mb-2">
                            <PhotoIcon className="h-5 w-5 text-blue-500"/> Foto (Opsional)
                         </label>
                         {photo ? (
@@ -249,13 +249,13 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                         ) : (
                              <label 
                                 htmlFor="photo-upload" 
-                                className={`w-full text-center p-6 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-colors ${formDisabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} ${isDragOver ? 'border-brand bg-brand/10' : 'border-border bg-soft hover:border-brand/50'}`}
+                                className={`w-full text-center p-6 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-colors ${formDisabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} ${isDragOver ? 'border-brand bg-brand/10' : 'border-border bg-soft hover:border-brand/50 dark:bg-gray-700'}`}
                                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if(!formDisabled) setIsDragOver(true); }}
                                 onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }}
                                 onDrop={onDrop}
                              >
                                 <PhotoIcon className="h-8 w-8 text-muted mb-2"/>
-                                <span className="font-semibold text-primary">Pilih atau jatuhkan foto di sini</span>
+                                <span className="font-semibold text-primary dark:text-gray-200">Pilih atau jatuhkan foto di sini</span>
                                 <span className="text-xs text-muted">Maks. 5MB</span>
                             </label>
                         )}

@@ -57,13 +57,13 @@ export const getOpeningStatus = (openingHours: string): OpeningStatus => {
     // Check Opening Soon (if not open yet, but within buffer before open)
     if (!isOpen && effectiveCurrentTime < openTime && (openTime - effectiveCurrentTime) <= bufferMinutes) {
          const diff = openTime - effectiveCurrentTime;
-         return { isOpen: false, status: 'opening_soon', message: `Buka sebentar lagi (${diff} mnt)`, color: 'text-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300' };
+         return { isOpen: false, status: 'opening_soon', message: `Buka sebentar lagi (${diff} mnt)`, color: 'text-yellow-800 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300' };
     }
 
     // Check Closing Soon (if open, and within buffer before close)
     if (isOpen && (effectiveCloseTime - effectiveCurrentTime) <= bufferMinutes) {
         const diff = effectiveCloseTime - effectiveCurrentTime;
-        return { isOpen: true, status: 'closing_soon', message: `Segera Tutup (${diff} mnt)`, color: 'text-orange-700 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-300' };
+        return { isOpen: true, status: 'closing_soon', message: `Segera Tutup (${diff} mnt)`, color: 'text-orange-800 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-300' };
     }
 
     if (isOpen) {

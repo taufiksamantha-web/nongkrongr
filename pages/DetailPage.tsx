@@ -184,7 +184,7 @@ const DetailPage: React.FC = () => {
                     src={cafe.coverUrl} 
                     defaultSrc={DEFAULT_COVER_URL}
                     alt={cafe.name} 
-                    className="w-full h-56 md:h-[500px] object-cover rounded-4xl mb-8 border border-border shadow-sm"
+                    className="w-full h-56 md:h-[550px] object-cover rounded-4xl mb-8 border border-border shadow-sm"
                     width={1280}
                     height={768}
                 />
@@ -216,25 +216,25 @@ const DetailPage: React.FC = () => {
                                     <ImageWithFallback 
                                         src={cafe.logoUrl} 
                                         alt={`${cafe.name} logo`} 
-                                        className="w-24 h-24 md:w-40 md:h-40 rounded-3xl object-contain shadow-md bg-soft p-1 border border-border"
-                                        width={160}
-                                        height={160}
+                                        className="w-24 h-24 md:w-44 md:h-44 rounded-3xl object-contain shadow-md bg-soft p-1 border border-border"
+                                        width={176}
+                                        height={176}
                                     />
                                 ) : (
-                                    <div className="w-24 h-24 md:w-40 md:h-40 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-3xl shadow-md border border-border">
+                                    <div className="w-24 h-24 md:w-44 md:h-44 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-3xl shadow-md border border-border">
                                         <BuildingStorefrontIcon className="h-12 w-12 md:h-20 md:w-20 text-muted" />
                                     </div>
                                 )}
                              </div>
 
-                             {/* Name & Price */}
+                             {/* Name & Location */}
                              <div className="flex-grow w-full">
                                 <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                                      <div className="flex-grow">
                                         <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold font-jakarta leading-tight text-primary dark:text-white break-words">
                                             {cafe.name}
                                         </h1>
-                                        <p className="text-muted flex items-center justify-center md:justify-start gap-1.5 mt-2 text-base md:text-xl">
+                                        <p className="text-muted flex items-center justify-center md:justify-start gap-1.5 mt-2 text-base md:text-xl md:mt-4">
                                            <MapPinIcon className="h-5 w-5 md:h-7 md:w-7"/> {cafe.district}, {cafe.city}
                                         </p>
                                      </div>
@@ -254,7 +254,7 @@ const DetailPage: React.FC = () => {
 
                         {/* Description */}
                         {cafe.description && (
-                            <div className="mt-8 md:mt-10 text-center md:text-left">
+                            <div className="mt-8 md:mt-12 text-center md:text-left">
                                 <p className="text-primary dark:text-gray-300 leading-relaxed text-lg md:text-xl">
                                     {cafe.description}
                                 </p>
@@ -314,48 +314,48 @@ const DetailPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Info Grid - Tighter padding on mobile */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mt-10 pt-8 border-t border-border">
-                            <div className="space-y-4 md:space-y-6">
-                                <div className="flex items-start p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
-                                    <MapPinIcon className="h-6 w-6 md:h-8 md:w-8 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                        {/* Info Grid - Tighter padding on mobile (p-1.5), Larger on Desktop */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 md:gap-8 mt-6 md:mt-10 pt-4 md:pt-8 border-t border-border">
+                            <div className="space-y-1 sm:space-y-3 md:space-y-6">
+                                <div className="flex items-start p-1.5 sm:p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <MapPinIcon className="h-6 w-6 md:h-9 md:w-9 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
                                     <div>
-                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-1">Alamat</p>
-                                        <p className="text-muted text-base md:text-lg">{cafe.address}</p>
+                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-0.5 md:mb-1">Alamat</p>
+                                        <p className="text-muted text-sm md:text-lg leading-snug">{cafe.address}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-start p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
-                                    <ClockIcon className="h-6 w-6 md:h-8 md:w-8 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                                <div className="flex items-start p-1.5 sm:p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <ClockIcon className="h-6 w-6 md:h-9 md:w-9 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
                                     <div>
-                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-1">Jam Operasional</p>
-                                        <p className="text-muted text-base md:text-lg">{cafe.openingHours}</p>
+                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-0.5 md:mb-1">Jam Operasional</p>
+                                        <p className="text-muted text-sm md:text-lg">{cafe.openingHours}</p>
                                         {openingStatus && (
-                                            <div className={`inline-flex items-center px-3 py-1 rounded-lg text-sm md:text-base font-bold mt-2 shadow-sm border border-transparent ${openingStatus.color}`}>
+                                            <div className={`inline-flex items-center px-2.5 py-1 md:px-3 md:py-1 rounded-lg text-xs md:text-base font-bold mt-1.5 md:mt-2 shadow-sm border border-transparent ${openingStatus.color}`}>
                                                 {openingStatus.message}
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="space-y-4 md:space-y-6">
-                                <div className="flex items-start p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
-                                    <PhoneIcon className="h-6 w-6 md:h-8 md:w-8 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                            <div className="space-y-1 sm:space-y-3 md:space-y-6">
+                                <div className="flex items-start p-1.5 sm:p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <PhoneIcon className="h-6 w-6 md:h-9 md:w-9 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
                                     <div>
-                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-1">Kontak</p>
+                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-0.5 md:mb-1">Kontak</p>
                                         {cafe.phoneNumber ? (
-                                            <a href={`tel:${cafe.phoneNumber}`} className="text-muted text-base md:text-lg hover:text-brand hover:underline transition-colors">{cafe.phoneNumber}</a>
-                                        ) : <p className="text-muted text-base italic">Tidak tersedia</p>}
+                                            <a href={`tel:${cafe.phoneNumber}`} className="text-muted text-sm md:text-lg hover:text-brand hover:underline transition-colors">{cafe.phoneNumber}</a>
+                                        ) : <p className="text-muted text-sm md:text-base italic">Tidak tersedia</p>}
                                     </div>
                                 </div>
-                                <div className="flex items-start p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
-                                    <GlobeAltIcon className="h-6 w-6 md:h-8 md:w-8 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
+                                <div className="flex items-start p-1.5 sm:p-3 md:p-4 rounded-xl hover:bg-soft dark:hover:bg-gray-700/30 transition-colors">
+                                    <GlobeAltIcon className="h-6 w-6 md:h-9 md:w-9 mr-3 md:mr-4 text-brand flex-shrink-0 mt-1" />
                                     <div className="min-w-0">
-                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-1">Website / Sosmed</p>
+                                        <p className="font-bold text-base md:text-xl text-primary dark:text-white mb-0.5 md:mb-1">Website / Sosmed</p>
                                         {cafe.websiteUrl ? (
-                                            <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-muted text-base md:text-lg hover:text-brand hover:underline transition-colors block truncate">
+                                            <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-muted text-sm md:text-lg hover:text-brand hover:underline transition-colors block truncate">
                                                 {cafe.websiteUrl.replace(/^https?:\/\//, '')}
                                             </a>
-                                        ) : <p className="text-muted text-base italic">Tidak tersedia</p>}
+                                        ) : <p className="text-muted text-sm md:text-base italic">Tidak tersedia</p>}
                                     </div>
                                 </div>
                             </div>
