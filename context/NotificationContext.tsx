@@ -24,8 +24,9 @@ interface NotificationContextType {
 
 export const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-const READ_NOTIFS_KEY = 'nongkrongr_read_notifications';
-const DELETED_NOTIFS_KEY = 'nongkrongr_deleted_notifications';
+// Constants for storage keys without suffix (suffix added dynamically)
+const READ_NOTIFS_PREFIX = 'nongkrongr_read_notifications';
+const DELETED_NOTIFS_PREFIX = 'nongkrongr_deleted_notifications';
 
 // Define minimal interfaces for Realtime payloads
 interface MinimalFeedback { id: number; name: string; message: string; created_at: string; status: string; }
@@ -38,21 +39,36 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const { currentUser } = useAuth();
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     
-    // Persistence states
-    const [readIds, setReadIds] = useState<Set<string>>(() => {
-        const stored = localStorage.getItem(READ_NOTIFS_KEY);
-        return stored ? new Set(JSON.parse(stored)) : new Set();
-    });
-    const [deletedIds, setDeletedIds] = useState<Set<string>>(() => {
-        const stored = localStorage.getItem(DELETED_NOTIFS_KEY);
-        return stored ? new Set(JSON.parse(stored)) : new Set();
-    });
+    // Persistence states initialized empty, loaded in useEffect
+    const [readIds, setReadIds] = useState<Set<string>>(new Set());
+    const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+
+    // Helper to get user-specific keys
+    const getStorageKeys = () => {
+        const suffix = currentUser ? `_${currentUser.id}` : '_guest';
+        return {
+            read: `${READ_NOTIFS_PREFIX}${suffix}`,
+            deleted: `${DELETED_NOTIFS_PREFIX}${suffix}`
+        };
+    };
+
+    // Load read/deleted state when currentUser changes
+    useEffect(() => {
+        const keys = getStorageKeys();
+        const storedRead = localStorage.getItem(keys.read);
+        const storedDeleted = localStorage.getItem(keys.deleted);
+        
+        setReadIds(storedRead ? new Set(JSON.parse(storedRead)) : new Set());
+        setDeletedIds(storedDeleted ? new Set(JSON.parse(storedDeleted)) : new Set());
+    }, [currentUser?.id]); // Dependency on ID specifically
+
+    // Helper for checking existence (using the state, which is updated by useEffect)
+    // We use refs or direct state access in effect, but here inside render cycle `readIds` is sufficient
+    // However, when calculating notifications, we must ensure `readIds` corresponds to `currentUser`.
 
     // Setup Realtime Subscriptions and Notifications
     useEffect(() => {
         const channels: ReturnType<typeof supabase.channel>[] = [];
-
-        // Helper to check if deleted
         const isDeleted = (id: string) => deletedIds.has(id);
         const isRead = (id: string) => readIds.has(id);
 
@@ -121,14 +137,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         
         if (currentUser) {
             // --- USER/MANAGER NOTIFICATIONS (Existing Logic + Realtime) ---
-            
-            // We still need to check existing data (cafes context) for reviews and status updates 
-            // that happened while offline or on load.
             const derivedNotifications: NotificationItem[] = [];
-            
-            // Cafe Status Changes (Approved/Rejected) logic is tricky in realtime because we need 'old' and 'new'.
-            // We rely on the CafeContext keeping 'cafes' updated, and we re-run this effect when 'cafes' changes?
-            // Ideally, we separate "Historical/Data-driven" notifs from "Realtime/Event" notifs.
             
             // 1. Check Loaded Data for notifications
             cafes.forEach(cafe => {
@@ -189,7 +198,14 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             setNotifications(prev => {
                 const existingIds = new Set(prev.map(n => n.id));
                 const newUnique = derivedNotifications.filter(n => !existingIds.has(n.id));
-                return [...newUnique, ...prev].sort((a, b) => b.date.getTime() - a.date.getTime());
+                // Also filter out any notifications that might be in the 'prev' state but are now deleted/read
+                // based on the updated `readIds` and `deletedIds` dependencies.
+                const allNotifications = [...newUnique, ...prev].filter(n => !isDeleted(n.id));
+                
+                // Re-apply read status (in case it changed)
+                return allNotifications
+                    .map(n => ({ ...n, isRead: isRead(n.id) }))
+                    .sort((a, b) => b.date.getTime() - a.date.getTime());
             });
         }
 
@@ -202,7 +218,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         if (!readIds.has(id)) {
             const newReadIds = new Set(readIds).add(id);
             setReadIds(newReadIds);
-            localStorage.setItem(READ_NOTIFS_KEY, JSON.stringify(Array.from(newReadIds)));
+            const keys = getStorageKeys();
+            localStorage.setItem(keys.read, JSON.stringify(Array.from(newReadIds)));
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
         }
     };
@@ -211,7 +228,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         const newReadIds = new Set(readIds);
         notifications.forEach(n => newReadIds.add(n.id));
         setReadIds(newReadIds);
-        localStorage.setItem(READ_NOTIFS_KEY, JSON.stringify(Array.from(newReadIds)));
+        const keys = getStorageKeys();
+        localStorage.setItem(keys.read, JSON.stringify(Array.from(newReadIds)));
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     };
 
@@ -219,7 +237,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         const newDeletedIds = new Set(deletedIds);
         notifications.forEach(n => newDeletedIds.add(n.id));
         setDeletedIds(newDeletedIds);
-        localStorage.setItem(DELETED_NOTIFS_KEY, JSON.stringify(Array.from(newDeletedIds)));
+        const keys = getStorageKeys();
+        localStorage.setItem(keys.deleted, JSON.stringify(Array.from(newDeletedIds)));
         setNotifications([]);
     };
 

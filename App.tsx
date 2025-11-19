@@ -30,7 +30,7 @@ interface ThemeContextType {
 }
 
 export const ThemeContext = createContext<ThemeContextType>({
-  theme: 'dark',
+  theme: 'light', // Changed default to light
   toggleTheme: () => {},
 });
 
@@ -82,7 +82,7 @@ const Header: React.FC = () => {
         <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 shadow-sm flex items-center justify-between">
           <nav className="w-full flex items-center justify-between relative">
             <Link to="/" className="flex items-center mr-6">
-              <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-6 sm:h-10 w-auto" />
+              <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-6 sm:h-6 w-auto" />
             </Link>
             
             <div className="hidden lg:flex items-center space-x-2 absolute left-1/2 -translate-x-1/2 bg-gray-100 dark:bg-gray-700/50 p-1.5 rounded-2xl border border-gray-200 dark:border-gray-600">
@@ -261,7 +261,8 @@ const App: React.FC = () => {
     if (storedTheme) {
       return storedTheme;
     }
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    // FORCE LIGHT MODE DEFAULT: Ignore system preference unless user manually set dark mode previously.
+    return 'light';
   });
   
   useEffect(() => {

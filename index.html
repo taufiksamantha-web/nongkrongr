@@ -14,9 +14,10 @@
       (function() {
         try {
           const storedTheme = localStorage.getItem('theme');
-          const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          // Removed system dark preference check to force light mode as default
+          // const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
           
-          if (storedTheme === 'dark' || (!storedTheme && systemDark)) {
+          if (storedTheme === 'dark') {
             document.documentElement.classList.add('dark');
           } else {
             document.documentElement.classList.remove('dark');
