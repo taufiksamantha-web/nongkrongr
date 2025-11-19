@@ -57,4 +57,18 @@ export const userService = {
   async restoreUser(userId: string): Promise<{ error: any }> {
     return this.updateUserStatus(userId, 'active');
   },
+
+  async deleteUserPermanent(userId: string): Promise<{ error: any }> {
+    // Warning: This relies on ON DELETE CASCADE in the database to remove related data
+    // (likes, reviews, etc.) linked to this user.
+    const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+    
+    if (error) {
+        console.error(`Error deleting user ${userId} permanently:`, error);
+    }
+    return { error };
+  }
 };

@@ -27,6 +27,7 @@ const UserManagementPanel: React.FC = () => {
 
     const fetchUsers = async () => {
         setLoading(true);
+        // Fetch only active/pending/rejected users (exclude archived)
         const { data, error } = await supabase.from('profiles').select('*').neq('status', 'archived').order('username', { ascending: true });
         if (error) {
             console.error("Error fetching users:", error);
@@ -70,16 +71,22 @@ const UserManagementPanel: React.FC = () => {
              return;
         }
 
+        // Optimistic Update
+        const oldUsers = [...users];
+        setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...userData } as User : u));
+
         const { error } = await supabase
             .from('profiles')
             .update({ username: userData.username, role: userData.role })
             .eq('id', editingUser.id);
 
         if (error) {
+            setUsers(oldUsers); // Revert
             setNotification({ message: `Error: ${error.message}`, type: 'error' });
         } else {
-            setNotification({ message: 'User profile updated successfully!', type: 'success' });
-            await fetchUsers();
+            setNotification({ message: 'Profil user berhasil diperbarui!', type: 'success' });
+            // No need to fetchUsers() if optimistic update worked, but for safety/consistency with DB triggers:
+            // fetchUsers(); 
         }
         setIsUserFormOpen(false);
         setEditingUser(null);
@@ -100,8 +107,12 @@ const UserManagementPanel: React.FC = () => {
             setNotification({ message: `Gagal mengarsipkan profil: ${error.message}`, type: 'error' });
         } else {
             setNotification({ message: `Profil "${userToDelete.username}" telah diarsipkan.`, type: 'success' });
+            // Remove from local list immediately
             setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
-             if (paginatedUsers.length === 1 && currentPage > 1) {
+            
+            // Reset pagination if needed
+            const remainingInPage = paginatedUsers.length - 1;
+            if (remainingInPage === 0 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             }
         }

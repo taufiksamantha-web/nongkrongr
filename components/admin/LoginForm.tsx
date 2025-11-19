@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -18,20 +17,31 @@ const LoginForm: React.FC = () => {
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [loading, setLoading] = useState(false);
+    
     const loginInputRef = useRef<HTMLInputElement>(null);
+    const usernameInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        loginInputRef.current?.focus();
         setError('');
-        // Do not clear success message on mode change, so user can see it after form switches.
-        // setSuccessMessage(''); 
         
-        // Clear fields on mode change for better UX, but only if not coming from a successful signup
-        if (!successMessage) {
-            setUsername('');
-            setEmail('');
-            setPassword('');
-            setConfirmPassword('');
+        if (mode === 'signup') {
+            setSuccessMessage('');
+             // Clear fields when entering signup mode for fresh start
+             setUsername('');
+             setEmail('');
+             setPassword('');
+             setConfirmPassword('');
+             // Focus on username input when switching to signup
+             setTimeout(() => usernameInputRef.current?.focus(), 100);
+        } else {
+             // When switching to login manually
+             if (!successMessage) {
+                 setUsername('');
+                 setEmail('');
+                 setPassword('');
+             }
+             // Focus on login input (email/username) when switching to login
+             setTimeout(() => loginInputRef.current?.focus(), 100);
         }
     }, [mode]);
 
@@ -57,26 +67,43 @@ const LoginForm: React.FC = () => {
                 setLoading(false);
                 return;
             }
-            const { error: authError } = await signup(username, email, password, isCafeAdmin);
+            
+            // Normalize input to lowercase
+            const safeUsername = username.trim().toLowerCase();
+            const safeEmail = email.trim().toLowerCase();
+
+            const { error: authError } = await signup(safeUsername, safeEmail, password, isCafeAdmin);
+            
             if (authError) {
-                 setError(authError.message || 'Gagal mendaftar. Email atau username mungkin sudah digunakan.');
+                 // Handle specific error messages from Supabase/Context
+                 if (authError.message.includes('already registered') || authError.message.includes('sudah terdaftar')) {
+                     setError('Email sudah terdaftar. Silakan login.');
+                 } else if (authError.message.includes('Username')) {
+                     setError(authError.message);
+                 } else {
+                     setError('Gagal mendaftar. Silakan coba lagi.');
+                 }
             } else {
+                // Registration Successful
                 if (isCafeAdmin) {
-                    setSuccessMessage('Pendaftaran sebagai pengelola berhasil! Akun Anda akan aktif setelah disetujui oleh admin.');
+                    setSuccessMessage('Pendaftaran sebagai pengelola berhasil! Akun Anda akan aktif setelah disetujui oleh admin. Silakan Login.');
                 } else {
                     setSuccessMessage('Pendaftaran berhasil! Silakan login untuk melanjutkan.');
                 }
-                // Reset form fields after successful signup
-                setUsername('');
-                setEmail(''); // Keep email for login convenience? No, user might have used username. Clear all.
-                setPassword('');
-                setConfirmPassword('');
+                
+                // Switch to login mode
                 setMode('login');
                 setIsCafeAdmin(false);
+                // Clear sensitive fields
+                setPassword('');
+                setConfirmPassword('');
             }
         } else {
-            // 'email' state here holds either username or email
-            const { error: authError } = await login(email, password);
+            // LOGIN MODE
+            // 'email' state here holds either username or email. Normalize to lowercase.
+            const safeIdentifier = email.trim().toLowerCase();
+            
+            const { error: authError } = await login(safeIdentifier, password);
             if (authError) {
                 setError(authError.message || 'Username/email atau password salah.');
             } else {
@@ -108,11 +135,21 @@ const LoginForm: React.FC = () => {
                 </div>
                 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    <h1 className="text-3xl font-bold font-jakarta text-center">
+                    <h1 className="text-2xl sm:text-3xl font-bold font-jakarta text-center whitespace-nowrap">
                         {mode === 'login' ? 'Selamat Datang Kembali' : 'Buat Akun Baru'}
                     </h1>
-                    {error && <p className="bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 p-3 rounded-xl text-center text-sm font-semibold">{error}</p>}
-                    {successMessage && <p className="bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300 p-3 rounded-xl text-center text-sm font-semibold">{successMessage}</p>}
+                    
+                    {error && (
+                        <div className="bg-red-100 dark:bg-red-500/20 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-200 p-3 rounded-xl text-center text-sm font-semibold animate-fade-in-up">
+                            {error}
+                        </div>
+                    )}
+                    
+                    {successMessage && mode === 'login' && (
+                        <div className="bg-green-100 dark:bg-green-500/20 border border-green-200 dark:border-green-900 text-green-700 dark:text-green-200 p-3 rounded-xl text-center text-sm font-semibold animate-fade-in-up">
+                            {successMessage}
+                        </div>
+                    )}
                     
                     <div key={mode} className="space-y-6 animate-fade-in-up" style={{animationDuration: '0.4s'}}>
                         {mode === 'signup' && (
@@ -120,6 +157,7 @@ const LoginForm: React.FC = () => {
                                 <label htmlFor="username" className="font-semibold">Username</label>
                                 <input
                                     id="username"
+                                    ref={usernameInputRef}
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}

@@ -153,20 +153,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const signup = async (username: string, email: string, password: string, isCafeAdmin: boolean = false) => {
         // 1. Pre-check Username Uniqueness
-        const { count, error: checkError } = await supabase
+        const { count: usernameCount, error: userCheckError } = await supabase
             .from('profiles')
             .select('id', { count: 'exact', head: true })
             .eq('username', username);
         
-        if (checkError) {
+        if (userCheckError) {
              return { error: new AuthError("Gagal memvalidasi username. Silakan coba lagi.") };
         }
-        
-        if (count !== null && count > 0) {
+        if (usernameCount !== null && usernameCount > 0) {
             return { error: new AuthError("Username sudah digunakan. Silakan pilih yang lain.") };
         }
 
-        // 2. Proceed with Auth Signup
+        // 2. Pre-check Email Uniqueness (in profiles)
+        // Although Auth handles this, checking profiles allows for a faster/cleaner error before the auth call
+        const { count: emailCount } = await supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .eq('email', email);
+
+        if (emailCount !== null && emailCount > 0) {
+            return { error: new AuthError("Email sudah terdaftar. Silakan login.") };
+        }
+
+        // 3. Proceed with Auth Signup
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
@@ -182,7 +192,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const role = isCafeAdmin ? 'admin_cafe' : 'user';
         const status = isCafeAdmin ? 'pending_approval' : 'active';
 
-        // 3. Create Profile
+        // 4. Create Profile
         const { error: profileError } = await supabase
             .from('profiles')
             .insert({ id: signUpData.user.id, username, email, role, status });
@@ -192,12 +202,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return { error: new AuthError(profileError.message) };
         }
 
-        // 4. FORCE LOGOUT to prevent auto-login
+        // 5. FORCE LOGOUT to prevent auto-login/redirect
         // This ensures the user sees the "Success" message and has to login manually.
-        // If session was created (auto-confirm enabled in Supabase), we kill it here.
-        if (signUpData.session) {
-            await supabase.auth.signOut();
-        }
+        await supabase.auth.signOut();
         
         return { error: null };
     };

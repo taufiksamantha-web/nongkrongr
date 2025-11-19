@@ -75,7 +75,8 @@ const ArchivePanel: React.FC = () => {
             setNotification({ message: `Gagal memulihkan user: ${error.message}`, type: 'error' });
         } else {
             setNotification({ message: `User "${user.username}" berhasil dipulihkan.`, type: 'success' });
-            await fetchArchivedUsers();
+            // Remove from local list immediately
+            setArchivedUsers(prev => prev.filter(u => u.id !== user.id));
         }
         setIsProcessing(false);
     };
@@ -94,12 +95,14 @@ const ArchivePanel: React.FC = () => {
                 setArchivedCafesList(prev => prev.filter(c => c.id !== itemToDelete.id));
             }
         } else {
-            const { error } = await supabase.from('profiles').delete().eq('id', itemToDelete.id);
+            // Use userService for user deletion
+            const { error } = await userService.deleteUserPermanent(itemToDelete.id);
             if (error) {
                  setNotification({ message: `Gagal menghapus permanen: ${error.message}`, type: 'error' });
             } else {
                  setNotification({ message: `User "${itemToDelete.name}" dihapus permanen.`, type: 'success' });
-                 await fetchArchivedUsers();
+                 // Update local list immediately
+                 setArchivedUsers(prev => prev.filter(u => u.id !== itemToDelete.id));
             }
         }
         setIsProcessing(false);
