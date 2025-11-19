@@ -3,12 +3,17 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Cafe, Amenity, Vibe, Spot, Event } from '../../types';
 import { cloudinaryService } from '../../services/cloudinaryService';
 import { geminiService } from '../../services/geminiService';
-import { AMENITIES, VIBES, SOUTH_SUMATRA_CITIES, DEFAULT_COVER_URL } from '../../constants';
+import { AMENITIES, VIBES, SOUTH_SUMATRA_CITIES } from '../../constants';
 import { PriceTier } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
 import ImageWithFallback from '../common/ImageWithFallback';
 import ConfirmationModal from '../common/ConfirmationModal';
-import { TrashIcon, PlusIcon, XMarkIcon, PhotoIcon, MapPinIcon } from '@heroicons/react/24/solid';
+import { 
+    TrashIcon, PlusIcon, XMarkIcon, PhotoIcon, MapPinIcon, ClockIcon, CurrencyDollarIcon,
+    IdentificationIcon, DocumentTextIcon, SparklesIcon, PhoneIcon, GlobeAltIcon,
+    MapIcon, BuildingOffice2Icon, WifiIcon, CameraIcon, LightBulbIcon,
+    CalendarDaysIcon, TicketIcon, StarIcon
+} from '@heroicons/react/24/solid';
 
 interface AdminCafeFormProps {
     cafe?: Cafe | null;
@@ -57,8 +62,11 @@ const FormGroup: React.FC<{ children: React.ReactNode, className?: string }> = (
     <div className={className}>{children}</div>
 );
 
-const FormLabel: React.FC<{ htmlFor: string, children: React.ReactNode }> = ({ htmlFor, children }) => (
-    <label htmlFor={htmlFor} className="font-semibold text-primary dark:text-gray-200 block mb-2 text-sm sm:text-base">{children}</label>
+const FormLabel: React.FC<{ htmlFor: string, children: React.ReactNode, icon?: React.ReactNode }> = ({ htmlFor, children, icon }) => (
+    <label htmlFor={htmlFor} className="font-semibold text-primary dark:text-gray-200 mb-2 text-sm sm:text-base flex items-center gap-2">
+        {icon && <span className="text-brand">{icon}</span>}
+        {children}
+    </label>
 );
 
 const FormHelperText: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -108,7 +116,8 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
     const [formData, setFormData] = useState({
         name: cafe?.name || '', description: cafe?.description || '', address: cafe?.address || '', city: cafe?.city || SOUTH_SUMATRA_CITIES[0], district: cafe?.district || '',
         phoneNumber: cafe?.phoneNumber || '', websiteUrl: cafe?.websiteUrl || '',
-        priceTier: cafe?.priceTier || PriceTier.STANDARD, logoUrl: cafe?.logoUrl || '', coverUrl: cafe?.coverUrl || DEFAULT_COVER_URL,
+        priceTier: cafe?.priceTier || PriceTier.STANDARD, logoUrl: cafe?.logoUrl || '', 
+        coverUrl: cafe?.coverUrl || '', // Default empty string (no placeholder)
         openingTime: initialHoursState.openingTime, closingTime: initialHoursState.closingTime, is24Hours: initialHoursState.is24Hours,
         lat: cafe?.coords?.lat?.toString() ?? '', lng: cafe?.coords?.lng?.toString() ?? '',
         isSponsored: cafe?.isSponsored || false, sponsoredUntil: getDisplayDate(cafe?.sponsoredUntil),
@@ -321,7 +330,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                 if (isNaN(lat) || isNaN(lng)) return { isValid: false, message: 'Koordinat Peta tidak valid (misal: -2.976, 104.745).' };
                 break;
             case 3:
-                if (!coverFile && !formData.coverUrl) return { isValid: false, message: 'Cover Image wajib diunggah.' };
+                if (!coverFile && !formData.coverUrl) return { isValid: false, message: 'Foto Cover wajib diunggah agar kafe terlihat menarik.' };
                 break;
             case 5:
                 if (isAdmin && formData.isSponsored) {
@@ -397,8 +406,11 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
         setNotification(null);
 
         try {
+            // Default logo is empty string if not present
             const logoUploadPromise = logoFile ? fileToBase64(logoFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(formData.logoUrl);
-            const coverUploadPromise = coverFile ? fileToBase64(coverFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(formData.coverUrl || DEFAULT_COVER_URL);
+            // Cover image is handled in validation, but here we use current if no file
+            const coverUploadPromise = coverFile ? fileToBase64(coverFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(formData.coverUrl);
+            
             const spotUploadPromises = formData.spots.map((spot, i) => spotFiles[i] ? fileToBase64(spotFiles[i]!).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(spot.photoUrl));
             const eventUploadPromises = !isAdmin ? formData.events.map((event, i) => eventFiles[i] ? fileToBase64(eventFiles[i]!).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(event.imageUrl || '')) : [];
             
@@ -462,8 +474,8 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
     
     const inputClass = "w-full p-3 border border-border bg-soft rounded-xl text-primary dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white focus:ring-2 focus:ring-brand focus:border-brand transition-colors duration-200";
     const fileInputClass = "w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand dark:file:bg-brand/20 dark:file:text-brand-light hover:file:bg-brand/20 dark:hover:file:bg-brand/30 transition-colors cursor-pointer";
-    const fieldsetStyles = "border border-border p-4 rounded-xl space-y-4";
-    const legendStyles = "font-semibold px-2 text-primary dark:text-gray-200";
+    const fieldsetStyles = "border border-border p-4 rounded-xl space-y-4 h-full flex flex-col"; 
+    const legendStyles = "font-semibold px-2 text-primary dark:text-gray-200 flex items-center gap-2";
     
     return (
         <>
@@ -480,39 +492,67 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                 </div>
                 
                 <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-4 sm:p-6 space-y-6 overflow-y-auto flex-grow">
-                    {step === 1 && ( <div className="space-y-6 animate-fade-in-up"> <h3 className="font-bold text-xl mb-2 dark:text-white">Langkah 1: Info & Vibe</h3> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Identitas Kafe</legend> <FormGroup><FormLabel htmlFor="name">Nama Cafe<span className="text-accent-pink ml-1">*</span></FormLabel><input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Contoh: Kopi Senja" className={inputClass} required /></FormGroup> <FormGroup> <FormLabel htmlFor="description">Deskripsi</FormLabel> <div className="relative"> <textarea id="description" name="description" value={formData.description} onChange={handleChange} placeholder="Jelaskan keunikan dari cafe ini..." className={`${inputClass} h-24`} /> </div> <FormHelperText>Jelaskan keunikan dari cafe ini.</FormHelperText> </FormGroup> <FormGroup><FormLabel htmlFor="vibes">Vibe Kafe</FormLabel><div className="flex flex-wrap gap-3">{VIBES.map(v => <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v)} className={`px-4 py-2 rounded-full border-2 font-semibold ${formData.vibes.some(fv => fv.id === v.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}>{v.name}</button>)}</div></FormGroup> </fieldset> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Kontak & Website</legend> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <FormGroup> <FormLabel htmlFor="phoneNumber">Nomor Telepon / WA</FormLabel> <input id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="Contoh: 08123456789" className={inputClass} /> </FormGroup> <FormGroup> <FormLabel htmlFor="websiteUrl">Website / Instagram Link</FormLabel> <input id="websiteUrl" name="websiteUrl" value={formData.websiteUrl} onChange={handleChange} placeholder="Contoh: https://instagram.com/kopisenja" className={inputClass} /> </FormGroup> </div> </fieldset> <fieldset className={fieldsetStyles}> <legend className={legendStyles}>Lokasi</legend> {!isEditMode && ( <div className="flex bg-soft dark:bg-gray-700/50 p-1 rounded-xl mb-4"> <button type="button" onClick={() => setLocationInputType('coords')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'coords' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Koordinat Peta</button> <button type="button" onClick={() => setLocationInputType('plusCode')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'plusCode' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Plus Code</button> </div> )} {locationInputType === 'coords' || isEditMode ? ( <FormGroup> <FormLabel htmlFor="coords">Koordinat Peta<span className="text-accent-pink ml-1">*</span></FormLabel> <input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /> <FormHelperText>Salin & tempel koordinat dari Google Maps. {isEditMode ? '' : 'Alamat akan terisi otomatis.'}</FormHelperText> </FormGroup> ) : ( <FormGroup> <FormLabel htmlFor="plusCode">Google Maps Plus Code<span className="text-accent-pink ml-1">*</span></FormLabel> <div className="relative"> <input id="plusCode" name="plusCode" type="text" value={plusCodeInput} onChange={handlePlusCodeInputChange} placeholder="Contoh: 6P5G2QG8+R8" className={`${inputClass} pr-10`} /> {isConvertingPlusCode && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>} </div> <FormHelperText>Masukkan Plus Code, maka koordinat & alamat akan terisi otomatis via AI.</FormHelperText> </FormGroup> )} <FormGroup><FormLabel htmlFor="address">Alamat {isEditMode ? '' : '(Otomatis)'}<span className="text-accent-pink ml-1">*</span></FormLabel><div className="relative"><input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Menunggu koordinat..." className={`${inputClass} pr-10`} required />{isGeocoding && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>}</div><FormHelperText>Pastikan alamat lengkap dan jelas.</FormHelperText></FormGroup> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <FormGroup> <FormLabel htmlFor="city">Kota / Kabupaten<span className="text-accent-pink ml-1">*</span></FormLabel> <select id="city" name="city" value={formData.city} onChange={handleChange} className={inputClass}> {SOUTH_SUMATRA_CITIES.map(city => (<option key={city} value={city}>{city}</option>))} </select> </FormGroup> <FormGroup> <FormLabel htmlFor="district">Kecamatan<span className="text-accent-pink ml-1">*</span></FormLabel> <input id="district" name="district" value={formData.district} onChange={handleChange} placeholder="Contoh: Ilir Barat I" className={inputClass} required /> </FormGroup> </div> </fieldset> </div>)}
+                    {step === 1 && ( 
+                        <div className="space-y-6 animate-fade-in-up"> 
+                            <h3 className="font-bold text-xl mb-2 dark:text-white">Langkah 1: Info & Vibe</h3> 
+                            <fieldset className={fieldsetStyles}> 
+                                <legend className={legendStyles}><IdentificationIcon className="h-5 w-5 text-brand"/> Identitas Kafe</legend> 
+                                <FormGroup><FormLabel htmlFor="name" icon={<IdentificationIcon className="h-4 w-4" />}>Nama Cafe<span className="text-accent-pink ml-1">*</span></FormLabel><input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Contoh: Kopi Senja" className={inputClass} required /></FormGroup> 
+                                <FormGroup> <FormLabel htmlFor="description" icon={<DocumentTextIcon className="h-4 w-4" />}>Deskripsi</FormLabel> <div className="relative"> <textarea id="description" name="description" value={formData.description} onChange={handleChange} placeholder="Jelaskan keunikan dari cafe ini..." className={`${inputClass} h-24`} /> </div> <FormHelperText>Jelaskan keunikan dari cafe ini.</FormHelperText> </FormGroup> 
+                                <FormGroup><FormLabel htmlFor="vibes" icon={<SparklesIcon className="h-4 w-4" />}>Vibe Kafe</FormLabel><div className="flex flex-wrap gap-3">{VIBES.map(v => <button type="button" key={v.id} onClick={() => handleMultiSelectChange('vibes', v)} className={`px-4 py-2 rounded-full border-2 font-semibold ${formData.vibes.some(fv => fv.id === v.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}>{v.name}</button>)}</div></FormGroup> 
+                            </fieldset> 
+                            <fieldset className={fieldsetStyles}> 
+                                <legend className={legendStyles}><PhoneIcon className="h-5 w-5 text-brand"/> Kontak & Website</legend> 
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> 
+                                    <FormGroup> <FormLabel htmlFor="phoneNumber" icon={<PhoneIcon className="h-4 w-4" />}>Nomor Telepon / WA</FormLabel> <input id="phoneNumber" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="Contoh: 08123456789" className={inputClass} /> </FormGroup> 
+                                    <FormGroup> <FormLabel htmlFor="websiteUrl" icon={<GlobeAltIcon className="h-4 w-4" />}>Website / Instagram Link</FormLabel> <input id="websiteUrl" name="websiteUrl" value={formData.websiteUrl} onChange={handleChange} placeholder="Contoh: https://instagram.com/kopisenja" className={inputClass} /> </FormGroup> 
+                                </div> 
+                            </fieldset> 
+                            <fieldset className={fieldsetStyles}> 
+                                <legend className={legendStyles}><MapIcon className="h-5 w-5 text-brand"/> Lokasi</legend> 
+                                {!isEditMode && ( <div className="flex bg-soft dark:bg-gray-700/50 p-1 rounded-xl mb-4"> <button type="button" onClick={() => setLocationInputType('coords')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'coords' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Koordinat Peta</button> <button type="button" onClick={() => setLocationInputType('plusCode')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'plusCode' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Plus Code</button> </div> )} 
+                                {locationInputType === 'coords' || isEditMode ? ( <FormGroup> <FormLabel htmlFor="coords" icon={<MapPinIcon className="h-4 w-4" />}>Koordinat Peta<span className="text-accent-pink ml-1">*</span></FormLabel> <input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /> <FormHelperText>Salin & tempel koordinat dari Google Maps. {isEditMode ? '' : 'Alamat akan terisi otomatis.'}</FormHelperText> </FormGroup> ) : ( <FormGroup> <FormLabel htmlFor="plusCode" icon={<MapPinIcon className="h-4 w-4" />}>Google Maps Plus Code<span className="text-accent-pink ml-1">*</span></FormLabel> <div className="relative"> <input id="plusCode" name="plusCode" type="text" value={plusCodeInput} onChange={handlePlusCodeInputChange} placeholder="Contoh: 6P5G2QG8+R8" className={`${inputClass} pr-10`} /> {isConvertingPlusCode && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>} </div> <FormHelperText>Masukkan Plus Code, maka koordinat & alamat akan terisi otomatis via AI.</FormHelperText> </FormGroup> )} 
+                                <FormGroup><FormLabel htmlFor="address" icon={<MapPinIcon className="h-4 w-4" />}>Alamat {isEditMode ? '' : '(Otomatis)'}<span className="text-accent-pink ml-1">*</span></FormLabel><div className="relative"><input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Menunggu koordinat..." className={`${inputClass} pr-10`} required />{isGeocoding && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>}</div><FormHelperText>Pastikan alamat lengkap dan jelas.</FormHelperText></FormGroup> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <FormGroup> <FormLabel htmlFor="city" icon={<BuildingOffice2Icon className="h-4 w-4" />}>Kota / Kabupaten<span className="text-accent-pink ml-1">*</span></FormLabel> <select id="city" name="city" value={formData.city} onChange={handleChange} className={inputClass}> {SOUTH_SUMATRA_CITIES.map(city => (<option key={city} value={city}>{city}</option>))} </select> </FormGroup> <FormGroup> <FormLabel htmlFor="district" icon={<BuildingOffice2Icon className="h-4 w-4" />}>Kecamatan<span className="text-accent-pink ml-1">*</span></FormLabel> <input id="district" name="district" value={formData.district} onChange={handleChange} placeholder="Contoh: Ilir Barat I" className={inputClass} required /> </FormGroup> </div> 
+                            </fieldset> 
+                        </div>
+                    )}
 
                     {step === 2 && (
-                         <div className="space-y-6 animate-fade-in-up">
+                         <div className="space-y-6 animate-fade-in-up h-full flex flex-col">
                             <h3 className="font-bold text-xl mb-2 dark:text-white">Langkah 2: Operasional</h3>
-                            <fieldset className={fieldsetStyles}>
-                                <legend className={legendStyles}>Jam Buka</legend>
-                                <div className="flex items-center mb-4">
-                                    <input id="is24Hours" name="is24Hours" type="checkbox" checked={formData.is24Hours} onChange={handleChange} className="w-5 h-5 rounded border-gray-300 text-brand focus:ring-brand mr-2" />
-                                    <label htmlFor="is24Hours" className="text-primary dark:text-gray-200">Buka 24 Jam</label>
-                                </div>
-                                {!formData.is24Hours && (
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormGroup><FormLabel htmlFor="openingTime">Buka</FormLabel><input type="time" id="openingTime" name="openingTime" value={formData.openingTime} onChange={handleChange} className={inputClass} /></FormGroup>
-                                        <FormGroup><FormLabel htmlFor="closingTime">Tutup</FormLabel><input type="time" id="closingTime" name="closingTime" value={formData.closingTime} onChange={handleChange} className={inputClass} /></FormGroup>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch h-full">
+                                <fieldset className={fieldsetStyles}>
+                                    <legend className={legendStyles}><ClockIcon className="h-5 w-5 text-brand"/> Jam Buka</legend>
+                                    <div className="flex flex-col justify-center h-full space-y-4">
+                                        <div className="flex items-center">
+                                            <input id="is24Hours" name="is24Hours" type="checkbox" checked={formData.is24Hours} onChange={handleChange} className="w-5 h-5 rounded border-gray-300 text-brand focus:ring-brand mr-2 cursor-pointer" />
+                                            <label htmlFor="is24Hours" className="text-primary dark:text-gray-200 cursor-pointer">Buka 24 Jam</label>
+                                        </div>
+                                        {!formData.is24Hours && (
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <FormGroup><FormLabel htmlFor="openingTime" icon={<ClockIcon className="h-4 w-4"/>}>Buka</FormLabel><input type="time" id="openingTime" name="openingTime" value={formData.openingTime} onChange={handleChange} className={inputClass} /></FormGroup>
+                                                <FormGroup><FormLabel htmlFor="closingTime" icon={<ClockIcon className="h-4 w-4"/>}>Tutup</FormLabel><input type="time" id="closingTime" name="closingTime" value={formData.closingTime} onChange={handleChange} className={inputClass} /></FormGroup>
+                                            </div>
+                                        )}
+                                        {/* Spacer to balance visual height if needed */}
+                                        <div className="flex-grow"></div>
                                     </div>
-                                )}
-                            </fieldset>
-                            <fieldset className={fieldsetStyles}>
-                                <legend className={legendStyles}>Kisaran Harga</legend>
-                                <FormGroup>
-                                    <FormLabel htmlFor="priceTier">Tingkat Harga</FormLabel>
-                                    <div className="flex gap-4">
-                                        {[1, 2, 3, 4].map(tier => (
-                                            <label key={tier} className={`flex-1 p-3 rounded-xl border-2 cursor-pointer text-center transition-all ${Number(formData.priceTier) === tier ? 'border-brand bg-brand/10 text-brand font-bold' : 'border-border bg-soft dark:bg-gray-700 text-muted hover:border-brand/50'}`}>
-                                                <input type="radio" name="priceTier" value={tier} checked={Number(formData.priceTier) === tier} onChange={handleChange} className="hidden" />
-                                                <div className="text-lg">{'$'.repeat(tier)}</div>
-                                                <div className="text-xs mt-1">{['Budget', 'Standar', 'Premium', 'Luxury'][tier - 1]}</div>
-                                            </label>
-                                        ))}
+                                </fieldset>
+                                <fieldset className={fieldsetStyles}>
+                                    <legend className={legendStyles}><CurrencyDollarIcon className="h-5 w-5 text-green-500"/> Kisaran Harga</legend>
+                                    <div className="flex flex-col justify-center h-full">
+                                        <div className="grid grid-cols-2 gap-3 flex-grow">
+                                            {[1, 2, 3, 4].map(tier => (
+                                                <label key={tier} className={`p-3 rounded-xl border-2 cursor-pointer text-center transition-all flex flex-col items-center justify-center ${Number(formData.priceTier) === tier ? 'border-brand bg-brand/10 text-brand font-bold shadow-inner' : 'border-border bg-soft dark:bg-gray-700 text-muted hover:border-brand/50'}`}>
+                                                    <input type="radio" name="priceTier" value={tier} checked={Number(formData.priceTier) === tier} onChange={handleChange} className="hidden" />
+                                                    <div className="text-lg leading-none mb-1">{'$'.repeat(tier)}</div>
+                                                    <div className="text-[10px] uppercase tracking-wide">{['Budget', 'Standar', 'Premium', 'Luxury'][tier - 1]}</div>
+                                                </label>
+                                            ))}
+                                        </div>
                                     </div>
-                                </FormGroup>
-                            </fieldset>
+                                </fieldset>
+                            </div>
                          </div>
                     )}
 
@@ -521,7 +561,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                              <h3 className="font-bold text-xl mb-2 dark:text-white">Langkah 3: Gambar & Fasilitas</h3>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                  <FormGroup>
-                                     <FormLabel htmlFor="logo">Logo Kafe</FormLabel>
+                                     <FormLabel htmlFor="logo" icon={<PhotoIcon className="h-4 w-4" />}>Logo Kafe</FormLabel>
                                      <div className="flex flex-col items-center p-4 border-2 border-dashed border-border rounded-xl bg-soft dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                                          {logoPreview || formData.logoUrl ? (
                                              <img src={logoPreview || formData.logoUrl} alt="Logo Preview" className="w-24 h-24 object-contain mb-2 rounded-lg" />
@@ -532,7 +572,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                                      </div>
                                  </FormGroup>
                                  <FormGroup>
-                                     <FormLabel htmlFor="cover">Foto Cover (Wajib)<span className="text-accent-pink ml-1">*</span></FormLabel>
+                                     <FormLabel htmlFor="cover" icon={<PhotoIcon className="h-4 w-4" />}>Foto Cover (Wajib)<span className="text-accent-pink ml-1">*</span></FormLabel>
                                      <div className="flex flex-col items-center p-4 border-2 border-dashed border-border rounded-xl bg-soft dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                                          {coverPreview || formData.coverUrl ? (
                                              <img src={coverPreview || formData.coverUrl} alt="Cover Preview" className="w-full h-32 object-cover mb-2 rounded-lg" />
@@ -544,7 +584,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                                  </FormGroup>
                              </div>
                              <fieldset className={fieldsetStyles}>
-                                 <legend className={legendStyles}>Fasilitas</legend>
+                                 <legend className={legendStyles}><WifiIcon className="h-5 w-5 text-brand"/> Fasilitas</legend>
                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                      {AMENITIES.map(amenity => (
                                          <button type="button" key={amenity.id} onClick={() => handleMultiSelectChange('amenities', amenity)} className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${formData.amenities.some(a => a.id === amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}>
@@ -580,8 +620,14 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                                                  </div>
                                                  <div className="space-y-3">
                                                      <input type="file" accept="image/*" onChange={(e) => handleSpotFileChange(index, e)} className="text-xs text-muted file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:bg-gray-200 file:text-gray-700 hover:file:bg-gray-300" />
-                                                     <input type="text" name="title" placeholder="Nama Spot (misal: Jendela Besar)" value={spot.title} onChange={(e) => handleSpotChange(index, e)} className={inputClass} />
-                                                     <input type="text" name="tip" placeholder="Tips Foto (opsional)" value={spot.tip} onChange={(e) => handleSpotChange(index, e)} className={inputClass} />
+                                                     <div className="flex items-center gap-2">
+                                                        <CameraIcon className="h-5 w-5 text-muted" />
+                                                        <input type="text" name="title" placeholder="Nama Spot (misal: Jendela Besar)" value={spot.title} onChange={(e) => handleSpotChange(index, e)} className={inputClass} />
+                                                     </div>
+                                                     <div className="flex items-center gap-2">
+                                                        <LightBulbIcon className="h-5 w-5 text-muted" />
+                                                        <input type="text" name="tip" placeholder="Tips Foto (opsional)" value={spot.tip} onChange={(e) => handleSpotChange(index, e)} className={inputClass} />
+                                                     </div>
                                                  </div>
                                              </div>
                                          </div>
@@ -597,7 +643,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                              
                              {isAdmin ? (
                                  <fieldset className={fieldsetStyles}>
-                                     <legend className={legendStyles}>Status Sponsor</legend>
+                                     <legend className={legendStyles}><StarIcon className="h-5 w-5 text-brand"/> Status Sponsor</legend>
                                      <div className="flex items-center mb-4">
                                          <input id="isSponsored" name="isSponsored" type="checkbox" checked={formData.isSponsored} onChange={handleChange} className="w-5 h-5 rounded border-gray-300 text-brand focus:ring-brand mr-2" />
                                          <label htmlFor="isSponsored" className="text-primary dark:text-gray-200 font-semibold">Aktifkan Sponsor</label>
@@ -605,11 +651,11 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                                      {formData.isSponsored && (
                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-down">
                                              <FormGroup>
-                                                 <FormLabel htmlFor="sponsoredUntil">Berlaku Hingga</FormLabel>
+                                                 <FormLabel htmlFor="sponsoredUntil" icon={<CalendarDaysIcon className="h-4 w-4"/>}>Berlaku Hingga</FormLabel>
                                                  <input type="date" id="sponsoredUntil" name="sponsoredUntil" value={formData.sponsoredUntil} onChange={handleChange} className={inputClass} required />
                                              </FormGroup>
                                              <FormGroup>
-                                                 <FormLabel htmlFor="sponsoredRank">Ranking (1-10)</FormLabel>
+                                                 <FormLabel htmlFor="sponsoredRank" icon={<StarIcon className="h-4 w-4"/>}>Ranking (1-10)</FormLabel>
                                                  <input type="number" id="sponsoredRank" name="sponsoredRank" value={formData.sponsoredRank} onChange={handleChange} className={inputClass} min="1" max="10" />
                                                  <FormHelperText>Semakin kecil angka, semakin tinggi posisi muncul.</FormHelperText>
                                              </FormGroup>
@@ -630,14 +676,14 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                                                  <div key={index} className="p-4 border border-border rounded-xl bg-soft dark:bg-gray-700/50 relative">
                                                      <button type="button" onClick={() => handleRemoveEvent(index)} className="absolute top-2 right-2 p-1 text-red-400 hover:bg-red-50 rounded-full"><TrashIcon className="h-5 w-5" /></button>
                                                      <div className="grid grid-cols-1 gap-3">
-                                                         <FormGroup><FormLabel htmlFor={`evt-name-${index}`}>Nama Event</FormLabel><input id={`evt-name-${index}`} name="name" value={event.name} onChange={(e) => handleEventChange(index, e)} className={inputClass} placeholder="Live Music, Promo Merdeka, dll" /></FormGroup>
+                                                         <FormGroup><FormLabel htmlFor={`evt-name-${index}`} icon={<TicketIcon className="h-4 w-4"/>}>Nama Event</FormLabel><input id={`evt-name-${index}`} name="name" value={event.name} onChange={(e) => handleEventChange(index, e)} className={inputClass} placeholder="Live Music, Promo Merdeka, dll" /></FormGroup>
                                                          <div className="grid grid-cols-2 gap-3">
-                                                             <FormGroup><FormLabel htmlFor={`evt-start-${index}`}>Mulai</FormLabel><input type="date" id={`evt-start-${index}`} name="start_date" value={getDisplayDate(event.start_date)} onChange={(e) => handleEventChange(index, e)} className={inputClass} /></FormGroup>
-                                                             <FormGroup><FormLabel htmlFor={`evt-end-${index}`}>Selesai</FormLabel><input type="date" id={`evt-end-${index}`} name="end_date" value={getDisplayDate(event.end_date)} onChange={(e) => handleEventChange(index, e)} className={inputClass} /></FormGroup>
+                                                             <FormGroup><FormLabel htmlFor={`evt-start-${index}`} icon={<CalendarDaysIcon className="h-4 w-4"/>}>Mulai</FormLabel><input type="date" id={`evt-start-${index}`} name="start_date" value={getDisplayDate(event.start_date)} onChange={(e) => handleEventChange(index, e)} className={inputClass} /></FormGroup>
+                                                             <FormGroup><FormLabel htmlFor={`evt-end-${index}`} icon={<CalendarDaysIcon className="h-4 w-4"/>}>Selesai</FormLabel><input type="date" id={`evt-end-${index}`} name="end_date" value={getDisplayDate(event.end_date)} onChange={(e) => handleEventChange(index, e)} className={inputClass} /></FormGroup>
                                                          </div>
-                                                          <FormGroup><FormLabel htmlFor={`evt-desc-${index}`}>Deskripsi Singkat</FormLabel><textarea id={`evt-desc-${index}`} name="description" value={event.description} onChange={(e) => handleEventChange(index, e)} className={`${inputClass} h-20`} /></FormGroup>
+                                                          <FormGroup><FormLabel htmlFor={`evt-desc-${index}`} icon={<DocumentTextIcon className="h-4 w-4"/>}>Deskripsi Singkat</FormLabel><textarea id={`evt-desc-${index}`} name="description" value={event.description} onChange={(e) => handleEventChange(index, e)} className={`${inputClass} h-20`} /></FormGroup>
                                                           <FormGroup>
-                                                             <FormLabel htmlFor={`evt-img-${index}`}>Poster Event (Opsional)</FormLabel>
+                                                             <FormLabel htmlFor={`evt-img-${index}`} icon={<PhotoIcon className="h-4 w-4"/>}>Poster Event (Opsional)</FormLabel>
                                                              <div className="flex items-center gap-3">
                                                                  <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded overflow-hidden flex-shrink-0">
                                                                      {eventPreviews[index] || event.imageUrl ? <img src={eventPreviews[index] || event.imageUrl} className="w-full h-full object-cover"/> : <PhotoIcon className="h-full w-full p-4 text-muted"/>}
@@ -688,4 +734,3 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
 };
 
 export default AdminCafeForm;
-    

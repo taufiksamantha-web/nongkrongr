@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { Cafe } from '../types';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
@@ -15,6 +16,55 @@ interface InteractiveMapProps {
   showDistanceControl?: boolean;
 }
 
+// Helper to decode OSRM polyline (Google Encoded Polyline Algorithm)
+const decodePolyline = (str: string, precision: number = 5) => {
+  let index = 0,
+      lat = 0,
+      lng = 0,
+      coordinates = [],
+      shift = 0,
+      result = 0,
+      byte = null,
+      latitude_change,
+      longitude_change,
+      factor = Math.pow(10, precision || 5);
+
+  // Coordinates have variable length when encoded, so just keep
+  // track of whether we've hit the end of the string. In each
+  // loop, a digit is check for a sign that we should continue.
+  while (index < str.length) {
+      byte = null;
+      shift = 0;
+      result = 0;
+
+      do {
+          byte = str.charCodeAt(index++) - 63;
+          result |= (byte & 0x1f) << shift;
+          shift += 5;
+      } while (byte >= 0x20);
+
+      latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+      shift = result = 0;
+
+      do {
+          byte = str.charCodeAt(index++) - 63;
+          result |= (byte & 0x1f) << shift;
+          shift += 5;
+      } while (byte >= 0x20);
+
+      longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+      lat += latitude_change;
+      lng += longitude_change;
+
+      coordinates.push([lat / factor, lng / factor]);
+  }
+
+  return coordinates;
+};
+
+
 const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'light', showUserLocation = false, showHeatmap = false, showDistanceControl = false }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -22,15 +72,153 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
   const markersRef = useRef<any[]>([]);
   const userMarkerRef = useRef<any>(null);
   const heatLayerRef = useRef<any>(null);
+  const routeLayerRef = useRef<any>(null); // To store the route polyline
   const watchIdRef = useRef<number | null>(null);
-  const locateControlRef = useRef<any>(null);
-  const routeLineRef = useRef<any>(null);
-  const userLatLngRef = useRef<any>(null);
+  const userLatLngRef = useRef<{lat: number, lng: number} | null>(null);
+
+  // Fetch Road Distance & Geometry from OSRM
+  const fetchRoadData = async (start: {lat: number, lng: number}, end: {lat: number, lng: number}) => {
+    try {
+      const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full`);
+      const data = await response.json();
+      if (data.routes && data.routes.length > 0) {
+        return {
+            distance: (data.routes[0].distance / 1000).toFixed(1), // km
+            geometry: data.routes[0].geometry // encoded polyline string
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to fetch OSRM data", error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     if (mapContainerRef.current && !mapRef.current && typeof L !== 'undefined') {
       const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([-2.976, 104.745], 13);
       L.control.zoom({ position: 'topright' }).addTo(map);
+      
+      // Add popup open listener for dynamic distance calculation (fallback/list view)
+      map.on('popupopen', async (e: any) => {
+        const popupNode = e.popup._contentNode;
+        const distanceEl = popupNode.querySelector('.distance-placeholder');
+        
+        if (distanceEl && userLatLngRef.current) {
+            const cafeLat = parseFloat(distanceEl.dataset.lat);
+            const cafeLng = parseFloat(distanceEl.dataset.lng);
+            
+            distanceEl.innerHTML = '<span class="animate-pulse">Menghitung jarak...</span>';
+            
+            const routeData = await fetchRoadData(userLatLngRef.current, { lat: cafeLat, lng: cafeLng });
+            
+            if (routeData) {
+                distanceEl.innerHTML = `<strong>${routeData.distance} km</strong> (Rute Jalan)`;
+            } else {
+                // Fallback to straight line if API fails
+                const straightDist = calculateDistance(userLatLngRef.current.lat, userLatLngRef.current.lng, cafeLat, cafeLng);
+                distanceEl.innerHTML = `<strong>${straightDist.toFixed(1)} km</strong> (Garis Lurus)`;
+            }
+        } else if (distanceEl && !userLatLngRef.current) {
+             distanceEl.innerHTML = '<span class="text-xs text-muted">Lokasi Anda tidak aktif</span>';
+        }
+      });
+
+      // Custom Control for Detail View - Explicit Button
+      if (showDistanceControl && cafe) {
+         const DistanceControl = L.Control.extend({
+            options: { position: 'bottomleft' },
+            onAdd: function() {
+               const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+               container.style.border = 'none';
+               container.style.backgroundColor = 'transparent';
+               
+               const btn = L.DomUtil.create('button', 'bg-white text-gray-800 font-bold py-2 px-4 rounded-xl shadow-lg flex items-center gap-2 hover:bg-gray-50 transition-all border border-gray-200', container);
+               btn.style.cursor = 'pointer';
+               btn.innerHTML = `
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 20px; height: 20px; color: #7C4DFF;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.159.69.159 1.006 0Z" />
+                  </svg>
+                  <span id="distance-label" style="font-size: 0.85rem;">Hitung Jarak Rute</span>
+               `;
+               
+               // Prevent map clicks propagating
+               L.DomEvent.disableClickPropagation(container);
+               L.DomEvent.disableScrollPropagation(container);
+
+               btn.onclick = async (e: any) => {
+                  e.preventDefault();
+                  const label = document.getElementById('distance-label');
+                  if(label) label.innerText = 'Mencari lokasi...';
+                  
+                  const updateDistance = async (lat: number, lng: number) => {
+                      if(label) label.innerText = 'Menghitung rute...';
+                      
+                      // Remove existing route if any
+                      if (routeLayerRef.current) {
+                          map.removeLayer(routeLayerRef.current);
+                          routeLayerRef.current = null;
+                      }
+
+                      const routeData = await fetchRoadData({lat, lng}, {lat: cafe.coords.lat, lng: cafe.coords.lng});
+                      
+                      if (routeData) {
+                          if(label) label.innerText = `${routeData.distance} km (Via Jalan)`;
+                          
+                          // Draw Route Line
+                          const coordinates = decodePolyline(routeData.geometry);
+                          routeLayerRef.current = L.polyline(coordinates, {
+                              color: '#7C4DFF', // Brand color
+                              weight: 5,
+                              opacity: 0.8,
+                              className: 'animate-route' // Add animation class
+                          }).addTo(map);
+                          
+                          // Zoom to fit the route
+                          map.fitBounds(routeLayerRef.current.getBounds(), { padding: [50, 50] });
+
+                      } else {
+                           // Fallback
+                           const straight = calculateDistance(lat, lng, cafe.coords.lat, cafe.coords.lng);
+                           if(label) label.innerText = `${straight.toFixed(1)} km (Garis Lurus)`;
+                      }
+                  }
+
+                  if (userLatLngRef.current) {
+                      updateDistance(userLatLngRef.current.lat, userLatLngRef.current.lng);
+                  } else {
+                      navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                              const { latitude, longitude } = pos.coords;
+                              userLatLngRef.current = { lat: latitude, lng: longitude };
+                              if (userMarkerRef.current) {
+                                  userMarkerRef.current.setLatLng([latitude, longitude]);
+                              } else {
+                                  const userIcon = L.divIcon({
+                                      className: 'user-location-marker',
+                                      html: '<div class="pulse"></div><div class="dot"></div>',
+                                      iconSize: [24, 24],
+                                      iconAnchor: [12, 12]
+                                  });
+                                  userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+                              }
+                              updateDistance(latitude, longitude);
+                          },
+                          (err) => {
+                              console.error(err);
+                              if(label) label.innerText = 'Gagal akses lokasi';
+                          },
+                          { enableHighAccuracy: true, timeout: 10000 }
+                      );
+                  }
+               };
+               
+               return container;
+            }
+         });
+         map.addControl(new DistanceControl());
+      }
+
       mapRef.current = map;
     }
     return () => {
@@ -40,7 +228,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
         mapRef.current = null;
       }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const map = mapRef.current;
@@ -60,17 +248,51 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+
+    // Handle User Location
+    if (showUserLocation) {
+        if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
+        
+        watchIdRef.current = navigator.geolocation.watchPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                userLatLngRef.current = { lat: latitude, lng: longitude };
+                
+                if (userMarkerRef.current) {
+                    userMarkerRef.current.setLatLng([latitude, longitude]);
+                } else {
+                    const userIcon = L.divIcon({
+                        className: 'user-location-marker',
+                        html: '<div class="pulse"></div><div class="dot"></div>',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    });
+                    userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+                    userMarkerRef.current.bindPopup("Lokasi Anda", { closeButton: false });
+                }
+            },
+            (err) => console.warn("Geolocation error", err),
+            { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        );
+    } else {
+        if (userMarkerRef.current) {
+            userMarkerRef.current.remove();
+            userMarkerRef.current = null;
+        }
+        userLatLngRef.current = null;
+    }
     
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
     const cafesToDisplay = cafe ? [cafe] : cafes || [];
-    if (cafesToDisplay.length === 0 && !showUserLocation) {
-        map.setView([-2.976, 104.745], 13);
-        return;
+    if (cafesToDisplay.length === 0 && !userLatLngRef.current) {
+        if (!map.getBounds().isValid()) map.setView([-2.976, 104.745], 13);
     }
 
     const bounds = L.latLngBounds();
+    if (userLatLngRef.current) bounds.extend([userLatLngRef.current.lat, userLatLngRef.current.lng]);
+
     cafesToDisplay.forEach(c => {
       if (c.coords && typeof c.coords.lat === 'number' && typeof c.coords.lng === 'number') {
         const isSingleView = !!cafe;
@@ -82,8 +304,21 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
         
         if (!isSingleView) {
             const coverUrl = c.coverUrl || DEFAULT_COVER_URL;
-            const popupContent = `<div class="font-sans" style="width: 200px;"><img src="${optimizeCloudinaryImage(coverUrl, 200, 100)}" alt="${c.name}" class="w-full h-24 object-cover rounded-lg mb-2" /><h3 class="font-bold font-jakarta text-base text-gray-800">${c.name}</h3><p class="text-gray-600 text-sm mb-2">${c.district}</p><a href="/#/cafe/${c.slug}" class="text-brand font-semibold text-sm hover:underline">Lihat Detail &rarr;</a></div>`;
-            marker.bindPopup(popupContent, { className: 'glass-popup' });
+            const popupContent = `
+                <div class="font-sans" style="width: 220px;">
+                    <img src="${optimizeCloudinaryImage(coverUrl, 220, 120)}" alt="${c.name}" class="w-full h-28 object-cover rounded-lg mb-2" />
+                    <h3 class="font-bold font-jakarta text-base text-gray-800 leading-tight">${c.name}</h3>
+                    <p class="text-gray-600 text-xs mb-1">${c.district}</p>
+                    <div class="text-sm text-blue-600 mb-2 distance-placeholder" data-lat="${c.coords.lat}" data-lng="${c.coords.lng}">
+                        Klik untuk lihat jarak
+                    </div>
+                    <a href="/#/cafe/${c.slug}" class="block text-center bg-brand text-white text-xs font-bold py-1.5 rounded hover:bg-brand/90 transition-colors no-underline">Lihat Detail</a>
+                </div>
+            `;
+            marker.bindPopup(popupContent, { className: 'glass-popup', minWidth: 220 });
+        } else if (showDistanceControl) {
+            // In single view, bind a simple popup for name
+            marker.bindPopup(`<b class="font-sans">${c.name}</b>`, { className: 'glass-popup' });
         }
         
         markersRef.current.push(marker);
@@ -93,10 +328,10 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
 
     if (bounds.isValid() && !showDistanceControl) {
         const padding = cafe ? [70, 70] : [50, 50];
-        const maxZoom = cafe ? 16 : 15;
+        const maxZoom = cafe ? 16 : 14;
         map.fitBounds(bounds, { padding, maxZoom, duration: 0.5 });
     }
-  }, [cafe, cafes, showDistanceControl]);
+  }, [cafe, cafes, showDistanceControl, showUserLocation, theme]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -106,7 +341,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
         markersRef.current.forEach(m => m.setOpacity(0));
         if (!heatLayerRef.current) {
             const points = cafes
-                .map(c => c.coords ? [c.coords.lat, c.coords.lng, 0.6] : null) // lat, lng, intensity
+                .map(c => c.coords ? [c.coords.lat, c.coords.lng, 0.6] : null)
                 .filter((p): p is [number, number, number] => p !== null);
             heatLayerRef.current = L.heatLayer(points, { 
                 radius: 25, 
@@ -118,114 +353,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
     } else {
         markersRef.current.forEach(m => m.setOpacity(1));
         if (heatLayerRef.current) {
-            map.removeLayer(heatLayerRef.current);
+            heatLayerRef.current.remove();
             heatLayerRef.current = null;
         }
     }
   }, [showHeatmap, cafes]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || (!showUserLocation && !showDistanceControl)) return;
-
-    const userLocationIcon = L.divIcon({ html: `<div class="user-location-marker"><div class="pulse"></div><div class="dot"></div></div>`, className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
-    
-    if (showUserLocation) {
-        let isFirstLocationUpdate = true;
-        
-        watchIdRef.current = navigator.geolocation.watchPosition(
-            (position) => {
-                const userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
-                userLatLngRef.current = userLatLng;
-                if (userMarkerRef.current) {
-                    userMarkerRef.current.setLatLng(userLatLng);
-                } else {
-                    userMarkerRef.current = L.marker(userLatLng, { icon: userLocationIcon, zIndexOffset: 1000 }).addTo(map).bindPopup("<b>Posisi Kamu</b>");
-                }
-                if (isFirstLocationUpdate && (cafes || []).length === 0) {
-                    map.setView(userLatLng, 15, { animate: true, duration: 0.5 });
-                }
-                isFirstLocationUpdate = false;
-            },
-            (error) => console.warn("Geolocation watch error:", error.message),
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-        );
-
-        if (locateControlRef.current) map.removeControl(locateControlRef.current);
-        const FindMeControl = L.Control.extend({
-            onAdd: function(map: any) {
-                const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control leaflet-control-custom');
-                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M21.75 12h-2.25m-1.666 5.834L16.5 16.5M4.5 12H2.25m1.666-5.834L5.25 7.5M12 21.75V19.5" /></svg>`;
-                btn.title = 'Temukan Lokasi Saya';
-                L.DomEvent.on(btn, 'click', (e: any) => {
-                    L.DomEvent.stop(e);
-                    if (userLatLngRef.current) map.flyTo(userLatLngRef.current, 16);
-                    else alert('Lokasi belum ditemukan. Tunggu sebentar atau pastikan izin lokasi aktif.');
-                });
-                return btn;
-            }
-        });
-        locateControlRef.current = new FindMeControl({ position: 'topright' });
-        map.addControl(locateControlRef.current);
-    }
-    
-    if (showDistanceControl && cafe) {
-        if (locateControlRef.current) map.removeControl(locateControlRef.current);
-        const DistanceControl = L.Control.extend({
-            onAdd: function(map: any) {
-                const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control leaflet-control-custom');
-                const defaultIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width: 20px; height: 20px;"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clip-rule="evenodd" /></svg>`;
-                btn.innerHTML = defaultIcon;
-                btn.title = 'Hitung Jarak Dari Lokasi Saya';
-                
-                L.DomEvent.on(btn, 'click', (e: any) => {
-                    L.DomEvent.stop(e);
-                    btn.innerHTML = `<div style="width:18px;height:18px;box-sizing:border-box" class="animate-spin rounded-full border-2 border-dashed border-gray-500"></div>`;
-                    (btn as HTMLButtonElement).disabled = true;
-
-                    navigator.geolocation.getCurrentPosition(
-                      (position) => {
-                          const userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
-                          const cafeLatLng = L.latLng(cafe.coords.lat, cafe.coords.lng);
-                          
-                          if (!userMarkerRef.current) {
-                            userMarkerRef.current = L.marker(userLatLng, { icon: userLocationIcon, zIndexOffset: 1000 }).addTo(map);
-                          } else {
-                            userMarkerRef.current.setLatLng(userLatLng);
-                          }
-                          
-                          if (routeLineRef.current) map.removeLayer(routeLineRef.current);
-                          routeLineRef.current = L.polyline([userLatLng, cafeLatLng], { color: '#7C4DFF', weight: 4, dashArray: '5, 10' }).addTo(map);
-
-                          const distance = calculateDistance(userLatLng.lat, userLatLng.lng, cafeLatLng.lat, cafeLatLng.lng);
-                          userMarkerRef.current.bindPopup(`<b>Posisi Kamu</b><br>Jarak: ${distance.toFixed(2)} km`).openPopup();
-
-                          map.fitBounds(L.latLngBounds(userLatLng, cafeLatLng), { padding: [50, 50] });
-
-                          btn.innerHTML = defaultIcon;
-                          (btn as HTMLButtonElement).disabled = false;
-                      },
-                      (error) => {
-                          alert(`Gagal mendapatkan lokasi: ${error.message}`);
-                          btn.innerHTML = defaultIcon;
-                          (btn as HTMLButtonElement).disabled = false;
-                      }
-                    );
-                });
-                return btn;
-            }
-        });
-        locateControlRef.current = new DistanceControl({ position: 'topright' });
-        map.addControl(locateControlRef.current);
-    }
-
-    return () => {
-        if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
-        if (userMarkerRef.current) { userMarkerRef.current.remove(); userMarkerRef.current = null; }
-        if (locateControlRef.current) { map?.removeControl(locateControlRef.current); locateControlRef.current = null; }
-        if (routeLineRef.current) { map?.removeLayer(routeLineRef.current); routeLineRef.current = null; }
-    };
-  }, [showUserLocation, showDistanceControl, cafe, cafes]);
 
   return <div ref={mapContainerRef} className="w-full h-full" />;
 };
