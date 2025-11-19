@@ -12,7 +12,7 @@ import { MagnifyingGlassIcon, ChevronDownIcon, AdjustmentsHorizontalIcon, XMarkI
 import { MapPinIcon } from '@heroicons/react/24/outline';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
 import InteractiveMap from '../components/InteractiveMap';
-import { calculateDistance } from '../utils/geolocation';
+import { calculateDistance, getDrivingDistance } from '../utils/geolocation';
 import { checkIfOpen, checkIfOpenLate } from '../utils/timeUtils';
 import SkeletonCard from '../components/SkeletonCard';
 
@@ -66,12 +66,12 @@ const FilterPanelContent: React.FC<{
                     {isLocating ? (
                         <>
                             <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-current"></div>
-                            Mencari Lokasi...
+                            Hitung Rute...
                         </>
                     ) : (
                         <>
                             <MapPinIcon className="h-5 w-5" />
-                            {sortBy === 'distance' ? 'Reset Urutan' : 'Urutkan Terdekat'}
+                            {sortBy === 'distance' ? 'Reset Urutan' : 'Urutkan Terdekat (Rute)'}
                         </>
                     )}
                 </button>
@@ -243,6 +243,7 @@ const ExplorePage: React.FC = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'default' | 'distance'>('default');
   const [isLocating, setIsLocating] = useState(false);
+  const [drivingDistances, setDrivingDistances] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     const fetchTags = async () => {
@@ -267,6 +268,7 @@ const ExplorePage: React.FC = () => {
     setFilters(prev => ({ ...prev, [key]: value }));
     if (sortBy === 'distance') {
         setSortBy('default');
+        setDrivingDistances(new Map());
     }
   };
 
@@ -278,15 +280,43 @@ const ExplorePage: React.FC = () => {
     if (sortBy === 'distance') {
       setSortBy('default');
       setUserLocation(null);
+      setDrivingDistances(new Map());
       return;
     }
 
     setIsLocating(true);
     setLocationError(null);
+
     navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
             const { latitude, longitude } = position.coords;
-            setUserLocation({ lat: latitude, lng: longitude });
+            const userLoc = { lat: latitude, lng: longitude };
+            setUserLocation(userLoc);
+
+            // Filter cafes first to avoid unnecessary calculations
+            const baseCafes = cafes.filter(c => c.status === 'approved');
+            const processedCafes = baseCafes.filter(cafe => {
+                 if (filters.city !== 'all' && cafe.city !== filters.city) return false;
+                 return true;
+            });
+
+            const newDistances = new Map<string, number>();
+
+            // Calculate driving distances in parallel (batching could be improved for large sets)
+            await Promise.all(processedCafes.map(async (cafe) => {
+                if (cafe.coords) {
+                    const dist = await getDrivingDistance(userLoc, cafe.coords);
+                    if (dist !== null) {
+                        newDistances.set(cafe.id, dist);
+                    } else {
+                        // Fallback to straight line if API fails
+                        const straightDist = calculateDistance(userLoc.lat, userLoc.lng, cafe.coords.lat, cafe.coords.lng);
+                        newDistances.set(cafe.id, straightDist);
+                    }
+                }
+            }));
+
+            setDrivingDistances(newDistances);
             setSortBy('distance');
             setIsLocating(false);
         },
@@ -326,7 +356,21 @@ const ExplorePage: React.FC = () => {
         processedCafes = baseCafes.filter(cafe => favoriteSet.has(cafe.id));
     } else {
         processedCafes = baseCafes.filter(cafe => {
-            if (filters.search && !cafe.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+            // Smart Search Logic
+            if (filters.search) {
+                const term = filters.search.toLowerCase();
+                const matchesSearch = 
+                    cafe.name.toLowerCase().includes(term) ||
+                    cafe.description?.toLowerCase().includes(term) ||
+                    cafe.city?.toLowerCase().includes(term) ||
+                    cafe.district?.toLowerCase().includes(term) ||
+                    cafe.vibes.some(v => v.name.toLowerCase().includes(term)) ||
+                    cafe.amenities.some(a => a.name.toLowerCase().includes(term)) ||
+                    cafe.tags.some(t => t.name.toLowerCase().includes(term));
+
+                if (!matchesSearch) return false;
+            }
+
             if (filters.city !== 'all' && cafe.city !== filters.city) return false;
             if (filters.vibes.length > 0 && !filters.vibes.every(v => cafe.vibes.some(cv => cv.id === v))) return false;
             if (filters.amenities.length > 0 && !filters.amenities.every(a => cafe.amenities.some(ca => ca.id === a))) return false;
@@ -344,11 +388,14 @@ const ExplorePage: React.FC = () => {
 
     if (sortBy === 'distance' && userLocation) {
         return processedCafes
-            .map(cafe => ({
-                ...cafe,
-                distance: calculateDistance(userLocation.lat, userLocation.lng, cafe.coords.lat, cafe.coords.lng),
-            }))
-            .sort((a, b) => a.distance! - b.distance!);
+            .map(cafe => {
+                // Use calculated driving distance if available, otherwise fallback to straight line on the fly
+                const dist = drivingDistances.has(cafe.id) 
+                    ? drivingDistances.get(cafe.id) 
+                    : calculateDistance(userLocation.lat, userLocation.lng, cafe.coords.lat, cafe.coords.lng);
+                return { ...cafe, distance: dist };
+            })
+            .sort((a, b) => (a.distance || 99999) - (b.distance || 99999));
     }
     
     if (sortParam === 'trending') {
@@ -366,7 +413,7 @@ const ExplorePage: React.FC = () => {
         const bReviewCount = b.reviews?.filter(r => r.status === 'approved').length || 0;
         return bReviewCount - aReviewCount;
     });
-  }, [cafes, filters, sortBy, userLocation, isFavoritesView, favoriteIds, sortParam]);
+  }, [cafes, filters, sortBy, userLocation, isFavoritesView, favoriteIds, sortParam, drivingDistances]);
 
   // Infinite Scroll Trigger
   useEffect(() => {
@@ -445,7 +492,7 @@ const ExplorePage: React.FC = () => {
             <MagnifyingGlassIcon className="h-6 w-6 text-muted absolute left-4 top-1/2 -translate-y-1/2" />
             <input
                 type="text"
-                placeholder="Cari berdasarkan nama cafe..."
+                placeholder="Cari nama, lokasi, vibes, fasilitas, atau tag..."
                 value={filters.search}
                 onChange={e => handleFilterChange('search', e.target.value)}
                 className="w-full p-4 pl-12 text-lg rounded-2xl border-2 border-border focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm bg-card dark:bg-gray-800 text-primary dark:text-white dark:placeholder-muted disabled:opacity-50"

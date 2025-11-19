@@ -186,7 +186,7 @@ const DetailPage: React.FC = () => {
 
 
     return (
-        <div className="container mx-auto px-6 py-8">
+        <div className="container mx-auto px-4 sm:px-6 py-8">
             <button
                 onClick={() => navigate(-1)}
                 className="mb-6 inline-flex items-center gap-2 text-muted hover:text-brand dark:hover:text-brand-light font-semibold transition-colors duration-300 group"
@@ -202,7 +202,7 @@ const DetailPage: React.FC = () => {
                     src={cafe.coverUrl} 
                     defaultSrc={DEFAULT_COVER_URL}
                     alt={cafe.name} 
-                    className="w-full h-64 md:h-96 object-cover rounded-4xl mb-8 border border-border"
+                    className="w-full h-56 md:h-96 object-cover rounded-4xl mb-8 border border-border shadow-sm"
                     width={1280}
                     height={768}
                 />
@@ -225,85 +225,103 @@ const DetailPage: React.FC = () => {
 
             <div className="grid lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
-                    {/* Header Cafe */}
+                    {/* Header Cafe Improved */}
                     <div className="bg-card border border-border p-6 md:p-8 rounded-3xl shadow-sm relative">
-                        <div className="flex flex-row items-start gap-5"> 
+                        <div className="flex flex-col sm:flex-row items-start gap-5"> 
                              {/* Logo */}
                              <div className="flex-shrink-0">
                                 {cafe.logoUrl ? (
                                     <ImageWithFallback 
                                         src={cafe.logoUrl} 
                                         alt={`${cafe.name} logo`} 
-                                        className="w-20 h-20 md:w-24 md:h-24 rounded-3xl object-contain shadow-md bg-soft p-1 border border-border"
-                                        width={100}
-                                        height={100}
+                                        className="w-20 h-20 md:w-28 md:h-28 rounded-3xl object-contain shadow-md bg-soft p-1 border border-border"
+                                        width={112}
+                                        height={112}
                                     />
                                 ) : (
-                                    <div className="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-3xl shadow-md border border-border">
+                                    <div className="w-20 h-20 md:w-28 md:h-28 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-3xl shadow-md border border-border">
                                         <BuildingStorefrontIcon className="h-10 w-10 text-muted" />
                                     </div>
                                 )}
                              </div>
 
-                             {/* Name & Price */}
-                             <div className="flex flex-col justify-center min-h-[5rem] md:min-h-[6rem] flex-grow min-w-0">
-                                <h1 className="text-2xl md:text-4xl font-extrabold font-jakarta leading-tight text-primary dark:text-white break-words">
-                                    {cafe.name}
-                                </h1>
-                                <div className="flex items-center mt-2">
-                                    {[1, 2, 3, 4].map((tier) => (
-                                        <CurrencyDollarIcon
-                                            key={tier}
-                                            aria-hidden="true"
-                                            className={`h-5 w-5 ${
-                                                tier <= cafe.priceTier ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600'
-                                            }`}
-                                        />
-                                    ))}
+                             {/* Name & Badges */}
+                             <div className="flex-grow w-full">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                                     <h1 className="text-3xl md:text-4xl font-extrabold font-jakarta leading-tight text-primary dark:text-white break-words">
+                                        {cafe.name}
+                                    </h1>
+                                    <div className="flex items-center flex-shrink-0 bg-soft dark:bg-gray-700/50 px-3 py-1.5 rounded-xl border border-border">
+                                        {[1, 2, 3, 4].map((tier) => (
+                                            <CurrencyDollarIcon
+                                                key={tier}
+                                                aria-hidden="true"
+                                                className={`h-5 w-5 ${
+                                                    tier <= cafe.priceTier ? 'text-brand' : 'text-gray-300 dark:text-gray-600'
+                                                }`}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div className="flex flex-wrap gap-2 mt-4">
+                                    {cafe.vibes.map(v => <span key={v.id} className="bg-brand/10 text-brand px-3 py-1 rounded-full text-sm font-semibold dark:bg-brand/20 border border-brand/20">{v.name}</span>)}
+                                    {cafe.amenities.map(a => <span key={a.id} className="bg-gray-100 dark:bg-gray-700/50 px-3 py-1 rounded-full text-sm text-muted border border-border">{a.icon} {a.name}</span>)}
                                 </div>
                              </div>
                         </div>
 
-                        <div className="flex flex-col gap-2 mt-6 text-muted">
-                            <div className="flex items-start">
-                                <MapPinIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0 mt-0.5" />
-                                <span>{cafe.address}</span>
-                            </div>
-                            <div className="flex items-center">
-                                 <ClockIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
-                                <span>Buka: {cafe.openingHours}</span>
-                            </div>
-                            {cafe.phoneNumber && (
-                                <div className="flex items-center">
-                                    <PhoneIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
-                                    <a href={`tel:${cafe.phoneNumber}`} className="hover:text-brand hover:underline transition-colors">{cafe.phoneNumber}</a>
+                        {/* Responsive Info Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-6 border-t border-border">
+                            <div className="space-y-4">
+                                <div className="flex items-start p-3 rounded-xl bg-soft dark:bg-gray-700/30">
+                                    <MapPinIcon className="h-6 w-6 mr-3 text-brand flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="font-bold text-sm text-primary dark:text-white mb-0.5">Alamat</p>
+                                        <p className="text-muted text-sm">{cafe.address}, {cafe.city}</p>
+                                    </div>
                                 </div>
-                            )}
-                            {cafe.websiteUrl && (
-                                <div className="flex items-center">
-                                    <GlobeAltIcon className="h-5 w-5 mr-2 text-brand flex-shrink-0" />
-                                    <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand hover:underline transition-colors break-all">
-                                        {cafe.websiteUrl.replace(/^https?:\/\//, '')}
-                                    </a>
+                                <div className="flex items-start p-3 rounded-xl bg-soft dark:bg-gray-700/30">
+                                    <ClockIcon className="h-6 w-6 mr-3 text-brand flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="font-bold text-sm text-primary dark:text-white mb-0.5">Jam Operasional</p>
+                                        <p className="text-muted text-sm">{cafe.openingHours}</p>
+                                        {isClosed && <p className="text-xs text-amber-600 font-bold mt-1">⚠️ Mungkin Tutup</p>}
+                                    </div>
                                 </div>
-                            )}
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex items-start p-3 rounded-xl bg-soft dark:bg-gray-700/30">
+                                    <PhoneIcon className="h-6 w-6 mr-3 text-brand flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="font-bold text-sm text-primary dark:text-white mb-0.5">Kontak</p>
+                                        {cafe.phoneNumber ? (
+                                            <a href={`tel:${cafe.phoneNumber}`} className="text-muted text-sm hover:text-brand hover:underline transition-colors">{cafe.phoneNumber}</a>
+                                        ) : <p className="text-muted text-sm italic">Tidak tersedia</p>}
+                                    </div>
+                                </div>
+                                <div className="flex items-start p-3 rounded-xl bg-soft dark:bg-gray-700/30">
+                                    <GlobeAltIcon className="h-6 w-6 mr-3 text-brand flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-sm text-primary dark:text-white mb-0.5">Website / Sosmed</p>
+                                        {cafe.websiteUrl ? (
+                                            <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-muted text-sm hover:text-brand hover:underline transition-colors block truncate">
+                                                {cafe.websiteUrl.replace(/^https?:\/\//, '')}
+                                            </a>
+                                        ) : <p className="text-muted text-sm italic">Tidak tersedia</p>}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        {isClosed && (
-                            <div className="mt-4 flex items-center gap-3 bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 p-3 rounded-xl text-sm font-semibold">
-                                <ExclamationTriangleIcon className="h-6 w-6 flex-shrink-0" />
-                                <span>Kafe mungkin sudah tutup saat ini.</span>
+                        {cafe.description && (
+                            <div className="mt-6 pt-6 border-t border-border">
+                                <h3 className="font-bold text-lg mb-2 font-jakarta">Tentang {cafe.name}</h3>
+                                <p className="text-primary dark:text-gray-300 leading-relaxed">
+                                    {cafe.description}
+                                </p>
                             </div>
                         )}
-                        {cafe.description && (
-                            <p className="my-6 text-primary dark:text-gray-300 italic text-lg border-l-4 border-brand/50 pl-4">
-                                {cafe.description}
-                            </p>
-                        )}
-                        <div className="flex flex-wrap gap-2 mt-4">
-                            {cafe.vibes.map(v => <span key={v.id} className="bg-brand/10 text-brand px-3 py-1 rounded-full text-sm font-semibold dark:bg-brand/20">{v.name}</span>)}
-                            {cafe.amenities.map(a => <span key={a.id} className="bg-gray-100 dark:bg-gray-700/50 px-3 py-1 rounded-full text-sm">{a.icon} {a.name}</span>)}
-                        </div>
                     </div>
                     
                     {/* Tags */}
@@ -319,12 +337,12 @@ const DetailPage: React.FC = () => {
 
                     {/* Interactive Map & Action Button */}
                     <div className="space-y-4">
-                        <div className="relative z-10 rounded-3xl shadow-md overflow-hidden h-96 border border-border">
-                            <InteractiveMap cafe={cafe} theme={theme} showDistanceControl={true} />
+                        <div className="relative z-10 rounded-3xl shadow-md overflow-hidden h-72 md:h-96 border border-border">
+                            <InteractiveMap cafe={cafe} theme={theme} showDistanceControl={true} showUserLocation={true} />
                         </div>
-                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full text-center bg-green-500 text-white font-bold py-3 rounded-2xl hover:bg-green-600 transition-all">
+                        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full text-center bg-green-600 text-white font-bold py-4 rounded-2xl hover:bg-green-700 transition-all shadow-lg shadow-green-600/20">
                             <MapPinIcon className="h-5 w-5" />
-                            Buka di Google Maps
+                            Buka Navigasi Google Maps
                         </a>
                     </div>
                     
@@ -387,7 +405,7 @@ const DetailPage: React.FC = () => {
                                     key={review.id} 
                                     review={{...review, cafeName: cafe.name, cafeSlug: cafe.slug}} 
                                 />
-                            )) : <p className="text-muted">Belum ada review untuk cafe ini.</p>}
+                            )) : <div className="p-6 bg-soft rounded-2xl text-center text-muted">Belum ada review. Jadilah yang pertama!</div>}
                          </div>
                          
                          {visibleReviewsCount < approvedReviews.length && (

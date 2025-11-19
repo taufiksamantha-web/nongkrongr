@@ -59,8 +59,31 @@ export const userService = {
   },
 
   async deleteUserPermanent(userId: string): Promise<{ error: any }> {
-    // Warning: This relies on ON DELETE CASCADE in the database to remove related data
-    // (likes, reviews, etc.) linked to this user.
+    // 1. Attempt to use a Secure RPC function (best practice for deleting from auth.users)
+    // Note: This function 'delete_user' must be created in your Supabase SQL Editor.
+    /* 
+       SQL:
+       create or replace function delete_user()
+       returns void as $$
+       begin
+         delete from auth.users where id = auth.uid(); -- Or pass ID as argument for admin
+       end;
+       $$ language plpgsql security definer;
+    */
+    
+    // Try to call a hypothetical admin deletion function first
+    const { error: rpcError } = await supabase.rpc('delete_user_by_id', { user_id: userId });
+    
+    if (!rpcError) {
+        return { error: null };
+    }
+
+    // 2. Fallback: Delete from 'profiles' table directly.
+    // If ON DELETE CASCADE is set up in the DB, this handles app data.
+    // Deleting from 'profiles' effectively removes the user from the app logic, 
+    // even if the auth record remains orphaned in Supabase Auth (until admin cleans it).
+    console.warn("RPC delete failed or not found, falling back to profiles deletion:", rpcError.message);
+
     const { error } = await supabase
         .from('profiles')
         .delete()

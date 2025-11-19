@@ -277,7 +277,18 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     if (searchQuery.trim().length > 1) {
       const approvedCafes = cafes.filter(c => c.status === 'approved');
-      const filtered = approvedCafes.filter(cafe => cafe.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
+      const term = searchQuery.trim().toLowerCase();
+      
+      const filtered = approvedCafes.filter(cafe => 
+          cafe.name.toLowerCase().includes(term) ||
+          cafe.description?.toLowerCase().includes(term) ||
+          cafe.city?.toLowerCase().includes(term) ||
+          cafe.district?.toLowerCase().includes(term) ||
+          cafe.vibes.some(v => v.name.toLowerCase().includes(term)) ||
+          cafe.amenities.some(a => a.name.toLowerCase().includes(term)) ||
+          cafe.tags.some(t => t.name.toLowerCase().includes(term))
+      );
+      
       setSearchResults(filtered);
       setIsResultsVisible(true);
     } else {

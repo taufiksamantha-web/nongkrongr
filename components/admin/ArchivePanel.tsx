@@ -87,7 +87,10 @@ const ArchivePanel: React.FC = () => {
                 setNotification({ message: `Gagal menghapus permanen: ${error.message}`, type: 'error' });
             } else {
                 setNotification({ message: `Kafe "${itemToDelete.name}" dihapus permanen.`, type: 'success' });
+                // Force update UI list immediately
                 setArchivedCafesList(prev => prev.filter(c => c.id !== itemToDelete.id));
+                // Sync context
+                fetchCafes(); 
             }
         } else {
             const { error } = await userService.deleteUserPermanent(itemToDelete.id);
@@ -95,6 +98,7 @@ const ArchivePanel: React.FC = () => {
                  setNotification({ message: `Gagal menghapus permanen: ${error.message}`, type: 'error' });
             } else {
                  setNotification({ message: `User "${itemToDelete.name}" dihapus permanen.`, type: 'success' });
+                 // Force update UI list immediately
                  setArchivedUsers(prev => prev.filter(u => u.id !== itemToDelete.id));
             }
         }

@@ -270,6 +270,16 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
                     userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
                     userMarkerRef.current.bindPopup("Lokasi Anda", { closeButton: false });
                 }
+
+                // Auto-Fit Bounds for Detail Page (User + Cafe)
+                if (cafe && cafe.coords) {
+                     const bounds = L.latLngBounds([
+                        [latitude, longitude],
+                        [cafe.coords.lat, cafe.coords.lng]
+                     ]);
+                     // Pad the bounds so markers aren't on the very edge
+                     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+                }
             },
             (err) => console.warn("Geolocation error", err),
             { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
@@ -286,7 +296,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
     markersRef.current = [];
 
     const cafesToDisplay = cafe ? [cafe] : cafes || [];
-    if (cafesToDisplay.length === 0 && !userLatLngRef.current) {
+    // Only reset view if we aren't showing user location (to prevent fighting with fitBounds above)
+    if (cafesToDisplay.length === 0 && !userLatLngRef.current && !showUserLocation) {
         if (!map.getBounds().isValid()) map.setView([-2.976, 104.745], 13);
     }
 
@@ -326,7 +337,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
       }
     });
 
-    if (bounds.isValid() && !showDistanceControl) {
+    // If not in single view mode or if user location isn't ready yet, fit bounds to cafes
+    if (bounds.isValid() && !showDistanceControl && !showUserLocation) {
         const padding = cafe ? [70, 70] : [50, 50];
         const maxZoom = cafe ? 16 : 14;
         map.fitBounds(bounds, { padding, maxZoom, duration: 0.5 });
