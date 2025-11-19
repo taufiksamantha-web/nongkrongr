@@ -136,12 +136,12 @@ const ArchivePanel: React.FC = () => {
 
             {/* Desktop Table View */}
             <div className="hidden md:block bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border overflow-x-auto mb-6">
-                <table className="w-full text-left min-w-[480px]">
+                <table className="w-full text-left min-w-[580px]">
                     <thead>
                         <tr className="border-b-2 border-border">
-                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Nama / Username</th>
-                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Keterangan</th>
-                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider text-right">Aksi</th>
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider w-1/3">Nama / Username</th>
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider w-1/3">Keterangan</th>
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider text-right w-1/3">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -157,9 +157,9 @@ const ArchivePanel: React.FC = () => {
                                 <td className="p-4 font-semibold text-primary dark:text-gray-200">{cafe.name}</td>
                                 <td className="p-4 text-muted text-sm truncate max-w-xs">{cafe.address}</td>
                                 <td className="p-4 text-right">
-                                    <div className="inline-flex items-center gap-2">
-                                        <button onClick={() => handleRestoreCafe(cafe)} disabled={isProcessing} className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-full transition-colors" title="Pulihkan"><ArrowPathIcon className="h-5 w-5" /></button>
-                                        <button onClick={() => setItemToDelete({ id: cafe.id, type: 'cafe', name: cafe.name })} disabled={isProcessing} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition-colors" title="Hapus Permanen"><TrashIcon className="h-5 w-5" /></button>
+                                    <div className="inline-flex items-center gap-2 justify-end">
+                                        <button onClick={() => handleRestoreCafe(cafe)} disabled={isProcessing} className="p-2 text-green-600 bg-green-100 dark:bg-green-500/20 rounded-full hover:bg-green-200 transition-colors" title="Pulihkan"><ArrowPathIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => setItemToDelete({ id: cafe.id, type: 'cafe', name: cafe.name })} disabled={isProcessing} className="p-2 text-red-500 bg-red-100 dark:bg-red-500/20 rounded-full hover:bg-red-200 transition-colors" title="Hapus Permanen"><TrashIcon className="h-5 w-5" /></button>
                                     </div>
                                 </td>
                             </tr>
@@ -170,9 +170,9 @@ const ArchivePanel: React.FC = () => {
                                 <td className="p-4 font-semibold text-primary dark:text-gray-200">{user.username}</td>
                                 <td className="p-4 text-muted text-sm">{user.email} • <span className="uppercase text-xs font-bold">{user.role}</span></td>
                                 <td className="p-4 text-right">
-                                    <div className="inline-flex items-center gap-2">
-                                        <button onClick={() => handleRestoreUser(user)} disabled={isProcessing} className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-full transition-colors" title="Pulihkan"><ArrowPathIcon className="h-5 w-5" /></button>
-                                        <button onClick={() => setItemToDelete({ id: user.id, type: 'user', name: user.username })} disabled={isProcessing} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition-colors" title="Hapus Permanen"><TrashIcon className="h-5 w-5" /></button>
+                                    <div className="inline-flex items-center gap-2 justify-end">
+                                        <button onClick={() => handleRestoreUser(user)} disabled={isProcessing} className="p-2 text-green-600 bg-green-100 dark:bg-green-500/20 rounded-full hover:bg-green-200 transition-colors" title="Pulihkan"><ArrowPathIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => setItemToDelete({ id: user.id, type: 'user', name: user.username })} disabled={isProcessing} className="p-2 text-red-500 bg-red-100 dark:bg-red-500/20 rounded-full hover:bg-red-200 transition-colors" title="Hapus Permanen"><TrashIcon className="h-5 w-5" /></button>
                                     </div>
                                 </td>
                             </tr>
@@ -184,31 +184,31 @@ const ArchivePanel: React.FC = () => {
             {/* Mobile Card View */}
             <div className="md:hidden space-y-3">
                 {activeTab === 'cafes' && archivedCafesList.map(cafe => (
-                    <div key={cafe.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-2xl border border-border flex flex-col gap-2">
+                    <div key={cafe.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-2xl border border-border flex flex-col gap-3">
                         <div className="flex justify-between items-start">
                             <div>
                                 <h3 className="font-bold text-lg">{cafe.name}</h3>
                                 <p className="text-sm text-muted line-clamp-1">{cafe.address}</p>
                             </div>
-                            <div className="flex gap-1">
-                                <button onClick={() => handleRestoreCafe(cafe)} disabled={isProcessing} className="p-2 bg-white dark:bg-gray-800 text-green-600 rounded-full shadow-sm border border-gray-100 dark:border-gray-700"><ArrowPathIcon className="h-5 w-5" /></button>
-                                <button onClick={() => setItemToDelete({ id: cafe.id, type: 'cafe', name: cafe.name })} disabled={isProcessing} className="p-2 bg-white dark:bg-gray-800 text-red-500 rounded-full shadow-sm border border-gray-100 dark:border-gray-700"><TrashIcon className="h-5 w-5" /></button>
-                            </div>
+                        </div>
+                        <div className="flex gap-2 pt-2 border-t border-border justify-end">
+                                <button onClick={() => handleRestoreCafe(cafe)} disabled={isProcessing} className="p-2 bg-green-100 dark:bg-green-500/20 text-green-600 rounded-full border border-green-200"><ArrowPathIcon className="h-5 w-5" /></button>
+                                <button onClick={() => setItemToDelete({ id: cafe.id, type: 'cafe', name: cafe.name })} disabled={isProcessing} className="p-2 bg-red-100 dark:bg-red-500/20 text-red-500 rounded-full border border-red-200"><TrashIcon className="h-5 w-5" /></button>
                         </div>
                     </div>
                 ))}
                 {activeTab === 'users' && archivedUsers.map(user => (
-                     <div key={user.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-2xl border border-border flex flex-col gap-2">
+                     <div key={user.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-2xl border border-border flex flex-col gap-3">
                         <div className="flex justify-between items-start">
                             <div>
                                 <h3 className="font-bold text-lg">{user.username}</h3>
                                 <p className="text-sm text-muted">{user.email}</p>
                                 <span className="inline-block mt-1 px-2 py-0.5 text-xs font-bold bg-gray-200 dark:bg-gray-600 rounded-full uppercase">{user.role}</span>
                             </div>
-                            <div className="flex gap-1">
-                                <button onClick={() => handleRestoreUser(user)} disabled={isProcessing} className="p-2 bg-white dark:bg-gray-800 text-green-600 rounded-full shadow-sm border border-gray-100 dark:border-gray-700"><ArrowPathIcon className="h-5 w-5" /></button>
-                                <button onClick={() => setItemToDelete({ id: user.id, type: 'user', name: user.username })} disabled={isProcessing} className="p-2 bg-white dark:bg-gray-800 text-red-500 rounded-full shadow-sm border border-gray-100 dark:border-gray-700"><TrashIcon className="h-5 w-5" /></button>
-                            </div>
+                        </div>
+                        <div className="flex gap-2 pt-2 border-t border-border justify-end">
+                                <button onClick={() => handleRestoreUser(user)} disabled={isProcessing} className="p-2 bg-green-100 dark:bg-green-500/20 text-green-600 rounded-full border border-green-200"><ArrowPathIcon className="h-5 w-5" /></button>
+                                <button onClick={() => setItemToDelete({ id: user.id, type: 'user', name: user.username })} disabled={isProcessing} className="p-2 bg-red-100 dark:bg-red-500/20 text-red-500 rounded-full border border-red-200"><TrashIcon className="h-5 w-5" /></button>
                         </div>
                     </div>
                 ))}

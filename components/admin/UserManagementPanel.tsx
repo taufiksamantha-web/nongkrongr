@@ -7,7 +7,7 @@ import { userService } from '../../services/userService';
 import UserFormModal from './UserFormModal';
 import FloatingNotification from '../common/FloatingNotification';
 import ConfirmationModal from '../common/ConfirmationModal';
-import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, PencilIcon, TrashIcon, UserCircleIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
+import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, PencilIcon, TrashIcon, UserCircleIcon, BuildingStorefrontIcon, ArchiveBoxArrowDownIcon } from '@heroicons/react/24/solid';
 
 const ITEMS_PER_PAGE = 5;
 type RoleTab = 'admin' | 'admin_cafe' | 'user';
@@ -18,11 +18,15 @@ const UserManagementPanel: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [isUserFormOpen, setIsUserFormOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    
+    // Action states
+    const [userToArchive, setUserToArchive] = useState<User | null>(null);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [activeTab, setActiveTab] = useState<RoleTab>('admin_cafe');
 
     const fetchUsers = async () => {
@@ -85,41 +89,56 @@ const UserManagementPanel: React.FC = () => {
             setNotification({ message: `Error: ${error.message}`, type: 'error' });
         } else {
             setNotification({ message: 'Profil user berhasil diperbarui!', type: 'success' });
-            // No need to fetchUsers() if optimistic update worked, but for safety/consistency with DB triggers:
-            // fetchUsers(); 
         }
         setIsUserFormOpen(false);
         setEditingUser(null);
     };
 
+    // SOFT DELETE (Archive)
     const handleArchiveUser = async () => {
-        if (!userToDelete || userToDelete.id === currentUser?.id) {
-            setNotification({ message: 'Tidak dapat menghapus diri sendiri.', type: 'error' });
-            setUserToDelete(null);
+        if (!userToArchive || userToArchive.id === currentUser?.id) {
+            setNotification({ message: 'Tidak dapat mengarsipkan diri sendiri.', type: 'error' });
+            setUserToArchive(null);
             return;
         }
-        setIsDeleting(true);
+        setIsProcessing(true);
         
-        // Use userService to soft delete (archive)
-        const { error } = await userService.archiveUser(userToDelete.id);
+        const { error } = await userService.archiveUser(userToArchive.id);
         
         if (error) {
             setNotification({ message: `Gagal mengarsipkan profil: ${error.message}`, type: 'error' });
         } else {
-            setNotification({ message: `Profil "${userToDelete.username}" telah diarsipkan.`, type: 'success' });
-            // Remove from local list immediately
-            setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
-            
-            // Reset pagination if needed
-            const remainingInPage = paginatedUsers.length - 1;
-            if (remainingInPage === 0 && currentPage > 1) {
-                setCurrentPage(currentPage - 1);
-            }
+            setNotification({ message: `Profil "${userToArchive.username}" telah diarsipkan.`, type: 'success' });
+            // Remove from local list
+            setUsers(prev => prev.filter(u => u.id !== userToArchive.id));
+            if (paginatedUsers.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
         }
-        setUserToDelete(null);
-        setIsDeleting(false);
+        setUserToArchive(null);
+        setIsProcessing(false);
     };
     
+    // HARD DELETE (Permanent)
+    const handlePermanentDelete = async () => {
+        if (!userToDelete || userToDelete.id === currentUser?.id) {
+             setNotification({ message: 'Tidak dapat menghapus diri sendiri.', type: 'error' });
+             setUserToDelete(null);
+             return;
+        }
+        setIsProcessing(true);
+
+        const { error } = await userService.deleteUserPermanent(userToDelete.id);
+        
+        if (error) {
+             setNotification({ message: `Gagal menghapus permanen: ${error.message}`, type: 'error' });
+        } else {
+             setNotification({ message: `User "${userToDelete.username}" telah dihapus selamanya.`, type: 'success' });
+             setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+             if (paginatedUsers.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
+        }
+        setUserToDelete(null);
+        setIsProcessing(false);
+    };
+
     const handleOpenEditForm = (user: User) => {
         setEditingUser(user);
         setIsUserFormOpen(true);
@@ -165,12 +184,12 @@ const UserManagementPanel: React.FC = () => {
 
              {/* Desktop Table View */}
              <div className="hidden md:block bg-soft dark:bg-gray-700/50 p-2 rounded-2xl border border-border overflow-x-auto">
-                <table className="w-full text-left min-w-[480px]">
+                <table className="w-full text-left min-w-[580px]">
                     <thead>
                         <tr className="border-b-2 border-border">
-                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Username</th>
-                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider">Email</th>
-                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider text-right">Aksi</th>
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider w-1/3">Username</th>
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider w-1/3">Email</th>
+                            <th className="p-4 text-sm font-bold text-muted uppercase tracking-wider text-right w-1/3">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -183,28 +202,40 @@ const UserManagementPanel: React.FC = () => {
                             </td></tr>
                         ) : (
                             paginatedUsers.map(user => (
-                                <tr key={user.id} className="border-b border-border last:border-0">
+                                <tr key={user.id} className="border-b border-border last:border-0 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                                     <td className="p-4 font-semibold text-primary dark:text-gray-200">{user.username}</td>
                                     <td className="p-4 text-muted text-sm truncate">{user.email}</td>
                                     <td className="p-4 text-right">
-                                        <div className="inline-flex items-center gap-2">
+                                        <div className="inline-flex items-center gap-2 justify-end">
                                             <button 
                                                 onClick={() => handleOpenEditForm(user)} 
-                                                className="p-2 text-brand rounded-full hover:bg-brand/10 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                                className="p-2 text-brand bg-brand/10 rounded-full hover:bg-brand/20 transition-colors disabled:opacity-50"
                                                 aria-label={`Edit user ${user.username}`}
                                                 disabled={user.id === currentUser?.id}
+                                                title="Edit User"
                                             >
                                                 <PencilIcon className="h-5 w-5" />
                                             </button>
                                             <button 
-                                                onClick={() => setUserToDelete(user)} 
-                                                className="p-2 text-accent-pink rounded-full hover:bg-accent-pink/10 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                                onClick={() => setUserToArchive(user)} 
+                                                className="p-2 text-amber-500 bg-amber-100 dark:bg-amber-500/20 rounded-full hover:bg-amber-200 dark:hover:bg-amber-500/30 transition-colors disabled:opacity-50"
                                                 disabled={user.id === currentUser?.id}
                                                 aria-label={`Archive user ${user.username}`}
                                                 title="Arsipkan User"
                                             >
-                                                <TrashIcon className="h-5 w-5" />
+                                                <ArchiveBoxArrowDownIcon className="h-5 w-5" />
                                             </button>
+                                            {currentUser?.role === 'admin' && (
+                                                <button 
+                                                    onClick={() => setUserToDelete(user)} 
+                                                    className="p-2 text-red-500 bg-red-100 dark:bg-red-500/20 rounded-full hover:bg-red-200 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                                                    disabled={user.id === currentUser?.id}
+                                                    aria-label={`Delete user ${user.username}`}
+                                                    title="Hapus Permanen"
+                                                >
+                                                    <TrashIcon className="h-5 w-5" />
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -225,7 +256,7 @@ const UserManagementPanel: React.FC = () => {
                      </div>
                 ) : (
                     paginatedUsers.map(user => (
-                        <div key={user.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-2xl border border-border flex flex-col gap-2">
+                        <div key={user.id} className="bg-soft dark:bg-gray-700/50 p-4 rounded-2xl border border-border flex flex-col gap-3">
                             <div className="flex justify-between items-start">
                                 <div className="flex-1 min-w-0 mr-2">
                                     <p className="font-bold text-lg text-primary dark:text-gray-200 truncate">{user.username}</p>
@@ -234,25 +265,35 @@ const UserManagementPanel: React.FC = () => {
                                         {(user.role || '').replace('_', ' ')}
                                     </span>
                                 </div>
-                                <div className="flex gap-1 shrink-0">
+                            </div>
+                             <div className="flex gap-2 pt-2 border-t border-border justify-end">
                                      <button 
                                         onClick={() => handleOpenEditForm(user)} 
-                                        className="p-2 bg-white dark:bg-gray-800 text-brand rounded-full shadow-sm border border-gray-100 dark:border-gray-700 disabled:opacity-50"
+                                        className="p-2 bg-brand/10 text-brand rounded-full border border-brand/20 disabled:opacity-50"
                                         disabled={user.id === currentUser?.id}
                                         aria-label="Edit"
                                     >
                                         <PencilIcon className="h-5 w-5" />
                                     </button>
                                     <button 
-                                        onClick={() => setUserToDelete(user)} 
-                                        className="p-2 bg-white dark:bg-gray-800 text-accent-pink rounded-full shadow-sm border border-gray-100 dark:border-gray-700 disabled:opacity-50"
+                                        onClick={() => setUserToArchive(user)} 
+                                        className="p-2 bg-amber-100 dark:bg-amber-500/20 text-amber-600 rounded-full border border-amber-200 disabled:opacity-50"
                                         disabled={user.id === currentUser?.id}
                                         aria-label="Archive"
                                     >
-                                        <TrashIcon className="h-5 w-5" />
+                                        <ArchiveBoxArrowDownIcon className="h-5 w-5" />
                                     </button>
+                                     {currentUser?.role === 'admin' && (
+                                        <button 
+                                            onClick={() => setUserToDelete(user)} 
+                                            className="p-2 bg-red-100 dark:bg-red-500/20 text-red-600 rounded-full border border-red-200 disabled:opacity-50"
+                                            disabled={user.id === currentUser?.id}
+                                            aria-label="Delete"
+                                        >
+                                            <TrashIcon className="h-5 w-5" />
+                                        </button>
+                                    )}
                                 </div>
-                            </div>
                         </div>
                     ))
                 )}
@@ -267,14 +308,26 @@ const UserManagementPanel: React.FC = () => {
             )}
 
              {isUserFormOpen && <UserFormModal userToEdit={editingUser} onSave={handleSaveUser} onCancel={() => setIsUserFormOpen(false)} />}
-             {userToDelete && (
+             
+             {userToArchive && (
                 <ConfirmationModal
                     title="Arsipkan User"
-                    message={`Yakin ingin mengarsipkan profil "${userToDelete.username}"? User tidak akan bisa login, tapi data bisa dipulihkan nanti.`}
+                    message={`Yakin ingin mengarsipkan profil "${userToArchive.username}"? User tidak akan bisa login, tapi data bisa dipulihkan nanti.`}
                     onConfirm={handleArchiveUser}
-                    onCancel={() => setUserToDelete(null)}
-                    isConfirming={isDeleting}
+                    onCancel={() => setUserToArchive(null)}
+                    isConfirming={isProcessing}
                     confirmText="Ya, Arsipkan"
+                />
+             )}
+             {userToDelete && (
+                <ConfirmationModal
+                    title="Hapus Permanen User"
+                    message={`PERINGATAN: Anda akan menghapus user "${userToDelete.username}" secara permanen beserta semua datanya. Tindakan ini TIDAK DAPAT DIKEMBALIKAN.`}
+                    onConfirm={handlePermanentDelete}
+                    onCancel={() => setUserToDelete(null)}
+                    isConfirming={isProcessing}
+                    confirmText="Hapus Selamanya"
+                    cancelText="Batal"
                 />
              )}
         </div>

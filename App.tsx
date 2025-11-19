@@ -9,6 +9,7 @@ import AboutPage from './pages/AboutPage';
 import LoginPage from './pages/LoginPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import FeedbackPage from './pages/FeedbackPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import WelcomeModal from './components/WelcomeModal';
 import Footer from './components/Footer';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -379,6 +380,8 @@ const App: React.FC = () => {
                                 <LoginPage />
                             </GuestRoute>
                         } />
+
+                        <Route path="/reset-password" element={<ResetPasswordPage />} />
                         
                         {/* Role-based routes mapping to AdminPage */}
                         <Route path="/dashboard-admin" element={

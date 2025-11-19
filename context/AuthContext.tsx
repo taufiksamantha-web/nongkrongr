@@ -11,6 +11,8 @@ interface AuthContextType {
     signup: (username: string, email: string, password: string, isCafeAdmin?: boolean) => Promise<{ error: AuthError | null }>;
     logout: () => Promise<{ error: AuthError | null }>;
     updateUserProfile: (updates: Partial<User>) => Promise<{ error: AuthError | null }>;
+    resetPasswordForEmail: (email: string) => Promise<{ error: AuthError | null }>;
+    updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -109,7 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Listener for auth changes
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+                if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'PASSWORD_RECOVERY') {
                     fetchUserAndSetState(session);
                 } else if (event === 'SIGNED_OUT') {
                     setCurrentUser(null);
@@ -265,7 +267,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.removeItem(USER_STORAGE_KEY);
 
         if (error) {
-            // Ignore session missing errors on logout
             const isSessionError = 
                 error.message.includes('Auth session missing') || 
                 error.message.includes('session_not_found') ||
@@ -280,6 +281,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { error };
     };
 
+    const resetPasswordForEmail = async (email: string) => {
+        // Use current window location as redirect URL
+        const redirectTo = `${window.location.origin}/#/reset-password`;
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo,
+        });
+        return { error };
+    };
+
+    const updatePassword = async (password: string) => {
+        const { error } = await supabase.auth.updateUser({ password });
+        return { error };
+    };
+
     const value = {
         currentUser,
         loading,
@@ -287,6 +302,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signup,
         logout,
         updateUserProfile,
+        resetPasswordForEmail,
+        updatePassword,
     };
 
     if (loading) {
