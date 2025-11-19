@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotifications, NotificationItem } from '../context/NotificationContext';
-import { BellIcon, CheckCircleIcon, XCircleIcon, InformationCircleIcon, ExclamationTriangleIcon, TrashIcon, CheckIcon, EnvelopeIcon, UserPlusIcon } from '@heroicons/react/24/solid';
+import { BellIcon, CheckCircleIcon, XCircleIcon, InformationCircleIcon, ExclamationTriangleIcon, TrashIcon, CheckIcon, EnvelopeIcon, UserPlusIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 
 const NotificationItemComp: React.FC<{ item: NotificationItem, onRead: () => void, onClose: () => void }> = ({ item, onRead, onClose }) => {
     const getIcon = () => {
@@ -52,7 +52,18 @@ const NotificationItemComp: React.FC<{ item: NotificationItem, onRead: () => voi
 };
 
 const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({ isOpen, onClose }) => {
-    const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
+    const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, refresh } = useNotifications();
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await refresh();
+        } finally {
+            // Minimal delay for visual feedback if the fetch is too fast
+            setTimeout(() => setIsRefreshing(false), 500);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -61,6 +72,14 @@ const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({
             <div className="p-4 border-b border-border flex justify-between items-center bg-soft/50 backdrop-blur-sm">
                 <h3 className="font-bold font-jakarta text-base">Notifikasi</h3>
                 <div className="flex gap-1">
+                    <button
+                        onClick={handleRefresh}
+                        className="p-1.5 text-muted hover:text-brand hover:bg-brand/10 rounded-full transition-colors"
+                        title="Refresh"
+                        disabled={isRefreshing}
+                    >
+                        <ArrowPathIcon className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-brand' : ''}`} />
+                    </button>
                     {unreadCount > 0 && (
                         <button 
                             onClick={markAllAsRead} 

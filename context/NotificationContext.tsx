@@ -20,6 +20,7 @@ interface NotificationContextType {
     markAsRead: (id: string) => void;
     markAllAsRead: () => void;
     clearAll: () => void;
+    refresh: () => Promise<void>;
 }
 
 export const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -34,7 +35,7 @@ interface MinimalProfile { id: string; username: string; role: string; created_a
 interface MinimalCafe { id: string; name: string; slug: string; manager_id: string; status: string; created_at: string; }
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { cafes } = useContext(CafeContext)!;
+    const { cafes, fetchCafes } = useContext(CafeContext)!;
     const { currentUser } = useAuth();
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     
@@ -269,10 +270,14 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         setNotifications([]);
     };
 
+    const refresh = async () => {
+        await fetchCafes();
+    };
+
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     return (
-        <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead, clearAll }}>
+        <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead, clearAll, refresh }}>
             {children}
         </NotificationContext.Provider>
     );

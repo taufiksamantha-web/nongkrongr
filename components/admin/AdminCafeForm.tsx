@@ -453,7 +453,8 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
 
         } catch (error: any) {
             console.error("Form Submission Error:", error);
-            setNotification({ message: `Gagal menyimpan data: ${error.message}`, type: 'error' });
+            const errorMsg = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+            setNotification({ message: `Gagal menyimpan data: ${errorMsg}`, type: 'error' });
         } finally {
             setIsSaving(false);
         }
@@ -687,3 +688,4 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
 };
 
 export default AdminCafeForm;
+    
