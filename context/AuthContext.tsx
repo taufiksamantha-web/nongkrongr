@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, ReactNode, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, ReactNode, useContext, useEffect, useCallback, useRef } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { AuthError, Session } from '@supabase/supabase-js';
@@ -15,6 +15,8 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const USER_STORAGE_KEY = 'nongkrongr_user_profile';
+
 const FullScreenLoader: React.FC = () => (
     <div className="fixed inset-0 bg-soft flex flex-col items-center justify-center z-[2000]">
         <img src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" alt="Nongkrongr Logo" className="h-16 w-auto mb-6" />
@@ -24,12 +26,37 @@ const FullScreenLoader: React.FC = () => (
 );
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    // 1. INITIALIZE STATE FROM CACHE (Instant Load)
+    const [currentUser, setCurrentUser] = useState<User | null>(() => {
+        if (typeof window !== 'undefined') {
+            const cached = localStorage.getItem(USER_STORAGE_KEY);
+            try {
+                return cached ? JSON.parse(cached) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+        return null;
+    });
+
+    // Keep a ref to access current value inside useCallback without adding to dependency array
+    const currentUserRef = useRef(currentUser);
+    useEffect(() => { currentUserRef.current = currentUser; }, [currentUser]);
+
+    // 2. Loading is only true if we have NO cache and are waiting for initial check
+    const [loading, setLoading] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            return !localStorage.getItem(USER_STORAGE_KEY);
+        }
+        return true;
+    });
 
     const fetchUserAndSetState = useCallback(async (session: Session | null): Promise<void> => {
         if (!session?.user) {
-            setCurrentUser(null);
+            if (currentUserRef.current !== null) {
+                setCurrentUser(null);
+                localStorage.removeItem(USER_STORAGE_KEY);
+            }
             setLoading(false);
             return;
         }
@@ -46,52 +73,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error("Session validation failed. User profile deleted.", { error });
             await supabase.auth.signOut();
             setCurrentUser(null);
+            localStorage.removeItem(USER_STORAGE_KEY);
         } else if (profile.status === 'rejected') {
              // CASE: Admin rejected the manager application
              console.warn("User login attempted but status is rejected.");
              await supabase.auth.signOut();
              setCurrentUser(null);
+             localStorage.removeItem(USER_STORAGE_KEY);
         } else if (profile.status === 'archived') {
              // CASE: Account archived (soft deleted)
              console.warn("User login attempted but status is archived.");
              await supabase.auth.signOut();
              setCurrentUser(null);
+             localStorage.removeItem(USER_STORAGE_KEY);
         } else {
-            // All good
-            setCurrentUser(profile as User);
+            // All good - Update State only if data changed to prevent flicker/re-renders
+            const userData = profile as User;
+            const currentStr = JSON.stringify(currentUserRef.current);
+            const newStr = JSON.stringify(userData);
+            
+            if (currentStr !== newStr) {
+                setCurrentUser(userData);
+                localStorage.setItem(USER_STORAGE_KEY, newStr);
+            }
         }
         setLoading(false);
     }, []);
 
     useEffect(() => {
-        setLoading(true);
-        // On initial load, get the session and validate it.
+        // Initial session check (Background if cache exists)
         supabase.auth.getSession().then(({ data: { session } }) => {
             fetchUserAndSetState(session);
         });
 
-        // The listener handles subsequent changes like login, logout.
+        // Listener for auth changes
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+                if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
                     fetchUserAndSetState(session);
+                } else if (event === 'SIGNED_OUT') {
+                    setCurrentUser(null);
+                    localStorage.removeItem(USER_STORAGE_KEY);
+                    setLoading(false);
                 }
             }
         );
-        
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                supabase.auth.getSession().then(({ data: { session } }) => {
-                   fetchUserAndSetState(session);
-                });
-            }
-        };
-        
-        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
             authListener.subscription.unsubscribe();
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [fetchUserAndSetState]);
 
@@ -130,19 +159,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 .single();
             
             if (profileFetchError || !profile) {
-                // User authenticated but profile is gone (Deleted by Admin)
                 await supabase.auth.signOut();
                 return { error: new AuthError("Akun Anda telah dihapus oleh Admin.") };
             }
 
             if (profile.status === 'rejected') {
-                // User authenticated but status is rejected
                 await supabase.auth.signOut();
                 return { error: new AuthError("Pendaftaran akun Anda ditolak oleh Admin.") };
             }
 
             if (profile.status === 'archived') {
-                // User authenticated but status is archived
                 await supabase.auth.signOut();
                 return { error: new AuthError("Akun ini telah diarsipkan. Hubungi admin untuk memulihkan.") };
             }
@@ -165,8 +191,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return { error: new AuthError("Username sudah digunakan. Silakan pilih yang lain.") };
         }
 
-        // 2. Pre-check Email Uniqueness (in profiles)
-        // Although Auth handles this, checking profiles allows for a faster/cleaner error before the auth call
+        // 2. Pre-check Email Uniqueness
         const { count: emailCount } = await supabase
             .from('profiles')
             .select('id', { count: 'exact', head: true })
@@ -203,7 +228,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         // 5. FORCE LOGOUT to prevent auto-login/redirect
-        // This ensures the user sees the "Success" message and has to login manually.
         await supabase.auth.signOut();
         
         return { error: null };
@@ -227,7 +251,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         if (data) {
-            setCurrentUser(data as User);
+            const updatedUser = data as User;
+            setCurrentUser(updatedUser);
+            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
         }
         
         return { error: null };
@@ -236,8 +262,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const logout = async () => {
         const { error } = await supabase.auth.signOut();
         setCurrentUser(null);
+        localStorage.removeItem(USER_STORAGE_KEY);
 
         if (error) {
+            // Ignore session missing errors on logout
             const isSessionError = 
                 error.message.includes('Auth session missing') || 
                 error.message.includes('session_not_found') ||

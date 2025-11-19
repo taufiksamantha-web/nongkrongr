@@ -13,14 +13,19 @@
       // Immediately invoke function to set theme before render to prevent flash
       (function() {
         try {
-          const storedTheme = localStorage.getItem('theme');
-          // Removed system dark preference check to force light mode as default
-          // const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var storedTheme = localStorage.getItem('theme');
+          var root = document.documentElement;
           
+          // Hardcoded colors matching CSS variables to ensure immediate application
+          var darkBg = '#0c0c0d'; // Matches hsl(240, 4%, 5%)
+          var lightBg = '#fbfaff'; // Matches hsl(260, 100%, 98%)
+
           if (storedTheme === 'dark') {
-            document.documentElement.classList.add('dark');
+            root.classList.add('dark');
+            root.style.backgroundColor = darkBg;
           } else {
-            document.documentElement.classList.remove('dark');
+            root.classList.remove('dark');
+            root.style.backgroundColor = lightBg;
           }
         } catch (e) {
           console.error('Theme script error', e);

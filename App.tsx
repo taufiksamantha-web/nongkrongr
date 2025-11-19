@@ -141,6 +141,12 @@ const Header: React.FC = () => {
     };
   }, [mobileMenuRef, notifRef]);
 
+  const getDashboardLabel = (role?: string) => {
+      if (role === 'admin') return 'Dashboard Admin';
+      if (role === 'admin_cafe') return 'Dashboard Pengelola Cafe';
+      return 'Dashboard Profile';
+  };
+
   return (
     <>
       <div className="container mx-auto px-4 pt-4 sticky top-4 z-50">
@@ -229,29 +235,24 @@ const Header: React.FC = () => {
             
              {isMobileMenuOpen && currentUser && (
                   <div ref={mobileMenuRef} className="absolute top-full right-0 mt-4 w-64 bg-card dark:bg-gray-800 rounded-3xl shadow-xl border border-border p-3 z-50 sm:hidden animate-fade-in-down">
-                      <div className="flex items-center gap-3 px-4 py-4 border-b border-border mb-2 bg-soft dark:bg-gray-700/30 rounded-2xl">
-                          {currentUser.avatar_url ? (
-                              <img src={currentUser.avatar_url} alt="Profile" className="h-12 w-12 rounded-full object-cover" />
-                          ) : (
-                              <UserCircleIcon className="h-12 w-12 text-brand" />
-                          )}
-                          <div className="overflow-hidden">
-                              <p className="font-bold text-primary dark:text-white truncate">{currentUser.username}</p>
-                              <p className="text-xs text-muted truncate">{currentUser.email}</p>
-                          </div>
-                      </div>
+                      <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block">
+                        <div className="flex items-center gap-3 px-4 py-4 border-b border-border mb-2 bg-soft dark:bg-gray-700/30 rounded-2xl hover:bg-brand/5 transition-colors group cursor-pointer">
+                            {currentUser.avatar_url ? (
+                                <img src={currentUser.avatar_url} alt="Profile" className="h-12 w-12 rounded-full object-cover" />
+                            ) : (
+                                <UserCircleIcon className="h-12 w-12 text-brand" />
+                            )}
+                            <div className="overflow-hidden">
+                                <p className="font-bold text-primary dark:text-white truncate group-hover:text-brand transition-colors">{currentUser.username}</p>
+                                <p className="text-xs text-muted truncate font-semibold text-brand">{getDashboardLabel(currentUser.role)}</p>
+                            </div>
+                        </div>
+                      </Link>
                       <div className="space-y-1">
                           <NavLink to="/" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Home</NavLink>
                           <NavLink to="/explore" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Explore</NavLink>
                            <NavLink to="/about" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Tentang Kami</NavLink>
                            <div className="border-t border-border my-2"></div>
-                          <Link 
-                              to="/admin" 
-                              className="block w-full text-left px-4 py-3 rounded-xl hover:bg-soft dark:hover:bg-gray-700 font-semibold transition-colors text-primary dark:text-white" 
-                              onClick={() => setIsMobileMenuOpen(false)}
-                          >
-                              Dashboard
-                          </Link>
                           <button 
                               onClick={() => { setIsMobileMenuOpen(false); setIsLogoutModalOpen(true); }} 
                               className="block w-full text-left px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold transition-colors"
@@ -343,8 +344,10 @@ const App: React.FC = () => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');
+      root.style.backgroundColor = '#0c0c0d';
     } else {
       root.classList.remove('dark');
+      root.style.backgroundColor = '#fbfaff';
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
