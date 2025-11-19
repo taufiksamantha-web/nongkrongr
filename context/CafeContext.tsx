@@ -184,38 +184,45 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
-    // Continuous Sync: "Soft Refresh" when tab becomes visible
-    useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                // Do a silent fetch to update data without showing a loading spinner
-                fetchCafes(false);
-            }
-        };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, [fetchCafes]);
-
+    // EFFICIENT REALTIME HANDLING
+    // Instead of fetching all data on every change, we update local state when possible.
+    // Note: Complex relation updates (like adding a tag or review) still trigger a fetch
+    // because constructing the full object from just a relation ID is complex.
     useEffect(() => {
         if (authLoading) return;
 
-        // Initial fetch when provider mounts or auth status changes
+        // Initial fetch
         fetchCafes(!getCachedCafes());
         
-        // Setup real-time subscription with simplified error handling
         const channel = supabase.channel('nongkrongr-db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-                fetchCafes(false);
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cafes' }, (payload) => {
+                // For new cafes, we fetch everything to ensure we get default relations if any
+                fetchCafes(false); 
             })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cafes' }, (payload) => {
+                 // Update local state efficiently without refetching everything
+                 setCafes(prev => prev.map(c => {
+                     if (c.id === payload.new.id) {
+                         // Merge new data. Note: Payload doesn't have relations, preserve existing ones.
+                         const updated = { ...c, ...payload.new };
+                         // Re-map coordinates if they changed
+                         if (payload.new.lat !== undefined || payload.new.lng !== undefined) {
+                             updated.coords = { lat: payload.new.lat, lng: payload.new.lng };
+                         }
+                         return updated;
+                     }
+                     return c;
+                 }));
+            })
+            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'cafes' }, (payload) => {
+                setCafes(prev => prev.filter(c => c.id !== payload.old.id));
+            })
+            // For relations (reviews, tags, etc), we still do a soft fetch because linking data is hard in frontend only
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, () => fetchCafes(false))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'cafe_tags' }, () => fetchCafes(false))
             .subscribe((status, err) => {
-                if (status === 'SUBSCRIBED') {
-                     setError(null);
-                }
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-                    // Suppress alerting user for background disconnects.
-                    // The visibility change handler acts as a robust fallback.
-                    console.warn(`Realtime connection status: ${status}`, err);
-                }
+                if (status === 'SUBSCRIBED') setError(null);
+                if (status === 'CHANNEL_ERROR') console.warn(`Realtime connection error`, err);
             });
 
         return () => {
@@ -272,7 +279,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (mainError) throw mainError;
             }
             await updateCafeRelationsInSupabase(id, { vibes, amenities, spots, events });
-            fetchCafes(false);
+            // We don't fetchCafes here because we did optimistic update, and the Realtime subscription will handle sync if needed
             return { data: { id }, error: null };
         } catch (err: any) {
             setCafes(originalCafes);
@@ -345,7 +352,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
         const { data, error } = await supabase.from('reviews').insert(newReview);
         if (error) return { data: null, error };
-        fetchCafes(false);
+        // Realtime will trigger fetch
         return { data, error: null };
     };
 
@@ -356,7 +363,6 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             const { error } = await supabase.from('reviews').update({ status }).eq('id', reviewId);
             if (error) throw error;
-            fetchCafes(false);
             return { error: null };
         } catch (err: any) {
             setCafes(originalCafes);
@@ -371,7 +377,6 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
             if (error) throw error;
-            fetchCafes(false);
             return { error: null };
         } catch (err: any) {
             setCafes(originalCafes);
