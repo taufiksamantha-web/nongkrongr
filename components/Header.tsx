@@ -129,11 +129,11 @@ const Header: React.FC = () => {
       <div className="container mx-auto px-4 pt-4 sticky top-4 z-50 w-full max-w-screen-2xl">
         <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 shadow-sm flex items-center justify-between transition-all duration-300">
           <nav className="w-full flex items-center justify-between relative">
-            <Link to="/" className="flex items-center mr-6">
+            <Link to="/" className="flex items-center mr-2 sm:mr-6 flex-shrink-0">
               <img 
                 src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" 
                 alt="Nongkrongr Logo" 
-                className="h-12 w-auto block sm:hidden object-contain" 
+                className="h-8 w-auto block sm:hidden object-contain" 
               />
               <img 
                 src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" 
@@ -146,11 +146,12 @@ const Header: React.FC = () => {
                 <NavPill />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <div className="flex items-center bg-brand/5 dark:bg-gray-700/50 rounded-full p-1.5 border border-brand/10 dark:border-gray-600">
+                  {/* Hide Theme Toggle on Mobile (moved to menu) */}
                   <button 
                     onClick={toggleTheme} 
-                    className="p-2 rounded-full text-muted hover:text-yellow-500 hover:bg-white dark:hover:bg-gray-600 transition-all"
+                    className="hidden sm:block p-2 rounded-full text-muted hover:text-yellow-500 hover:bg-white dark:hover:bg-gray-600 transition-all"
                     aria-label="Toggle theme"
                   >
                     {theme === 'light' ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
@@ -158,14 +159,14 @@ const Header: React.FC = () => {
 
                   {currentUser && (
                      <>
-                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                        <div className="hidden sm:block w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                         <div className="relative" ref={notifRef}>
                               <button
                                   onClick={() => setIsNotifOpen(!isNotifOpen)}
                                   className="p-2 rounded-full text-muted hover:text-brand hover:bg-white dark:hover:bg-gray-600 transition-all relative"
                                   aria-label="Notifikasi"
                               >
-                                  <BellIcon className="h-5 w-5" />
+                                  <BellIcon className="h-6 w-6 sm:h-5 sm:w-5" />
                                   {unreadCount > 0 && (
                                       <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full border border-card"></span>
                                   )}
@@ -179,6 +180,7 @@ const Header: React.FC = () => {
                   
                   {currentUser ? (
                     <>
+                        {/* Desktop User Profile */}
                         <Link to={getDashboardPath(currentUser.role)} className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold text-primary dark:text-white hover:bg-white dark:hover:bg-gray-600 transition-all">
                             {currentUser.avatar_url ? (
                                 <img src={currentUser.avatar_url} alt="Profile" className="h-6 w-6 rounded-full object-cover border border-brand/20" />
@@ -193,12 +195,12 @@ const Header: React.FC = () => {
                             <ArrowRightOnRectangleIcon className="h-5 w-5" />
                         </button>
                         
-                        {/* Mobile User Button - Updated to show Avatar */}
-                        <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden flex items-center gap-1 px-2 py-2 rounded-full hover:bg-brand/10 transition-all" aria-label="Buka menu pengguna">
+                        {/* Mobile User Button - Proportional Sizing */}
+                        <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden flex items-center justify-center rounded-full hover:bg-brand/10 transition-all p-0.5" aria-label="Buka menu pengguna">
                              {currentUser.avatar_url ? (
-                                <img src={currentUser.avatar_url} alt="Profile" className="h-8 w-8 rounded-full object-cover border-2 border-brand/20" />
+                                <img src={currentUser.avatar_url} alt="Profile" className="h-9 w-9 rounded-full object-cover border-2 border-brand/20" />
                              ) : (
-                                <div className="bg-brand text-white rounded-full p-1.5 shadow-lg shadow-brand/20">
+                                <div className="h-9 w-9 rounded-full bg-brand text-white flex items-center justify-center shadow-lg shadow-brand/20">
                                     <UserCircleIcon className="h-6 w-6"/>
                                 </div>
                              )}
@@ -229,10 +231,19 @@ const Header: React.FC = () => {
                         </div>
                       </Link>
                       <div className="space-y-1">
-                          <NavLink to="/" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Home</NavLink>
                           <NavLink to="/explore" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Explore</NavLink>
-                           <NavLink to="/about" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Tentang Kami</NavLink>
-                           <div className="border-t border-border my-2"></div>
+                          <NavLink to="/about" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Tentang Kami</NavLink>
+                          
+                          {/* Mobile Dark Mode Toggle */}
+                          <button 
+                            onClick={toggleTheme}
+                            className="w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700 flex items-center justify-between group"
+                          >
+                            <span>{theme === 'light' ? 'Mode Gelap' : 'Mode Terang'}</span>
+                            {theme === 'light' ? <MoonIcon className="h-5 w-5 text-muted group-hover:text-brand" /> : <SunIcon className="h-5 w-5 text-yellow-400" />}
+                          </button>
+
+                          <div className="border-t border-border my-2"></div>
                           <button 
                               onClick={() => { setIsMobileMenuOpen(false); setIsLogoutModalOpen(true); }} 
                               className="block w-full text-left px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold transition-colors"
