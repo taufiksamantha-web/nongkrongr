@@ -333,13 +333,24 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const addReview = async (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => {
+        // EXPLICITLY construct the object to avoid spreading unwanted props that trigger schema cache errors
         const newReview = { 
             id: `review-${crypto.randomUUID()}`,
-            ...review, 
+            cafe_id: review.cafe_id,
+            author: review.author,
+            ratingAesthetic: review.ratingAesthetic,
+            ratingWork: review.ratingWork,
+            crowdMorning: review.crowdMorning,
+            crowdAfternoon: review.crowdAfternoon,
+            crowdEvening: review.crowdEvening,
+            priceSpent: review.priceSpent,
+            text: review.text,
+            photos: review.photos,
             status: 'pending' as const, 
             createdAt: new Date().toISOString(), 
             helpful_count: 0 
         };
+
         const { data, error } = await supabase.from('reviews').insert(newReview);
         // Note: Realtime subscription usually catches this, but invalidation is safer
         queryClient.invalidateQueries({ queryKey: ['cafes'] }); 
