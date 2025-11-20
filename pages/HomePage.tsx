@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cafe, Review, User } from '../types';
@@ -70,7 +71,7 @@ const rotatingPlaceholders = [
 ];
 
 const EmptyState: React.FC<{ title: string; message: string }> = ({ title, message }) => (
-    <div className="text-center py-10 bg-card dark:bg-card/50 rounded-3xl border border-border col-span-full shadow-sm">
+    <div className="text-center py-10 bg-card dark:bg-card/50 rounded-3xl border border-border col-span-full shadow-sm h-full flex flex-col justify-center items-center">
         <InboxIcon className="mx-auto h-12 w-12 text-muted/50" />
         <p className="mt-4 text-xl font-bold font-jakarta">{title}</p>
         <p className="text-muted mt-2 max-w-xs mx-auto">{message}</p>
@@ -101,6 +102,10 @@ const HomePage: React.FC = () => {
   const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
 
+  // Visibility Settings
+  const [showSectionRecs, setShowSectionRecs] = useState(true);
+  const [showSectionCOTW, setShowSectionCOTW] = useState(true);
+
   const navigate = useNavigate();
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const slideIntervalRef = useRef<number | null>(null);
@@ -109,8 +114,14 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     const fetchSettings = async () => {
-        const url = await settingsService.getSetting('hero_background_url');
+        const [url, showRecs, showCotw] = await Promise.all([
+            settingsService.getSetting('hero_background_url'),
+            settingsService.getSetting('show_recommendations_section'),
+            settingsService.getSetting('show_cotw_section')
+        ]);
         setHeroBgUrl(url || defaultHeroBgUrl);
+        setShowSectionRecs(showRecs !== 'false');
+        setShowSectionCOTW(showCotw !== 'false');
     };
     fetchSettings();
   }, []);
@@ -126,9 +137,9 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const intervalId = setInterval(() => {
       setPlaceholderIndex(prevIndex => (prevIndex + 1) % rotatingPlaceholders.length);
-    }, 2000); // Ganti setiap 2 detik
+    }, 2000);
 
-    return () => clearInterval(intervalId); // Bersihkan interval saat komponen unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -166,22 +177,19 @@ const HomePage: React.FC = () => {
       const sortedByAesthetic = [...approvedCafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
       setTrendingCafes(sortedByAesthetic.slice(0, 4));
 
-      // Recent Reviews (Restored)
-      const allReviewsData = getAllReviews(); // This returns TopReview[]
-      // Filter only reviews for approved cafes
+      // Recent Reviews
+      const allReviewsData = getAllReviews(); 
       const validReviews = allReviewsData.filter(r => approvedCafes.some(c => c.id === r.cafeId && c.status === 'approved'));
       setRecentReviews(validReviews.slice(0, 3));
 
       // --- Smart Recommendations ---
       const calculateSmartScore = (cafe: Cafe, user: User | null, allUserReviews: Review[], location: { lat: number; lng: number } | null): number => {
-          // Base score
           let score = (cafe.avgAestheticScore + cafe.avgWorkScore) / 2;
           if (cafe.spots.length > 0) score += 1.5;
           if (cafe.reviews.filter(r => r.status === 'approved').length > 3) score += 1.0;
           if (cafe.amenities.length >= 5) score += 0.5;
           if (cafe.isSponsored) score += 10 - (cafe.sponsoredRank * 0.5);
 
-          // User-specific scoring
           if (user && allUserReviews.length > 0) {
               const positiveReviews = allUserReviews.filter(r => (r.ratingAesthetic + r.ratingWork) >= 15);
               const preferenceProfile = {
@@ -198,10 +206,8 @@ const HomePage: React.FC = () => {
               cafe.vibes.forEach(vibe => { if (preferenceProfile.vibes.has(vibe.id)) score += 2.0; });
               cafe.amenities.forEach(amenity => { if (preferenceProfile.amenities.has(amenity.id)) score += 1.5; });
           }
-          // Location-based scoring for guests
           else if (!user && location) {
               const distance = calculateDistance(location.lat, location.lng, cafe.coords.lat, cafe.coords.lng);
-              // Adds up to 5 points for cafes within 1km, diminishing rapidly.
               const distanceBonus = 5 / (distance + 1);
               score += distanceBonus;
           }
@@ -304,13 +310,19 @@ const HomePage: React.FC = () => {
   
   if (error) return <DatabaseConnectionError />;
 
-  // Determines if the COTW section should be shown. 
-  // We show it if data exists OR if it's loading (to show skeleton).
-  // If loaded and null, we hide it.
-  const showCotwSection = loading || cafeOfTheWeek !== null;
+  // Logic to determine layout
+  const hasFeaturedSection = showSectionRecs || showSectionCOTW;
+  
+  // Grid layout logic:
+  // Both active: 2 columns (lg:grid-cols-2)
+  // One active: Full width for the active one, max-width restricted for aesthetics
+  const gridClass = (showSectionRecs && showSectionCOTW) 
+      ? 'lg:grid-cols-2' 
+      : 'lg:grid-cols-1 max-w-5xl mx-auto';
 
   return (
     <div className="relative">
+      {/* Hero Section */}
       <div className="relative bg-gray-900 overflow-hidden -mt-32">
         <div 
           className="absolute inset-0 z-0"
@@ -327,7 +339,6 @@ const HomePage: React.FC = () => {
            )}
             <div className="absolute inset-0 bg-black/60"></div>
         </div>
-        {/* Updated padding-top to push text down */}
         <div className="relative z-10 container mx-auto px-4 sm:px-6 pt-40 sm:pt-48 pb-16 sm:pb-20 text-center">
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-jakarta text-white leading-tight sm:leading-snug drop-shadow-lg">
             Temukan Spot Nongkrong<br />
@@ -358,87 +369,90 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Featured & COTW Split Section */}
-      <div className="py-10 overflow-hidden transition-all duration-500 bg-gradient-to-b from-brand/5 to-transparent">
-        <div className="container mx-auto px-4 sm:px-6">
-            <div className={`grid grid-cols-1 ${showCotwSection ? 'lg:grid-cols-2' : 'max-w-4xl mx-auto'} gap-8 items-stretch`}>
-                
-                {/* Left Column: Recommended Slider */}
-                <div className="w-full h-full flex flex-col min-w-0">
-                     <SectionHeader 
-                        icon={<SparklesIcon className="h-6 w-6"/>} 
-                        title="Rekomendasi Spesial" 
-                        subtitle="Pilihan cerdas berdasarkan popularitas dan rating."
-                        center
-                     />
-                     
-                     <div className="flex-grow relative rounded-3xl">
-                        {loading ? (<SkeletonFeaturedCard />) : recommendedCafes.length > 0 ? (
-                            <div className="relative h-full">
-                                <div className="overflow-hidden h-full rounded-3xl">
-                                    <div className="flex transition-transform duration-500 ease-in-out h-full" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-                                        {recommendedCafes.map(cafe => (
-                                            <div key={cafe.id} className="w-full flex-shrink-0 px-1 h-full">
-                                                <FeaturedCafeCard cafe={cafe} />
+      {/* Featured & COTW Split Section - Conditionally Rendered */}
+      {hasFeaturedSection && (
+        <div className="py-10 overflow-hidden transition-all duration-500 bg-gradient-to-b from-brand/5 to-transparent">
+            <div className="container mx-auto px-4 sm:px-6">
+                <div className={`grid grid-cols-1 ${gridClass} gap-8 items-stretch`}>
+                    
+                    {/* Left Column: Recommended Slider */}
+                    {showSectionRecs && (
+                        <div className="w-full h-full flex flex-col min-w-0">
+                            <SectionHeader 
+                                icon={<SparklesIcon className="h-6 w-6"/>} 
+                                title="Rekomendasi Spesial" 
+                                subtitle="Pilihan cerdas berdasarkan popularitas dan rating."
+                                center
+                            />
+                            
+                            <div className="flex-grow relative rounded-3xl h-full min-h-[450px]">
+                                {loading ? (<SkeletonFeaturedCard />) : recommendedCafes.length > 0 ? (
+                                    <div className="relative h-full">
+                                        <div className="overflow-hidden h-full rounded-3xl">
+                                            <div className="flex transition-transform duration-500 ease-in-out h-full" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                                                {recommendedCafes.map(cafe => (
+                                                    <div key={cafe.id} className="w-full flex-shrink-0 px-1 h-full">
+                                                        <FeaturedCafeCard cafe={cafe} />
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
+                                        </div>
+                                        {recommendedCafes.length > 1 && (
+                                            <>
+                                                <button onClick={prevSlide} className="absolute top-1/2 -translate-y-1/2 left-2 sm:-left-4 p-2 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all shadow-md z-20">
+                                                    <ChevronLeftIcon className="h-5 w-5" />
+                                                </button>
+                                                <button onClick={nextSlide} className="absolute top-1/2 -translate-y-1/2 right-2 sm:-right-4 p-2 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all shadow-md z-20">
+                                                    <ChevronRightIcon className="h-5 w-5" />
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
-                                </div>
-                                {recommendedCafes.length > 1 && (
-                                    <>
-                                        <button onClick={prevSlide} className="absolute top-1/2 -translate-y-1/2 left-2 sm:-left-4 p-2 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all shadow-md z-20">
-                                            <ChevronLeftIcon className="h-5 w-5" />
-                                        </button>
-                                        <button onClick={nextSlide} className="absolute top-1/2 -translate-y-1/2 right-2 sm:-right-4 p-2 bg-card/80 backdrop-blur-sm rounded-full text-primary hover:bg-card transition-all shadow-md z-20">
-                                            <ChevronRightIcon className="h-5 w-5" />
-                                        </button>
-                                    </>
+                                ) : (
+                                    <EmptyState title="Belum Ada Rekomendasi" message="Data rekomendasi belum tersedia." />
                                 )}
                             </div>
-                        ) : (
-                             <EmptyState title="Belum Ada Rekomendasi" message="Data rekomendasi belum tersedia." />
-                        )}
-                     </div>
+                        </div>
+                    )}
+
+                    {/* Right Column: Cafe of The Week */}
+                    {showSectionCOTW && (
+                        <div className="w-full h-full flex flex-col min-w-0">
+                            <SectionHeader 
+                                icon={<TrophyIcon className="h-6 w-6 text-accent-amber"/>} 
+                                title="Cafe of The Week" 
+                                subtitle="Sorotan minggu ini. Wajib dikunjungi!"
+                                center
+                            />
+                            
+                            <div className="flex-grow h-full min-h-[450px]">
+                                {!loading && cafeOfTheWeek ? (
+                                    <CafeOfTheWeekCard cafe={cafeOfTheWeek} />
+                                ) : loading ? (
+                                    <SkeletonFeaturedCard />
+                                ) : (
+                                    <EmptyState title="Coming Soon" message="Cafe of The Week belum dipilih minggu ini." />
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
-
-                {/* Right Column: Cafe of The Week - Only rendered if showCotwSection is true */}
-                {showCotwSection && (
-                    <div className="w-full h-full flex flex-col min-w-0">
-                         <SectionHeader 
-                            icon={<TrophyIcon className="h-6 w-6 text-accent-amber"/>} 
-                            title="Cafe of The Week" 
-                            subtitle="Sorotan minggu ini. Wajib dikunjungi!"
-                            center
-                         />
-                         
-                         <div className="flex-grow h-full">
-                             {!loading && cafeOfTheWeek ? (
-                                  <CafeOfTheWeekCard cafe={cafeOfTheWeek} />
-                             ) : loading ? (
-                                 <SkeletonFeaturedCard />
-                             ) : (
-                                 // Fallback just in case, though logic above should prevent this
-                                 <div className="h-full flex items-center justify-center bg-card/50 rounded-3xl border border-border p-10 text-center">
-                                     <div>
-                                         <TrophyIcon className="h-12 w-12 mx-auto text-muted/30 mb-4" />
-                                         <p className="text-muted font-bold">Belum ada Cafe of The Week</p>
-                                     </div>
-                                 </div>
-                             )}
-                         </div>
-                    </div>
-                )}
-
             </div>
         </div>
-      </div>
+      )}
 
-      {/* Center Content Header & Sections */}
-      <div className="text-center my-10 px-4 max-w-3xl mx-auto">
-         <h2 className="text-3xl sm:text-4xl font-bold font-jakarta">Eksplorasi Lebih Jauh</h2>
-         <div className="h-1 w-20 bg-brand rounded-full mx-auto my-4"></div>
-         <p className="text-muted text-lg">Temukan lebih banyak tempat seru di sekitarmu berdasarkan lokasi dan preferensi komunitas.</p>
-      </div>
+      {/* Center Content Header & Sections - Render conditionally based on featured presence */}
+      {hasFeaturedSection && (
+          <div className="text-center my-10 px-4 max-w-3xl mx-auto">
+             <h2 className="text-3xl sm:text-4xl font-bold font-jakarta">Eksplorasi Lebih Jauh</h2>
+             <div className="h-1 w-20 bg-brand rounded-full mx-auto my-4"></div>
+             <p className="text-muted text-lg">Temukan lebih banyak tempat seru di sekitarmu berdasarkan lokasi dan preferensi komunitas.</p>
+          </div>
+      )}
+      
+      {/* If header is hidden, add top margin to first list to separate from hero */}
+      <div className={!hasFeaturedSection ? "mt-12" : ""}></div>
 
       {!isLocating && userLocation && nearestCafes.length > 0 && (
         <div className="py-10 bg-gradient-to-b from-transparent to-gray-50 dark:to-white/5">
@@ -483,7 +497,7 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Reviews Section - Restored & Centered */}
+      {/* Reviews Section */}
       <div className="py-10 border-t border-border/50 bg-gradient-to-b from-soft to-transparent">
         <div className="container mx-auto px-4 sm:px-6">
             <SectionHeader center icon={<ChatBubbleBottomCenterTextIcon className="h-6 w-6 sm:h-8 sm:w-8"/>} title="Kata Mereka" subtitle="Apa kata para Nongkrongers tentang tempat favorit mereka?" />
@@ -501,7 +515,7 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Floating Explore Button - Redesigned & Centered */}
+      {/* Floating Explore Button */}
       <div className="fixed bottom-8 left-0 right-0 flex justify-center z-50 xl:hidden pointer-events-none">
         <Link 
           to="/explore" 

@@ -8,12 +8,36 @@ import ImageWithFallback from '../common/ImageWithFallback';
 
 const HERO_BACKGROUND_KEY = 'hero_background_url';
 
+// Toggle Switch Component
+const ToggleSwitch: React.FC<{ label: string; description?: string; checked: boolean; onChange: (val: boolean) => void; disabled?: boolean }> = ({ label, description, checked, onChange, disabled }) => (
+    <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
+        <div>
+            <p className="font-semibold text-primary dark:text-white">{label}</p>
+            {description && <p className="text-xs text-muted mt-0.5">{description}</p>}
+        </div>
+        <button
+            onClick={() => !disabled && onChange(!checked)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 ${checked ? 'bg-brand' : 'bg-gray-200 dark:bg-gray-700'} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+            <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`}
+            />
+        </button>
+    </div>
+);
+
 const WebsiteSettingsPanel: React.FC = () => {
   const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
   const [socialLinks, setSocialLinks] = useState({
     instagram: '',
     tiktok: '',
     twitter: '',
+  });
+  
+  // Homepage Visibility Settings
+  const [visibilitySettings, setVisibilitySettings] = useState({
+      showRecommendations: true,
+      showCOTW: true,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -23,17 +47,23 @@ const WebsiteSettingsPanel: React.FC = () => {
 
   const fetchSettings = useCallback(async () => {
     setIsLoading(true);
-    const [heroUrl, instagramUrl, tiktokUrl, twitterUrl] = await Promise.all([
+    const [heroUrl, instagramUrl, tiktokUrl, twitterUrl, showRecs, showCotw] = await Promise.all([
       settingsService.getSetting(HERO_BACKGROUND_KEY),
       settingsService.getSetting('social_instagram_url'),
       settingsService.getSetting('social_tiktok_url'),
       settingsService.getSetting('social_twitter_url'),
+      settingsService.getSetting('show_recommendations_section'),
+      settingsService.getSetting('show_cotw_section'),
     ]);
     setHeroBgUrl(heroUrl);
     setSocialLinks({
       instagram: instagramUrl || '',
       tiktok: tiktokUrl || '',
       twitter: twitterUrl || '',
+    });
+    setVisibilitySettings({
+        showRecommendations: showRecs !== 'false', // Default true if null
+        showCOTW: showCotw !== 'false', // Default true if null
     });
     setIsLoading(false);
   }, []);
@@ -57,13 +87,28 @@ const WebsiteSettingsPanel: React.FC = () => {
         settingsService.updateSetting('social_twitter_url', socialLinks.twitter),
       ]);
       setNotification({ message: 'Link media sosial berhasil disimpan!', type: 'success' });
-      // Re-fetch to confirm the save was successful.
       await fetchSettings();
     } catch (err: any) {
       setNotification({ message: `Gagal menyimpan: ${err.message}`, type: 'error' });
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSaveVisibility = async () => {
+      setIsSaving(true);
+      setNotification(null);
+      try {
+          await Promise.all([
+              settingsService.updateSetting('show_recommendations_section', String(visibilitySettings.showRecommendations)),
+              settingsService.updateSetting('show_cotw_section', String(visibilitySettings.showCOTW)),
+          ]);
+          setNotification({ message: 'Pengaturan tampilan Homepage berhasil disimpan!', type: 'success' });
+      } catch (err: any) {
+          setNotification({ message: `Gagal menyimpan: ${err.message}`, type: 'error' });
+      } finally {
+          setIsSaving(false);
+      }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,7 +136,7 @@ const WebsiteSettingsPanel: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
       
       <h2 className="text-2xl font-bold font-jakarta text-center bg-gradient-to-r from-brand to-purple-600 bg-clip-text text-transparent">
@@ -106,35 +151,63 @@ const WebsiteSettingsPanel: React.FC = () => {
         </div>
       ) : (
         <>
-            <div>
-                <h3 className="font-semibold text-lg mb-4">Background Hero Section</h3>
+            {/* Section 1: Homepage Appearance */}
+            <div className="bg-card rounded-2xl border border-border p-5">
+                <h3 className="font-bold text-lg mb-4 border-b border-border pb-2">Tampilan Homepage</h3>
+                <div className="space-y-2">
+                    <ToggleSwitch 
+                        label="Tampilkan Rekomendasi Spesial" 
+                        description="Slider rekomendasi berdasarkan algoritma cerdas di bagian atas."
+                        checked={visibilitySettings.showRecommendations}
+                        onChange={(val) => setVisibilitySettings(prev => ({...prev, showRecommendations: val}))}
+                        disabled={isSaving}
+                    />
+                    <ToggleSwitch 
+                        label="Tampilkan Cafe of The Week" 
+                        description="Kartu sorotan khusus untuk satu kafe pilihan admin."
+                        checked={visibilitySettings.showCOTW}
+                        onChange={(val) => setVisibilitySettings(prev => ({...prev, showCOTW: val}))}
+                        disabled={isSaving}
+                    />
+                </div>
+                <div className="mt-4 text-right">
+                     <button onClick={handleSaveVisibility} disabled={isSaving} className="px-6 py-2 bg-brand text-white font-bold rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-50 text-sm">
+                        {isSaving ? 'Menyimpan...' : 'Simpan Tampilan'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Section 2: Hero Image */}
+            <div className="bg-card rounded-2xl border border-border p-5">
+                <h3 className="font-bold text-lg mb-4 border-b border-border pb-2">Background Utama</h3>
                 <div>
-                    <p className="text-sm text-muted mb-2">Gambar saat ini:</p>
-                    <ImageWithFallback src={heroBgUrl} alt="Hero background preview" className="w-full h-40 object-cover rounded-2xl mb-4" fallbackText="Belum ada background kustom." width={400} height={200}/>
-                    <label htmlFor="hero-bg-upload" className={`w-full text-center cursor-pointer bg-brand/10 text-brand font-semibold p-3 rounded-xl block hover:bg-brand/20 transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                      {isUploading ? 'Mengupload...' : 'Unggah Gambar Baru'}
+                    <p className="text-sm text-muted mb-3">Gambar ini akan muncul di bagian paling atas (Hero Section) halaman utama.</p>
+                    <ImageWithFallback src={heroBgUrl} alt="Hero background preview" className="w-full h-48 object-cover rounded-2xl mb-4 border border-border" fallbackText="Belum ada background kustom." width={400} height={200}/>
+                    <label htmlFor="hero-bg-upload" className={`w-full text-center cursor-pointer bg-brand/10 text-brand font-semibold p-3 rounded-xl block hover:bg-brand/20 transition-colors border-2 border-dashed border-brand/30 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      {isUploading ? 'Mengupload...' : 'Ganti Gambar Background'}
                     </label>
                     <input id="hero-bg-upload" type="file" accept="image/*" onChange={handleFileChange} className="hidden" disabled={isUploading}/>
                 </div>
             </div>
 
-            <div className="pt-4 border-t border-border">
-                <h3 className="font-semibold text-lg mb-4">Link Media Sosial</h3>
+            {/* Section 3: Social Media */}
+            <div className="bg-card rounded-2xl border border-border p-5">
+                <h3 className="font-bold text-lg mb-4 border-b border-border pb-2">Link Media Sosial</h3>
                 <div className="space-y-4">
                      <div>
                         <label htmlFor="instagram" className="font-medium text-sm text-muted">Instagram URL</label>
-                        <input id="instagram" name="instagram" value={socialLinks.instagram} onChange={handleSocialLinkChange} className="mt-1 w-full p-2 border border-border bg-soft dark:bg-gray-700/50 rounded-lg"/>
+                        <input id="instagram" name="instagram" value={socialLinks.instagram} onChange={handleSocialLinkChange} className="mt-1 w-full p-2 border border-border bg-soft dark:bg-gray-700/50 rounded-lg focus:ring-2 focus:ring-brand outline-none"/>
                     </div>
                      <div>
                         <label htmlFor="tiktok" className="font-medium text-sm text-muted">TikTok URL</label>
-                        <input id="tiktok" name="tiktok" value={socialLinks.tiktok} onChange={handleSocialLinkChange} className="mt-1 w-full p-2 border border-border bg-soft dark:bg-gray-700/50 rounded-lg"/>
+                        <input id="tiktok" name="tiktok" value={socialLinks.tiktok} onChange={handleSocialLinkChange} className="mt-1 w-full p-2 border border-border bg-soft dark:bg-gray-700/50 rounded-lg focus:ring-2 focus:ring-brand outline-none"/>
                     </div>
                      <div>
                         <label htmlFor="twitter" className="font-medium text-sm text-muted">Twitter/X URL</label>
-                        <input id="twitter" name="twitter" value={socialLinks.twitter} onChange={handleSocialLinkChange} className="mt-1 w-full p-2 border border-border bg-soft dark:bg-gray-700/50 rounded-lg"/>
+                        <input id="twitter" name="twitter" value={socialLinks.twitter} onChange={handleSocialLinkChange} className="mt-1 w-full p-2 border border-border bg-soft dark:bg-gray-700/50 rounded-lg focus:ring-2 focus:ring-brand outline-none"/>
                     </div>
-                    <button onClick={handleSaveSocialLinks} disabled={isSaving} className="w-full bg-brand text-white font-bold py-2 rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-50">
-                        {isSaving ? 'Menyimpan...' : 'Simpan Link'}
+                    <button onClick={handleSaveSocialLinks} disabled={isSaving} className="w-full bg-brand text-white font-bold py-2.5 rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-50 text-sm mt-2">
+                        {isSaving ? 'Menyimpan...' : 'Simpan Link Sosmed'}
                     </button>
                 </div>
             </div>
