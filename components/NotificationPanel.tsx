@@ -1,10 +1,10 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotifications, NotificationItem } from '../context/NotificationContext';
-import { BellIcon, CheckCircleIcon, XCircleIcon, InformationCircleIcon, ExclamationTriangleIcon, TrashIcon, CheckIcon, EnvelopeIcon, UserPlusIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
+import { BellIcon, CheckCircleIcon, XCircleIcon, InformationCircleIcon, ExclamationTriangleIcon, TrashIcon, CheckIcon, EnvelopeIcon, UserPlusIcon, ArrowPathIcon, XMarkIcon } from '@heroicons/react/24/solid';
 
-const NotificationItemComp: React.FC<{ item: NotificationItem, onRead: () => void, onClose: () => void }> = ({ item, onRead, onClose }) => {
+const NotificationItemComp: React.FC<{ item: NotificationItem, onRead: () => void, onDelete: (id: string) => void, onClose: () => void }> = ({ item, onRead, onDelete, onClose }) => {
     const getIcon = () => {
         if (item.id.includes('feedback')) return <EnvelopeIcon className="h-5 w-5 text-purple-500" />;
         if (item.id.includes('new-user')) return <UserPlusIcon className="h-5 w-5 text-blue-500" />;
@@ -17,12 +17,18 @@ const NotificationItemComp: React.FC<{ item: NotificationItem, onRead: () => voi
         }
     };
 
+    const handleDelete = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onDelete(item.id);
+    };
+
     const content = (
-        <div className={`flex gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${!item.isRead ? 'bg-brand/5 dark:bg-brand/10' : ''}`}>
+        <div className={`flex gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors relative group ${!item.isRead ? 'bg-brand/5 dark:bg-brand/10' : ''}`}>
             <div className="flex-shrink-0 mt-0.5">
                 {getIcon()}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 pr-6">
                 <p className={`text-sm text-primary dark:text-gray-200 ${!item.isRead ? 'font-bold' : 'font-medium'}`}>
                     {item.title}
                     {!item.isRead && <span className="ml-2 inline-block w-2 h-2 bg-red-500 rounded-full align-middle"></span>}
@@ -35,6 +41,13 @@ const NotificationItemComp: React.FC<{ item: NotificationItem, onRead: () => voi
                     {item.date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                 </p>
             </div>
+            <button 
+                onClick={handleDelete}
+                className="absolute top-3 right-3 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 rounded-full opacity-0 group-hover:opacity-100 transition-all z-20"
+                title="Hapus notifikasi"
+            >
+                <XMarkIcon className="h-4 w-4" />
+            </button>
         </div>
     );
 
@@ -60,17 +73,25 @@ const GroupHeader: React.FC<{ title: string }> = ({ title }) => (
 );
 
 const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({ isOpen, onClose }) => {
-    const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, refresh } = useNotifications();
+    const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, clearAll, refresh } = useNotifications();
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const handleRefresh = async () => {
+    const handleRefresh = useCallback(async () => {
+        if (isRefreshing) return;
         setIsRefreshing(true);
         try {
             await refresh();
         } finally {
-            setTimeout(() => setIsRefreshing(false), 500);
+            setTimeout(() => setIsRefreshing(false), 800); // Minimum spin time
         }
-    };
+    }, [refresh, isRefreshing]);
+
+    // Auto-refresh when opened
+    useEffect(() => {
+        if (isOpen) {
+            handleRefresh();
+        }
+    }, [isOpen]);
 
     // Grouping Logic
     const groupedNotifications = useMemo(() => {
@@ -111,7 +132,6 @@ const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({
                         onClick={handleRefresh}
                         className="p-1.5 text-muted hover:text-brand hover:bg-brand/10 rounded-full transition-colors"
                         title="Refresh"
-                        disabled={isRefreshing}
                     >
                         <ArrowPathIcon className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-brand' : ''}`} />
                     </button>
@@ -143,7 +163,7 @@ const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({
                             <>
                                 <GroupHeader title="Hari Ini" />
                                 {groupedNotifications.today.map(notif => (
-                                    <NotificationItemComp key={notif.id} item={notif} onRead={() => markAsRead(notif.id)} onClose={onClose} />
+                                    <NotificationItemComp key={notif.id} item={notif} onRead={() => markAsRead(notif.id)} onDelete={deleteNotification} onClose={onClose} />
                                 ))}
                             </>
                         )}
@@ -151,7 +171,7 @@ const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({
                             <>
                                 <GroupHeader title="Kemarin" />
                                 {groupedNotifications.yesterday.map(notif => (
-                                    <NotificationItemComp key={notif.id} item={notif} onRead={() => markAsRead(notif.id)} onClose={onClose} />
+                                    <NotificationItemComp key={notif.id} item={notif} onRead={() => markAsRead(notif.id)} onDelete={deleteNotification} onClose={onClose} />
                                 ))}
                             </>
                         )}
@@ -159,7 +179,7 @@ const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({
                             <>
                                 <GroupHeader title="Sebelumnya" />
                                 {groupedNotifications.older.map(notif => (
-                                    <NotificationItemComp key={notif.id} item={notif} onRead={() => markAsRead(notif.id)} onClose={onClose} />
+                                    <NotificationItemComp key={notif.id} item={notif} onRead={() => markAsRead(notif.id)} onDelete={deleteNotification} onClose={onClose} />
                                 ))}
                             </>
                         )}

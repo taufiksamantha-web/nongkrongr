@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { CafeContext } from './CafeContext';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabaseClient';
@@ -12,7 +12,7 @@ export interface NotificationItem {
     date: Date;
     link?: string;
     isRead: boolean;
-    highlightText?: string; // New field for cafe name or key info
+    highlightText?: string;
 }
 
 interface NotificationContextType {
@@ -20,17 +20,16 @@ interface NotificationContextType {
     unreadCount: number;
     markAsRead: (id: string) => void;
     markAllAsRead: () => void;
+    deleteNotification: (id: string) => void;
     clearAll: () => void;
     refresh: () => Promise<void>;
 }
 
 export const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-// Constants for Guest storage keys
 const GUEST_READ_KEY = 'nongkrongr_guest_read_notifications';
 const GUEST_DELETED_KEY = 'nongkrongr_guest_deleted_notifications';
 
-// Define minimal interfaces for Realtime payloads
 interface MinimalFeedback { id: number; name: string; message: string; created_at: string; status: string; }
 interface MinimalProfile { id: string; username: string; role: string; created_at?: string; }
 interface MinimalCafe { id: string; name: string; slug: string; manager_id: string; status: string; created_at: string; }
@@ -40,20 +39,27 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const { currentUser } = useAuth();
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     
-    // State for Read/Deleted IDs (In-Memory Source of Truth)
     const [readIds, setReadIds] = useState<Set<string>>(new Set());
     const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
     const [isStateLoaded, setIsStateLoaded] = useState(false);
 
-    // --- PERSISTENCE LOGIC ---
+    // Use refs to avoid closure staleness in async operations
+    const deletedIdsRef = useRef<Set<string>>(new Set());
+    const readIdsRef = useRef<Set<string>>(new Set());
+    
+    useEffect(() => {
+        deletedIdsRef.current = deletedIds;
+    }, [deletedIds]);
 
-    // 1. Load State (DB for User, LocalStorage for Guest)
+    useEffect(() => {
+        readIdsRef.current = readIds;
+    }, [readIds]);
+
     useEffect(() => {
         const loadState = async () => {
             setIsStateLoaded(false);
             
             if (currentUser) {
-                // USER: Fetch from Database
                 const { data, error } = await supabase
                     .from('user_notifications_state')
                     .select('notification_id, is_read, is_deleted')
@@ -72,7 +78,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     setDeletedIds(newDeletedIds);
                 }
             } else {
-                // GUEST: Fetch from LocalStorage
                 const storedRead = localStorage.getItem(GUEST_READ_KEY);
                 const storedDeleted = localStorage.getItem(GUEST_DELETED_KEY);
                 
@@ -91,20 +96,43 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         loadState();
     }, [currentUser]);
 
-    // 2. Save State Helpers
     const persistReadState = async (id: string) => {
         if (currentUser) {
-            // DB Upsert
-            await supabase.from('user_notifications_state').upsert({
+            const { error } = await supabase.from('user_notifications_state').upsert({
                 user_id: currentUser.id,
                 notification_id: id,
                 is_read: true,
+                // If creating a new row, default is_deleted to false if not specified, 
+                // but we should try to preserve existing via database constraints or rely on default.
+                // However, simpler to just set updated_at.
                 updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id, notification_id' });
+            }, { onConflict: 'user_id,notification_id' });
+            
+            if (error) console.error("Error persisting read state:", error);
         } else {
-            // LocalStorage
-            const currentRead = new Set(readIds).add(id);
+            const currentRead = new Set(readIdsRef.current).add(id);
             localStorage.setItem(GUEST_READ_KEY, JSON.stringify(Array.from(currentRead)));
+        }
+    };
+
+    const persistDeletedState = async (id: string) => {
+        if (currentUser) {
+            // We explicitly send is_read status as well to ensure if a row is created (upsert),
+            // it has the correct read status instead of defaulting to false.
+            const isCurrentlyRead = readIdsRef.current.has(id);
+
+            const { error } = await supabase.from('user_notifications_state').upsert({
+                user_id: currentUser.id,
+                notification_id: id,
+                is_deleted: true,
+                is_read: isCurrentlyRead, 
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id,notification_id' });
+
+            if (error) console.error("Error persisting deleted state:", error);
+        } else {
+            const currentDeleted = new Set(deletedIdsRef.current).add(id);
+            localStorage.setItem(GUEST_DELETED_KEY, JSON.stringify(Array.from(currentDeleted)));
         }
     };
 
@@ -113,26 +141,25 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
              const updates = ids.map(id => ({
                 user_id: currentUser.id,
                 notification_id: id,
-                [type === 'read' ? 'is_read' : 'is_deleted']: true,
+                is_read: type === 'read' ? true : readIdsRef.current.has(id),
+                is_deleted: type === 'deleted' ? true : deletedIdsRef.current.has(id),
                 updated_at: new Date().toISOString()
              }));
              
-             await supabase.from('user_notifications_state').upsert(updates, { onConflict: 'user_id, notification_id' });
+             const { error } = await supabase.from('user_notifications_state').upsert(updates, { onConflict: 'user_id,notification_id' });
+             if (error) console.error(`Error persisting batch ${type}:`, error);
         } else {
             if (type === 'read') {
-                const currentRead = new Set([...readIds, ...ids]);
+                const currentRead = new Set([...readIdsRef.current, ...ids]);
                 localStorage.setItem(GUEST_READ_KEY, JSON.stringify(Array.from(currentRead)));
             } else {
-                const currentDeleted = new Set([...deletedIds, ...ids]);
+                const currentDeleted = new Set([...deletedIdsRef.current, ...ids]);
                 localStorage.setItem(GUEST_DELETED_KEY, JSON.stringify(Array.from(currentDeleted)));
             }
         }
     }
 
-
-    // --- NOTIFICATION GENERATION LOGIC ---
-    
-    const isDeleted = useCallback((id: string) => deletedIds.has(id), [deletedIds]);
+    const isDeleted = useCallback((id: string) => deletedIdsRef.current.has(id), []);
     const isRead = useCallback((id: string) => readIds.has(id), [readIds]);
 
     const sendBrowserNotification = useCallback((title: string, body: string, link?: string) => {
@@ -159,7 +186,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         
         const fetchedNotifs: NotificationItem[] = [];
 
-        // 1. GLOBAL: New Cafes (Last 7 Days)
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         
@@ -187,9 +213,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             }
         });
 
-        // 2. PERSONAL: User & Manager
         if (currentUser) {
-            // A. Reviews
             const { data: myReviews } = await supabase
                 .from('reviews')
                 .select('id, status, created_at, cafes(name, slug)')
@@ -216,7 +240,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 }
             });
 
-            // B. Cafe Status
             if (currentUser.role === 'admin_cafe') {
                 const { data: myCafes } = await supabase
                     .from('cafes')
@@ -252,9 +275,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             const uniqueMap = new Map();
             combined.forEach(item => uniqueMap.set(item.id, item));
             
-            // Merge with previous items not in fetch (realtime ones)
             prev.forEach(item => {
-                if (!uniqueMap.has(item.id)) {
+                if (!uniqueMap.has(item.id) && !isDeleted(item.id)) {
                      uniqueMap.set(item.id, { ...item, isRead: isRead(item.id) });
                 }
             });
@@ -268,13 +290,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         fetchNotifications();
     }, [isStateLoaded, fetchNotifications]);
 
-    // --- REALTIME ---
     useEffect(() => {
         if (!isStateLoaded) return;
 
         const channels: ReturnType<typeof supabase.channel>[] = [];
 
-        // 1. New Cafe
         const globalChannel = supabase.channel('global-cafe-updates')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cafes', filter: 'status=eq.approved' }, (payload) => {
                 const cafe = payload.new as MinimalCafe;
@@ -296,22 +316,23 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             .subscribe();
         channels.push(globalChannel);
         
-        // 2. Watch notification state changes (Sync across devices)
         if (currentUser) {
             const stateChannel = supabase.channel(`user-notif-state-${currentUser.id}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications_state', filter: `user_id=eq.${currentUser.id}` }, (payload) => {
-                    // Refresh internal state from DB to sync read/deleted status
                      const { new: newData } = payload;
                      if (newData) {
                         if (newData.is_read) setReadIds(prev => new Set(prev).add(newData.notification_id));
-                        if (newData.is_deleted) setDeletedIds(prev => new Set(prev).add(newData.notification_id));
+                        if (newData.is_deleted) {
+                            const id = newData.notification_id;
+                            setDeletedIds(prev => new Set(prev).add(id));
+                            setNotifications(prev => prev.filter(n => n.id !== id));
+                        }
                      }
                 })
                 .subscribe();
              channels.push(stateChannel);
         }
         
-        // 2. ADMIN LISTENERS
         if (currentUser?.role === 'admin') {
             const adminChannel = supabase.channel('admin-notifications')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, (payload) => {
@@ -323,15 +344,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                         const link = '/dashboard-admin';
                         
                         setNotifications(prev => [{
-                            id: notifId,
-                            title,
-                            message: msg,
-                            type: 'info',
-                            date: new Date(),
-                            link,
-                            isRead: isRead(notifId)
+                            id: notifId, title, message: msg, type: 'info', date: new Date(), link, isRead: isRead(notifId)
                         }, ...prev]);
-
                         sendBrowserNotification(title, msg, link);
                     }
                 })
@@ -342,17 +356,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                         const title = 'Masukan Baru';
                         const msg = `Dari ${fb.name}: "${fb.message.substring(0, 40)}..."`;
                         const link = '/dashboard-admin';
-                        
                         setNotifications(prev => [{
-                            id: notifId,
-                            title,
-                            message: msg,
-                            type: 'warning',
-                            date: new Date(),
-                            link,
-                            isRead: isRead(notifId)
+                            id: notifId, title, message: msg, type: 'warning', date: new Date(), link, isRead: isRead(notifId)
                         }, ...prev]);
-
                         sendBrowserNotification(title, msg, link);
                     }
                 })
@@ -364,18 +370,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                             const title = 'Cafe Baru Menunggu Review';
                             const msg = `perlu persetujuan untuk ditayangkan.`;
                             const link = '/dashboard-admin';
-
                             setNotifications(prev => [{
-                                id: notifId,
-                                title,
-                                message: msg,
-                                highlightText: cafe.name,
-                                type: 'info',
-                                date: new Date(),
-                                link,
-                                isRead: isRead(notifId)
+                                id: notifId, title, message: msg, highlightText: cafe.name, type: 'info', date: new Date(), link, isRead: isRead(notifId)
                             }, ...prev]);
-
                             sendBrowserNotification(title, `${cafe.name} ${msg}`, link);
                         }
                     }
@@ -384,7 +381,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             channels.push(adminChannel);
         }
 
-        // 3. PERSONAL LISTENERS (User/Manager)
         if (currentUser) {
             const userChannel = supabase.channel(`user-personal-${currentUser.id}`)
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reviews', filter: `author=eq.${currentUser.username}` }, async (payload) => {
@@ -396,28 +392,17 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     const id = `review-${r.id}-${r.status}`; 
                     const isApproved = r.status === 'approved';
                     const title = isApproved ? 'Review Disetujui' : 'Review Ditolak';
-                    const msg = isApproved 
-                        ? `Ulasanmu di ${cafe?.name || 'cafe'} telah ditayangkan.` 
-                        : `Ulasanmu di ${cafe?.name || 'cafe'} tidak dapat ditayangkan.`;
+                    const msg = isApproved ? `Ulasanmu di ${cafe?.name || 'cafe'} telah ditayangkan.` : `Ulasanmu di ${cafe?.name || 'cafe'} tidak dapat ditayangkan.`;
                     const link = isApproved ? `/cafe/${cafe?.slug}` : undefined;
                     
                     if (!isDeleted(id)) {
                          setNotifications(prev => {
                              const filtered = prev.filter(n => n.id !== id);
                              return [{
-                                id,
-                                title,
-                                message: msg,
-                                type: isApproved ? 'success' : 'alert',
-                                date: new Date(),
-                                link,
-                                isRead: isRead(id)
+                                id, title, message: msg, type: isApproved ? 'success' : 'alert', date: new Date(), link, isRead: isRead(id)
                             }, ...filtered];
                         });
-                        
-                        if (!isRead(id)) {
-                            sendBrowserNotification(title, msg, link);
-                        }
+                        if (!isRead(id)) sendBrowserNotification(title, msg, link);
                     }
                 })
                 .subscribe();
@@ -428,33 +413,20 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cafes', filter: `manager_id=eq.${currentUser.id}` }, (payload) => {
                         const cafe = payload.new as MinimalCafe;
                         if (cafe.status === 'pending') return;
-
                         const id = `cafe-status-${cafe.id}-${cafe.status}`;
                         const isApproved = cafe.status === 'approved';
                         const title = isApproved ? 'Cafe Disetujui' : 'Cafe Ditolak';
-                        const msg = isApproved 
-                            ? `Selamat! telah disetujui.` 
-                            : `Maaf, pendaftaran ditolak.`;
+                        const msg = isApproved ? `Selamat! telah disetujui.` : `Maaf, pendaftaran ditolak.`;
                         const link = isApproved ? `/cafe/${cafe.slug}` : '/dashboard-pengelola';
 
                          if (!isDeleted(id)) {
                              setNotifications(prev => {
                                  const filtered = prev.filter(n => n.id !== id);
                                  return [{
-                                    id,
-                                    title,
-                                    message: msg,
-                                    highlightText: cafe.name,
-                                    type: isApproved ? 'success' : 'alert',
-                                    date: new Date(),
-                                    link,
-                                    isRead: isRead(id)
+                                    id, title, message: msg, highlightText: cafe.name, type: isApproved ? 'success' : 'alert', date: new Date(), link, isRead: isRead(id)
                                 }, ...filtered];
                             });
-
-                            if (!isRead(id)) {
-                                sendBrowserNotification(title, `${cafe.name} ${msg}`, link);
-                            }
+                            if (!isRead(id)) sendBrowserNotification(title, `${cafe.name} ${msg}`, link);
                          }
                     })
                     .subscribe();
@@ -467,16 +439,20 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         };
     }, [currentUser, isStateLoaded, isDeleted, isRead, sendBrowserNotification]);
 
-    // --- ACTIONS ---
-
     const markAsRead = (id: string) => {
         if (!readIds.has(id)) {
-            // Optimistic Update
             setReadIds(prev => new Set(prev).add(id));
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-            // Persist
             persistReadState(id);
         }
+    };
+    
+    const deleteNotification = (id: string) => {
+        // Update local state first (Optimistic UI)
+        setDeletedIds(prev => new Set(prev).add(id));
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        // Trigger DB persistence
+        persistDeletedState(id);
     };
 
     const markAllAsRead = () => {
@@ -491,10 +467,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         });
 
         if (idsToUpdate.length > 0) {
-             // Optimistic
             setReadIds(newReadIds);
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-            // Persist Batch
             persistBatchState(idsToUpdate, 'read');
         }
     };
@@ -502,12 +476,10 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const clearAll = () => {
         const idsToDelete = notifications.map(n => n.id);
         if (idsToDelete.length > 0) {
-            // Optimistic
             const newDeletedIds = new Set(deletedIds);
             idsToDelete.forEach(id => newDeletedIds.add(id));
             setDeletedIds(newDeletedIds);
             setNotifications([]);
-            // Persist Batch
             persistBatchState(idsToDelete, 'deleted');
         }
     };
@@ -520,7 +492,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     return (
-        <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead, clearAll, refresh }}>
+        <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, clearAll, refresh }}>
             {children}
         </NotificationContext.Provider>
     );

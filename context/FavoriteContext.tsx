@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, ReactNode, useContext, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabaseClient';
@@ -47,7 +48,7 @@ export const FavoriteProvider: React.FC<{ children: ReactNode }> = ({ children }
                     .eq('user_id', currentUser.id);
                 
                 if (error) {
-                    console.error("Error fetching user favorites from DB:", error);
+                    console.error("Error fetching user favorites from DB:", error.message || error);
                     setFavoriteIds([]);
                 } else {
                     setFavoriteIds(data.map(fav => fav.cafe_id));

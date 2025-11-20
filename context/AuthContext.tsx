@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (error || !profile) {
             // CASE: Admin deleted the user from 'profiles' table
-            console.error("Session validation failed. User profile deleted.", { error });
+            console.error("Session validation failed. User profile deleted.", error?.message || error);
             await supabase.auth.signOut();
             setCurrentUser(null);
             localStorage.removeItem(USER_STORAGE_KEY);
