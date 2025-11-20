@@ -406,8 +406,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
         }
         
         setIsSaving(true);
-        setNotification({ message: 'Menyimpan data ke database...', type: 'info' });
-
+        
         try {
             // 1. PREPARE DATA (Use existing URLs or placeholders if uploading new ones)
             // We do NOT upload yet. We save the record first to ensure data integrity.
@@ -449,8 +448,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
             // 3. UPLOAD IMAGES (If new files exist)
             if (logoFile || coverFile || spotFiles.some(f => f !== null) || eventFiles.some(f => f !== null)) {
                 setIsUploading(true);
-                setNotification({ message: 'Data tersimpan. Mengupload gambar...', type: 'info' });
-
+                
                 const logoUploadPromise = logoFile ? fileToBase64(logoFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(null);
                 const coverUploadPromise = coverFile ? fileToBase64(coverFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(null);
                 
