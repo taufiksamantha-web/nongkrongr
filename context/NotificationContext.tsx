@@ -195,30 +195,33 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         const dateLimit = sevenDaysAgo.toISOString();
 
-        // 1. LOGIC FOR ALL (Termasuk Guest): Cafe Baru Approved
-        const { data: newCafes } = await supabase
-            .from('cafes')
-            .select('id, name, slug, created_at, status')
-            .eq('status', 'approved')
-            .gt('created_at', dateLimit)
-            .order('created_at', { ascending: false })
-            .limit(5);
+        // 1. LOGIC FOR ALL EXCEPT MANAGERS: Cafe Baru Approved
+        // Pengelola Cafe tidak perlu melihat notifikasi cafe baru (kompetitor), sesuai request.
+        if (currentUser?.role !== 'admin_cafe') {
+            const { data: newCafes } = await supabase
+                .from('cafes')
+                .select('id, name, slug, created_at, status')
+                .eq('status', 'approved')
+                .gt('created_at', dateLimit)
+                .order('created_at', { ascending: false })
+                .limit(5);
 
-        newCafes?.forEach(cafe => {
-            const id = `new-cafe-${cafe.id}`;
-            if (!isDeleted(id)) {
-                fetchedNotifs.push({
-                    id,
-                    title: 'Cafe Baru!',
-                    message: `baru saja hadir di Nongkrongr.`,
-                    highlightText: cafe.name,
-                    type: 'success',
-                    date: new Date(cafe.created_at),
-                    link: `/cafe/${cafe.slug}`,
-                    isRead: isRead(id)
-                });
-            }
-        });
+            newCafes?.forEach(cafe => {
+                const id = `new-cafe-${cafe.id}`;
+                if (!isDeleted(id)) {
+                    fetchedNotifs.push({
+                        id,
+                        title: 'Cafe Baru!',
+                        message: `baru saja hadir di Nongkrongr.`,
+                        highlightText: cafe.name,
+                        type: 'success',
+                        date: new Date(cafe.created_at),
+                        link: `/cafe/${cafe.slug}`,
+                        isRead: isRead(id)
+                    });
+                }
+            });
+        }
 
         if (currentUser) {
             // 2. LOGIC FOR ADMIN
@@ -338,7 +341,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         const channels: ReturnType<typeof supabase.channel>[] = [];
 
         // 1. Global Channel (Cafe Approved)
+        // Filter out new cafe notifications for Managers
         const globalChannel = supabase.channel('global-notif').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cafes', filter: 'status=eq.approved' }, (payload) => {
+             // Explicitly cast currentUser to avoid TS inference issues where it might be confused with notifications array
+             if ((currentUser as any)?.role === 'admin_cafe') return; 
+             
              const cafe = payload.new as MinimalCafe;
              const id = `new-cafe-${cafe.id}`;
              if (!isDeleted(id)) {
@@ -442,7 +449,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     const old = payload.old as MinimalProfile;
                     if (old?.status !== 'active' && p.status === 'active') {
                          const id = `acc-active-${p.id}`;
-                         if(!isDeleted(id)) setNotifications(prev => [{ id, title: 'Akun Aktif', message: 'Akun Anda telah disetujui Admin.', type: 'success', date: new Date(), link: p.role === 'admin_cafe' ? '/dashboard-pengelola' : '/', isRead: false }, ...prev]);
+                         if(!isDeleted(id)) setNotifications(p => [{ id, title: 'Akun Aktif', message: 'Akun Anda telah disetujui Admin.', type: 'success', date: new Date(), link: p.role === 'admin_cafe' ? '/dashboard-pengelola' : '/', isRead: false }, ...p]);
                     }
                 })
                 .subscribe();
