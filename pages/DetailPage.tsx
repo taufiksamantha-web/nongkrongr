@@ -166,6 +166,36 @@ const DetailPage: React.FC = () => {
     const visibleReviews = approvedReviews.slice(0, visibleReviewsCount);
     const cafeEvents = cafe.events?.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()) || [];
 
+    // Reusable Buttons for cleaner render logic (Mobile vs Desktop)
+    const ActionButtons = ({ isMobile }: { isMobile: boolean }) => {
+        // Mobile: Transparent/Dark overlay style
+        // Desktop: Clean button style matching info card
+        const shareClass = isMobile 
+            ? "p-2 sm:p-3 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-all shadow-sm active:scale-90"
+            : "p-2 rounded-xl bg-soft dark:bg-gray-700/30 text-muted hover:text-brand hover:bg-brand/5 border border-border transition-all shadow-sm active:scale-95";
+            
+        const favClass = isMobile
+            ? `p-2 sm:p-3 rounded-full transition-all duration-300 shadow-sm active:scale-75 bg-black/40 backdrop-blur-md text-white hover:bg-black/60 ${favorited ? 'text-accent-pink' : ''} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`
+            : `p-2 rounded-xl transition-all duration-300 shadow-sm active:scale-90 border border-border ${favorited ? 'bg-accent-pink/10 text-accent-pink border-accent-pink/20' : 'bg-soft dark:bg-gray-700/30 text-muted hover:text-accent-pink hover:bg-accent-pink/5'} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`;
+
+        return (
+            <div className={`flex gap-2 sm:gap-3 ${isMobile ? 'absolute top-4 right-4 z-10 md:hidden' : 'hidden md:flex items-center gap-2'}`}>
+                <ShareButton 
+                    cafeName={cafe.name} 
+                    cafeDescription={cafe.description} 
+                    className={shareClass}
+                />
+                <button
+                    onClick={handleFavoriteClick}
+                    className={favClass}
+                    aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+                    title={favorited ? 'Hapus dari favorit' : 'Tambah ke favorit'}
+                >
+                    {favorited ? <HeartIcon className={`w-5 h-5 ${!isMobile ? 'sm:w-5 sm:h-5' : 'sm:w-6 sm:h-6'}`}/> : <HeartIconOutline className={`w-5 h-5 ${!isMobile ? 'sm:w-5 sm:h-5' : 'sm:w-6 sm:h-6'}`} />}
+                </button>
+            </div>
+        );
+    };
 
     return (
         <div className="container mx-auto px-4 sm:px-6 py-6 transition-all duration-300 ease-in-out w-full max-w-screen-2xl">
@@ -189,21 +219,8 @@ const DetailPage: React.FC = () => {
                     width={1280}
                     height={768}
                 />
-                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex gap-2 sm:gap-3 z-10">
-                     <ShareButton 
-                        cafeName={cafe.name} 
-                        cafeDescription={cafe.description} 
-                        className="p-2 sm:p-3 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-all shadow-sm active:scale-90"
-                    />
-                     <button
-                        onClick={handleFavoriteClick}
-                        className={`p-2 sm:p-3 rounded-full transition-all duration-300 shadow-sm active:scale-75 bg-black/40 backdrop-blur-md text-white hover:bg-black/60 ${favorited ? 'text-accent-pink' : ''} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`}
-                        aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
-                        title={favorited ? 'Hapus dari favorit' : 'Tambah ke favorit'}
-                     >
-                        {favorited ? <HeartIcon className="h-5 w-5 sm:h-6 sm:w-6 text-accent-pink"/> : <HeartIconOutline className="h-5 w-5 sm:h-6 sm:w-6" />}
-                     </button>
-                </div>
+                {/* Mobile Action Buttons - Hidden on Desktop */}
+                <ActionButtons isMobile={true} />
             </div>
 
             {/* Main Layout - Fluid Grid */}
@@ -243,8 +260,11 @@ const DetailPage: React.FC = () => {
                                         </div>
                                      </div>
                                      
-                                     {/* Compact Price Badge */}
-                                     <div className="flex items-center justify-center md:justify-end mt-1 md:mt-0 flex-shrink-0">
+                                     {/* Compact Price Badge & Desktop Actions */}
+                                     <div className="flex items-center justify-center md:justify-end gap-3 mt-1 md:mt-0 flex-shrink-0">
+                                         {/* Desktop Action Buttons */}
+                                         <ActionButtons isMobile={false} />
+                                         
                                          <div className="bg-soft dark:bg-gray-700/30 px-3 py-1.5 rounded-lg border border-border flex items-center gap-0.5">
                                              <span className={`text-xl sm:text-2xl font-extrabold tracking-wide leading-none ${getPriceColor(cafe.priceTier)}`}>
                                                 {'$'.repeat(cafe.priceTier)}

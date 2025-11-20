@@ -192,8 +192,16 @@ const Header: React.FC = () => {
                         <button onClick={() => setIsLogoutModalOpen(true)} className="hidden sm:flex p-2 rounded-full text-muted hover:text-red-500 hover:bg-white dark:hover:bg-gray-600 transition-all" title="Logout">
                             <ArrowRightOnRectangleIcon className="h-5 w-5" />
                         </button>
-                        <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden flex items-center gap-1 px-3 py-2 rounded-full bg-brand text-white hover:bg-brand/90 transition-all shadow-lg shadow-brand/20" aria-label="Buka menu pengguna">
-                             <UserCircleIcon className="h-6 w-6 text-white"/>
+                        
+                        {/* Mobile User Button - Updated to show Avatar */}
+                        <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden flex items-center gap-1 px-2 py-2 rounded-full hover:bg-brand/10 transition-all" aria-label="Buka menu pengguna">
+                             {currentUser.avatar_url ? (
+                                <img src={currentUser.avatar_url} alt="Profile" className="h-8 w-8 rounded-full object-cover border-2 border-brand/20" />
+                             ) : (
+                                <div className="bg-brand text-white rounded-full p-1.5 shadow-lg shadow-brand/20">
+                                    <UserCircleIcon className="h-6 w-6"/>
+                                </div>
+                             )}
                         </button>
                     </>
                   ) : (
