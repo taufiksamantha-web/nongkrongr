@@ -93,18 +93,7 @@ const fetchCafesPage = async ({ pageParam = 0 }: { pageParam: number }) => {
     const from = pageParam * ITEMS_PER_PAGE;
     const to = from + ITEMS_PER_PAGE - 1;
 
-    // 1. Fetch Profiles first (efficient lookups)
-    const { data: profilesData } = await supabase.from('profiles').select('username, avatar_url');
-    const profileAvatarMap = new Map<string, string>();
-    if (profilesData) {
-        for (const profile of profilesData) {
-            if (profile.username && profile.avatar_url) {
-                profileAvatarMap.set(profile.username, profile.avatar_url);
-            }
-        }
-    }
-
-    // 2. Fetch Cafes with Server-Side Pagination
+    // 1. Fetch Cafes with Server-Side Pagination
     const { data, error } = await supabase
         .from('cafes')
         .select(`*,vibes:cafe_vibes(*, vibes(*)),amenities:cafe_amenities(*, amenities(*)),tags:cafe_tags(*, tags(*)),spots(*),reviews(*),events(*)`)
@@ -112,6 +101,33 @@ const fetchCafesPage = async ({ pageParam = 0 }: { pageParam: number }) => {
         .order('created_at', { ascending: false });
 
     if (error) throw error;
+    
+    // 2. OPTIMIZED: Fetch Profiles ONLY for authors in the fetched reviews
+    const authors = new Set<string>();
+    data.forEach((cafe: any) => {
+        if (cafe.reviews && Array.isArray(cafe.reviews)) {
+            cafe.reviews.forEach((r: any) => {
+                if (r.author) authors.add(r.author);
+            });
+        }
+    });
+
+    const profileAvatarMap = new Map<string, string>();
+    
+    if (authors.size > 0) {
+        const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .in('username', Array.from(authors));
+            
+        if (profilesData) {
+            for (const profile of profilesData) {
+                if (profile.username && profile.avatar_url) {
+                    profileAvatarMap.set(profile.username, profile.avatar_url);
+                }
+            }
+        }
+    }
 
     // 3. Format Data
     const formattedData = data.map(cafe => ({
