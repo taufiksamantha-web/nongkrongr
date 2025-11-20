@@ -155,8 +155,8 @@ interface CafeContextType {
     deleteReview: (reviewId: string) => Promise<{ error: any }>;
     incrementHelpfulCount: (reviewId: string) => Promise<{ error: any }>;
     
-    getPendingReviews: () => (Review & { cafeName: string; cafeId: string })[];
-    getAllReviews: () => (Review & { cafeName: string; cafeId: string })[];
+    getPendingReviews: () => (Review & { cafeName: string; cafeId: string; cafeSlug: string })[];
+    getAllReviews: () => (Review & { cafeName: string; cafeId: string; cafeSlug: string })[];
     getPendingCafes: () => Cafe[];
     getRejectedCafes: () => Cafe[];
     getArchivedCafes: () => Cafe[];
@@ -429,8 +429,8 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
     
-    const getPendingReviews = () => cafes.flatMap(c => c.reviews.filter(r => r.status === 'pending').map(r => ({ ...r, cafeName: c.name, cafeId: c.id })));
-    const getAllReviews = () => cafes.flatMap(c => c.reviews.map(r => ({ ...r, cafeName: c.name, cafeId: c.id }))).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const getPendingReviews = () => cafes.flatMap(c => c.reviews.filter(r => r.status === 'pending').map(r => ({ ...r, cafeName: c.name, cafeId: c.id, cafeSlug: c.slug })));
+    const getAllReviews = () => cafes.flatMap(c => c.reviews.map(r => ({ ...r, cafeName: c.name, cafeId: c.id, cafeSlug: c.slug }))).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const getPendingCafes = () => cafes.filter(c => c.status === 'pending');
     const getRejectedCafes = () => cafes.filter(c => c.status === 'rejected');
     const getArchivedCafes = () => cafes.filter(c => c.status === 'archived');
