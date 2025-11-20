@@ -98,14 +98,20 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         if (currentUser) {
             // --- SUPERADMIN LOGIC ---
             if (currentUser.role === 'admin') {
-                // 1. Pusat Persetujuan: Pending Reviews
-                const { data: pReviews } = await supabase.from('reviews').select('id, author, created_at, cafes(name)').eq('status', 'pending').limit(10);
+                // 1. Pusat Persetujuan: Pending Reviews (Updated for author_id relation)
+                const { data: pReviews } = await supabase
+                    .from('reviews')
+                    .select('id, created_at, cafes(name), profile:profiles(username)')
+                    .eq('status', 'pending')
+                    .limit(10);
+                
                 pReviews?.forEach((r: any) => { 
                     const id = `admin-review-${r.id}`; 
+                    const authorName = r.profile?.username || 'Pengguna';
                     if(!isDeleted(id)) fetchedNotifs.push({ 
                         id, 
-                        title: 'Review Perlu Moderasi', 
-                        message: `${r.author} mereview ${r.cafes?.name}.`, 
+                        title: 'Review Menunggu Approval', 
+                        message: `${authorName} mereview ${r.cafes?.name}.`, 
                         type: 'warning', 
                         date: new Date(r.created_at), 
                         link: '/dashboard-admin', 
@@ -151,7 +157,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                         id,
                         title: 'Masukan Baru',
                         message: `Pesan baru dari ${f.name}.`,
-                        type: 'info', // Info type maps to generic info icon usually, specific handling in panel can use Envelope
+                        type: 'info', 
                         date: new Date(f.created_at),
                         link: '/dashboard-admin',
                         isRead: isRead(id)
@@ -165,9 +171,26 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 myCafes?.forEach(c => { const id = `mgr-cafe-${c.id}-${c.status}`; if(!isDeleted(id)) fetchedNotifs.push({ id, title: `Cafe ${c.status === 'approved' ? 'Disetujui' : 'Ditolak'}`, message: c.name, type: c.status==='approved'?'success':'alert', date: new Date(c.created_at), link: '/dashboard-pengelola', isRead: isRead(id) }); });
             }
             
-            // --- USER COMMON LOGIC: My Reviews Status ---
-            const { data: myReviews } = await supabase.from('reviews').select('id, status, created_at, cafes(name, slug)').eq('author', currentUser.username).neq('status', 'pending').limit(5);
-            myReviews?.forEach((r: any) => { const id = `my-review-${r.id}-${r.status}`; if(!isDeleted(id)) fetchedNotifs.push({ id, title: 'Status Review', message: `Review di ${r.cafes?.name} ${r.status}.`, type: r.status==='approved'?'success':'alert', date: new Date(r.created_at), link: `/cafe/${r.cafes?.slug}`, isRead: isRead(id) }); });
+            // --- USER COMMON LOGIC: My Reviews Status (Updated for author_id) ---
+            const { data: myReviews } = await supabase
+                .from('reviews')
+                .select('id, status, created_at, cafes(name, slug)')
+                .eq('author_id', currentUser.id) // Use author_id instead of author username
+                .neq('status', 'pending')
+                .limit(5);
+
+            myReviews?.forEach((r: any) => { 
+                const id = `my-review-${r.id}-${r.status}`; 
+                if(!isDeleted(id)) fetchedNotifs.push({ 
+                    id, 
+                    title: 'Status Review', 
+                    message: `Review di ${r.cafes?.name} ${r.status === 'approved' ? 'disetujui' : 'ditolak'}.`, 
+                    type: r.status==='approved'?'success':'alert', 
+                    date: new Date(r.created_at), 
+                    link: `/cafe/${r.cafes?.slug}`, 
+                    isRead: isRead(id) 
+                }); 
+            });
         }
 
         setNotifications(prev => {

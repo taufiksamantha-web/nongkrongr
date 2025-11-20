@@ -75,7 +75,7 @@
       "columns": [
         { "name": "id", "type": "text", "is_primary_key": true },
         { "name": "cafe_id", "type": "text", "references": "cafes(id)", "on_delete": "cascade" },
-        { "name": "author", "type": "text" },
+        { "name": "author_id", "type": "uuid", "references": "profiles(id)", "on_delete": "set null", "is_nullable": true },
         { "name": "ratingAesthetic", "type": "smallint" },
         { "name": "ratingWork", "type": "smallint" },
         { "name": "crowdMorning", "type": "smallint" },

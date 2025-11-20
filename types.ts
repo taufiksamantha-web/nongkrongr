@@ -48,7 +48,8 @@ export interface Event {
 export interface Review {
   id: string;
   cafe_id?: string;
-  author: string;
+  author_id?: string; // ID of the user (UUID)
+  author: string; // Username (display name)
   ratingAesthetic: number; // 1-10
   ratingWork: number; // 1-10
   crowdMorning: number; // 1-5

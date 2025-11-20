@@ -94,42 +94,16 @@ const fetchCafesPage = async ({ pageParam = 0 }: { pageParam: number }) => {
     const to = from + ITEMS_PER_PAGE - 1;
 
     // 1. Fetch Cafes with Server-Side Pagination
+    // Join profiles via review.author_id to get username and avatar
     const { data, error } = await supabase
         .from('cafes')
-        .select(`*,vibes:cafe_vibes(*, vibes(*)),amenities:cafe_amenities(*, amenities(*)),tags:cafe_tags(*, tags(*)),spots(*),reviews(*),events(*)`)
+        .select(`*,vibes:cafe_vibes(*, vibes(*)),amenities:cafe_amenities(*, amenities(*)),tags:cafe_tags(*, tags(*)),spots(*),reviews(*, profile:profiles(username, avatar_url)),events(*)`)
         .range(from, to)
         .order('created_at', { ascending: false });
 
     if (error) throw error;
-    
-    // 2. OPTIMIZED: Fetch Profiles ONLY for authors in the fetched reviews
-    const authors = new Set<string>();
-    data.forEach((cafe: any) => {
-        if (cafe.reviews && Array.isArray(cafe.reviews)) {
-            cafe.reviews.forEach((r: any) => {
-                if (r.author) authors.add(r.author);
-            });
-        }
-    });
 
-    const profileAvatarMap = new Map<string, string>();
-    
-    if (authors.size > 0) {
-        const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('username, avatar_url')
-            .in('username', Array.from(authors));
-            
-        if (profilesData) {
-            for (const profile of profilesData) {
-                if (profile.username && profile.avatar_url) {
-                    profileAvatarMap.set(profile.username, profile.avatar_url);
-                }
-            }
-        }
-    }
-
-    // 3. Format Data
+    // 2. Format Data
     const formattedData = data.map(cafe => ({
         ...cafe, coords: { lat: cafe.lat ?? 0, lng: cafe.lng ?? 0 },
         vibes: cafe.vibes.map((v: any) => v.vibes).filter(Boolean),
@@ -140,7 +114,10 @@ const fetchCafesPage = async ({ pageParam = 0 }: { pageParam: number }) => {
             ...r, 
             photos: Array.isArray(r.photos) ? r.photos.filter(Boolean) : [], 
             helpful_count: r.helpful_count || 0,
-            author_avatar_url: profileAvatarMap.get(r.author) || null,
+            // Map profile data to flat author properties for UI
+            author: r.profile?.username || 'Anonymous',
+            author_avatar_url: r.profile?.avatar_url || null,
+            author_id: r.author_id
         })),
     } as Cafe));
     
@@ -337,7 +314,9 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newReview = { 
             id: `review-${crypto.randomUUID()}`,
             cafe_id: review.cafe_id,
-            author: review.author,
+            author_id: currentUser?.id, // Store author_id from current session
+            // Note: We are NOT storing 'author' string anymore as it's removed from the table.
+            // The UI might pass it, but we ignore it for the DB insert.
             ratingAesthetic: review.ratingAesthetic,
             ratingWork: review.ratingWork,
             crowdMorning: review.crowdMorning,
@@ -360,10 +339,11 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const updateReviewStatus = async (reviewId: string, status: Review['status']) => {
         try {
-            const { error } = await supabase.from('reviews').update({ status }).eq('id', reviewId);
+            const { data, error } = await supabase.from('reviews').update({ status }).eq('id', reviewId).select();
             if (error) throw error;
+            // Invalidate to ensure global state (like cafe cards) reflects the new review status
             queryClient.invalidateQueries({ queryKey: ['cafes'] });
-            return { error: null };
+            return { error: null, data };
         } catch (err: any) {
             return { error: err };
         }
