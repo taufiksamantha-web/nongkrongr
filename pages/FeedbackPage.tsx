@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import FloatingNotification from '../components/common/FloatingNotification';
-import { PaperAirplaneIcon, EnvelopeIcon } from '@heroicons/react/24/solid';
+import { PaperAirplaneIcon, EnvelopeIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
 
 const FeedbackPage: React.FC = () => {
     const { currentUser } = useAuth();
@@ -11,9 +12,33 @@ const FeedbackPage: React.FC = () => {
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    
+    // Anti-spam state
+    const [captcha, setCaptcha] = useState({ num1: 0, num2: 0 });
+    const [captchaInput, setCaptchaInput] = useState('');
+
+    useEffect(() => {
+        generateCaptcha();
+    }, []);
+
+    const generateCaptcha = () => {
+        setCaptcha({
+            num1: Math.floor(Math.random() * 10),
+            num2: Math.floor(Math.random() * 10)
+        });
+        setCaptchaInput('');
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validate Captcha
+        if (parseInt(captchaInput) !== captcha.num1 + captcha.num2) {
+            setNotification({ message: 'Jawaban keamanan salah. Silakan coba lagi.', type: 'error' });
+            generateCaptcha();
+            return;
+        }
+
         if (!message.trim() || (!currentUser && !name.trim())) {
             setNotification({ message: 'Nama dan pesan tidak boleh kosong.', type: 'error' });
             return;
@@ -34,6 +59,7 @@ const FeedbackPage: React.FC = () => {
             setNotification({ message: 'Terima kasih! Masukan Anda telah kami terima.', type: 'success' });
             setMessage('');
             if (!currentUser) setName('');
+            generateCaptcha();
         }
         setIsLoading(false);
     };
@@ -82,6 +108,29 @@ const FeedbackPage: React.FC = () => {
                             className="w-full p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl h-40"
                             required
                         ></textarea>
+                    </div>
+                    
+                    {/* Anti-spam Captcha */}
+                    <div>
+                        <label htmlFor="captcha" className="font-semibold block mb-2 text-primary flex items-center gap-2">
+                            <ShieldCheckIcon className="h-5 w-5 text-brand" />
+                            Pertanyaan Keamanan
+                        </label>
+                        <div className="flex items-center gap-3">
+                            <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 rounded-xl font-bold text-lg tracking-widest select-none">
+                                {captcha.num1} + {captcha.num2} = ?
+                            </div>
+                            <input
+                                id="captcha"
+                                type="number"
+                                value={captchaInput}
+                                onChange={(e) => setCaptchaInput(e.target.value)}
+                                placeholder="Hasil"
+                                className="w-24 p-3 border border-border bg-soft dark:bg-gray-700/50 rounded-xl text-center font-bold"
+                                required
+                            />
+                        </div>
+                        <p className="text-xs text-muted mt-1">Mohon isi hasil penjumlahan untuk verifikasi.</p>
                     </div>
 
                     <button

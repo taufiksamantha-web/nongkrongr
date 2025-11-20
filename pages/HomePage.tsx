@@ -9,7 +9,7 @@ import CafeCard from '../components/CafeCard';
 import FeaturedCafeCard from '../components/FeaturedCafeCard';
 import ReviewCard from '../components/ReviewCard';
 import DatabaseConnectionError from '../components/common/DatabaseConnectionError';
-import { FireIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon, MapPinIcon, RocketLaunchIcon, TrophyIcon, ChatBubbleBottomCenterTextIcon, GlobeAltIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/solid';
+import { FireIcon, HeartIcon, SparklesIcon, ChevronLeftIcon, ChevronRightIcon, InboxIcon, ArrowRightIcon, MapPinIcon, RocketLaunchIcon, TrophyIcon, ChatBubbleBottomCenterTextIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
 import { optimizeCloudinaryImage } from '../utils/imageOptimizer';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonFeaturedCard from '../components/SkeletonFeaturedCard';
@@ -501,15 +501,15 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Floating Explore Button - Adjusted to match Filter Button style and centered */}
-      <div className="lg:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-max animate-fade-in-up">
-         <Link 
-            to="/explore" 
-            className="flex items-center gap-2 py-3 px-6 bg-card/90 dark:bg-gray-800/90 backdrop-blur-md border border-brand/50 text-primary dark:text-white rounded-full font-bold shadow-2xl active:scale-95 transition-all hover:bg-brand/5 ring-1 ring-white/20 group"
-         >
-            <GlobeAltIcon className="h-6 w-6 text-brand group-hover:animate-spin" />
-            <span>Mulai Jelajah</span>
-         </Link>
+      {/* Floating Explore Button - Redesigned & Centered */}
+      <div className="fixed bottom-8 left-0 right-0 flex justify-center z-50 xl:hidden pointer-events-none">
+        <Link 
+          to="/explore" 
+          className="pointer-events-auto flex items-center gap-2.5 px-6 py-3.5 bg-gray-900/80 dark:bg-white/80 backdrop-blur-xl border border-white/10 dark:border-black/5 text-white dark:text-gray-900 rounded-full shadow-2xl shadow-brand/25 hover:scale-105 active:scale-95 transition-all duration-300 group animate-fade-in-up ring-1 ring-white/20 dark:ring-black/10"
+        >
+          <GlobeAltIcon className="h-5 w-5 text-brand group-hover:animate-spin" />
+          <span className="font-bold text-sm tracking-wide">Mulai Jelajah</span>
+        </Link>
       </div>
 
     </div>

@@ -65,7 +65,7 @@ const AdminPage: React.FC = () => {
             setIsLoggingOut(false);
         }
     };
-    
+
     if (!currentUser) {
         return null;
     }
@@ -108,10 +108,10 @@ const AdminPage: React.FC = () => {
                 {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
                 
                 {/* Optimized Navigation Header */}
-                <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 mb-8 flex items-center justify-between sticky top-4 z-30 shadow-sm">
+                <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 mb-8 flex items-center justify-between sticky top-4 z-30 shadow-sm relative">
                     <button 
                         onClick={() => setIsProfileModalOpen(true)}
-                        className="flex items-center gap-3 px-2 group hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-xl transition-all py-1 cursor-pointer relative"
+                        className="flex items-center gap-3 px-2 group hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-xl transition-all py-1 cursor-pointer relative z-10"
                         title="Klik untuk ganti foto profil"
                     >
                         <div className="relative">
@@ -126,7 +126,7 @@ const AdminPage: React.FC = () => {
                                 <PencilSquareIcon className="h-3 w-3 text-brand" />
                             </div>
                         </div>
-                        <div className="hidden sm:block text-left">
+                        <div className="hidden lg:block text-left">
                             <h2 className="text-sm font-bold font-jakarta text-primary dark:text-white leading-tight group-hover:text-brand transition-colors">
                                 {currentUser.username}
                             </h2>
@@ -136,14 +136,14 @@ const AdminPage: React.FC = () => {
                         </div>
                     </button>
 
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700/50 rounded-full p-1.5 border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center bg-gray-100 dark:bg-gray-700/50 rounded-full p-1.5 border border-gray-200 dark:border-gray-600 z-10">
                          <Link 
                             to="/" 
                             className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-muted hover:text-primary hover:bg-white dark:hover:bg-gray-600 transition-all" 
                             title="Ke Halaman Utama"
                         >
                             <HomeIcon className="h-5 w-5"/>
-                            <span className="hidden md:inline">Home</span>
+                            <span className="hidden lg:inline">Home</span>
                         </Link>
                         <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                         <button 
@@ -160,7 +160,7 @@ const AdminPage: React.FC = () => {
                             title="Logout"
                         >
                             <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                            <span className="hidden md:inline">Keluar</span>
+                            <span className="hidden lg:inline">Keluar</span>
                         </button>
                     </div>
                 </header>

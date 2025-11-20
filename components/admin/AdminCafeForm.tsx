@@ -1,30 +1,18 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import { Cafe, Amenity, Vibe, Spot, Event } from '../../types';
 import { cloudinaryService } from '../../services/cloudinaryService';
 import { AMENITIES, VIBES, SOUTH_SUMATRA_CITIES } from '../../constants';
 import { PriceTier } from '../../types';
 import { fileToBase64 } from '../../utils/fileUtils';
-import ImageWithFallback from '../common/ImageWithFallback';
+import { CafeContext } from '../../context/CafeContext';
 import ConfirmationModal from '../common/ConfirmationModal';
 import { 
     TrashIcon, PlusIcon, XMarkIcon, PhotoIcon, MapPinIcon, ClockIcon, CurrencyDollarIcon,
     IdentificationIcon, DocumentTextIcon, SparklesIcon, PhoneIcon, GlobeAltIcon,
     MapIcon, BuildingOffice2Icon, WifiIcon, CameraIcon, LightBulbIcon,
-    CalendarDaysIcon, TicketIcon, StarIcon
+    CalendarDaysIcon, TicketIcon, StarIcon, LinkIcon
 } from '@heroicons/react/24/solid';
-
-// Declare global OpenLocationCode
-declare global {
-    interface Window {
-        OpenLocationCode: {
-            decode: (code: string) => {
-                latitudeCenter: number;
-                longitudeCenter: number;
-            };
-        };
-    }
-}
 
 interface AdminCafeFormProps {
     cafe?: Cafe | null;
@@ -34,6 +22,9 @@ interface AdminCafeFormProps {
     setNotification: (notification: { message: string, type: 'success' | 'error' } | null) => void;
     onSuccess: () => void;
 }
+
+// Declare the global OLC object
+declare const OpenLocationCode: any;
 
 const MultiStepProgressBar: React.FC<{ steps: string[], currentStep: number, onStepClick: (step: number) => void }> = ({ steps, currentStep, onStepClick }) => (
     <div className="flex items-start justify-between w-full px-2">
@@ -84,11 +75,9 @@ const FormHelperText: React.FC<{ children: React.ReactNode }> = ({ children }) =
     <p className="text-xs sm:text-sm text-muted mt-1">{children}</p>
 );
 
-// Helper function to safely format a date for the date input's value property
 const getDisplayDate = (date: string | Date | undefined | null): string => {
     if (!date) return '';
     try {
-        // Create a date object, but crucially, get the date parts from UTC to avoid timezone shifts.
         const d = new Date(date);
         const year = d.getUTCFullYear();
         const month = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -101,6 +90,7 @@ const getDisplayDate = (date: string | Date | undefined | null): string => {
 };
 
 const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, userRole, setNotification, onSuccess }) => {
+    const { updateCafe } = useContext(CafeContext)!; // Need this for post-upload updates
     
     const [step, setStep] = useState(1);
     const isAdmin = userRole === 'admin';
@@ -128,7 +118,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
         name: cafe?.name || '', description: cafe?.description || '', address: cafe?.address || '', city: cafe?.city || SOUTH_SUMATRA_CITIES[0], district: cafe?.district || '',
         phoneNumber: cafe?.phoneNumber || '', websiteUrl: cafe?.websiteUrl || '',
         priceTier: cafe?.priceTier || PriceTier.STANDARD, logoUrl: cafe?.logoUrl || '', 
-        coverUrl: cafe?.coverUrl || '', // Default empty string (no placeholder)
+        coverUrl: cafe?.coverUrl || '', 
         openingTime: initialHoursState.openingTime, closingTime: initialHoursState.closingTime, is24Hours: initialHoursState.is24Hours,
         lat: cafe?.coords?.lat?.toString() ?? '', lng: cafe?.coords?.lng?.toString() ?? '',
         isSponsored: cafe?.isSponsored || false, sponsoredUntil: getDisplayDate(cafe?.sponsoredUntil),
@@ -146,18 +136,15 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
     const [spotPreviews, setSpotPreviews] = useState<(string | null)[]>([]);
     const [eventPreviews, setEventPreviews] = useState<(string | null)[]>([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploading, setIsUploading] = useState(false); // New state to show specific upload status
     const [isGeocoding, setIsGeocoding] = useState(false);
     const geocodeTimeoutRef = useRef<number | null>(null);
 
-    // State for unsaved changes protection
     const [isDirty, setIsDirty] = useState(false);
     const [showExitConfirm, setShowExitConfirm] = useState(false);
 
-    // New states for Plus Code functionality
-    const [locationInputType, setLocationInputType] = useState<'coords' | 'plusCode'>('coords');
-    const [plusCodeInput, setPlusCodeInput] = useState('');
-    const [isConvertingPlusCode, setIsConvertingPlusCode] = useState(false);
-    const plusCodeDebounceRef = useRef<number | null>(null);
+    const [locationInputType, setLocationInputType] = useState<'coords' | 'mapsLink'>('coords');
+    const [mapsLinkInput, setMapsLinkInput] = useState('');
 
     useEffect(() => { if (logoFile) { const o = URL.createObjectURL(logoFile); setLogoPreview(o); return () => URL.revokeObjectURL(o); } }, [logoFile]);
     useEffect(() => { if (coverFile) { const o = URL.createObjectURL(coverFile); setCoverPreview(o); return () => URL.revokeObjectURL(o); } }, [coverFile]);
@@ -192,7 +179,6 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
     };
 
     const handleReverseGeocode = useCallback(() => {
-        // FEATURE RESTRICTION: Only run reverse geocoding when adding a new cafe
         if (isEditMode) return;
 
         if (geocodeTimeoutRef.current) clearTimeout(geocodeTimeoutRef.current);
@@ -234,48 +220,43 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
         if (formData.lat.trim() && formData.lng.trim()) handleReverseGeocode();
     }, [formData.lat, formData.lng, handleReverseGeocode]);
 
-    const handlePlusCodeConversion = useCallback(async (code: string) => {
-        // FEATURE RESTRICTION: Only run plus code conversion when adding a new cafe
-        if (isEditMode) return;
+    const extractCoordsFromInput = (input: string): { lat: number, lng: number } | null => {
+        const latLngRegex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+        const queryRegex = /[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/;
+        
+        let match = input.match(latLngRegex);
+        if (!match) match = input.match(queryRegex);
 
-        if (plusCodeDebounceRef.current) clearTimeout(plusCodeDebounceRef.current);
-        plusCodeDebounceRef.current = window.setTimeout(async () => {
-            const cleanCode = code.trim().toUpperCase();
-            
-            if (cleanCode.length < 8 || !cleanCode.includes('+')) {
-                return;
-            }
-            
-            setIsConvertingPlusCode(true);
-            setNotification(null);
-            
+        if (match && match.length >= 3) {
+            return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+        }
+
+        if (input.includes('+') && typeof OpenLocationCode !== 'undefined') {
             try {
-                if (window.OpenLocationCode) {
-                    // Use the client-side library instead of API calls
-                    const decoded = window.OpenLocationCode.decode(cleanCode);
-                    const lat = decoded.latitudeCenter;
-                    const lng = decoded.longitudeCenter;
-                    
-                    setCoordsInput(`${lat}, ${lng}`);
-                    setFormData(prev => ({ ...prev, lat: String(lat), lng: String(lng) }));
-                    markDirty();
-                } else {
-                     throw new Error("Library Open Location Code belum dimuat. Silakan refresh halaman.");
+                const potentialCode = input.trim().split(' ')[0].trim();
+                if (OpenLocationCode.isValid(potentialCode)) {
+                     const codeArea = OpenLocationCode.decode(potentialCode);
+                     return { lat: codeArea.latitudeCenter, lng: codeArea.longitudeCenter };
                 }
-            } catch (error: any) {
-                console.error("Plus Code Error:", error);
-                setNotification({ message: "Kode Plus tidak valid atau library belum siap.", type: 'error' });
-            } finally {
-                setIsConvertingPlusCode(false);
+            } catch (e) {
+                console.warn("OLC Decode error", e);
             }
-        }, 1000); // 1-second debounce
-    }, [setNotification, isEditMode]);
+        }
+        return null;
+    };
 
-    const handlePlusCodeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleMapsLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         markDirty();
         const { value } = e.target;
-        setPlusCodeInput(value);
-        handlePlusCodeConversion(value.trim());
+        setMapsLinkInput(value);
+
+        if (value.trim().length > 4) {
+            const coords = extractCoordsFromInput(value);
+            if (coords) {
+                setCoordsInput(`${coords.lat}, ${coords.lng}`);
+                setFormData(prev => ({ ...prev, lat: String(coords.lat), lng: String(coords.lng) }));
+            }
+        }
     };
 
     const handleMultiSelectChange = (field: 'vibes' | 'amenities', item: Vibe | Amenity) => {
@@ -311,7 +292,6 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
         setSpotFiles(prev => prev.filter((_, i) => i !== index));
     };
 
-    // Event Handlers
     const handleEventChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         markDirty();
         const { name, value } = e.target;
@@ -346,12 +326,13 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
         switch (currentStep) {
             case 1:
                 if (!formData.name.trim()) return { isValid: false, message: 'Nama Kafe wajib diisi.' };
-                if (!formData.address.trim() || !formData.city.trim() || !formData.district.trim()) return { isValid: false, message: 'Alamat, Kota, dan Kecamatan wajib diisi.' };
+                if (!formData.address.trim() || !formData.city.trim() || !formData.district.trim()) return { isValid: false, message: 'Alamat, Kota, dan Kecamatan wajib diisi. Gunakan fitur "Link Google Maps" untuk isi otomatis.' };
                 const lat = parseFloat(String(formData.lat));
                 const lng = parseFloat(String(formData.lng));
                 if (isNaN(lat) || isNaN(lng)) return { isValid: false, message: 'Koordinat Peta tidak valid (misal: -2.976, 104.745).' };
                 break;
             case 3:
+                // Cover file is required ONLY if there is no existing URL and no new file selected
                 if (!coverFile && !formData.coverUrl) return { isValid: false, message: 'Foto Cover wajib diunggah agar kafe terlihat menarik.' };
                 break;
             case 5:
@@ -425,37 +406,14 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
         }
         
         setIsSaving(true);
-        setNotification(null);
+        setNotification({ message: 'Menyimpan data ke database...', type: 'info' });
 
         try {
-            // Default logo is empty string if not present
-            const logoUploadPromise = logoFile ? fileToBase64(logoFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(formData.logoUrl);
-            // Cover image is handled in validation, but here we use current if no file
-            const coverUploadPromise = coverFile ? fileToBase64(coverFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(formData.coverUrl);
+            // 1. PREPARE DATA (Use existing URLs or placeholders if uploading new ones)
+            // We do NOT upload yet. We save the record first to ensure data integrity.
             
-            const spotUploadPromises = formData.spots.map((spot, i) => spotFiles[i] ? fileToBase64(spotFiles[i]!).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(spot.photoUrl));
-            const eventUploadPromises = !isAdmin ? formData.events.map((event, i) => eventFiles[i] ? fileToBase64(eventFiles[i]!).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(event.imageUrl || '')) : [];
-            
-            const [finalLogoUrl, finalCoverUrl, ...restUrls] = await Promise.all([logoUploadPromise, coverUploadPromise, ...spotUploadPromises, ...eventUploadPromises]);
-            const finalSpotUrls = restUrls.slice(0, spotUploadPromises.length);
-            const finalEventUrls = restUrls.slice(spotUploadPromises.length);
-
-            const finalSpots = formData.spots
-                .map((spot, i) => ({ ...spot, photoUrl: finalSpotUrls[i] }))
-                .filter(s => s.title.trim() || s.photoUrl);
-
-            const finalEvents = !isAdmin ? formData.events
-                .map((event, i) => {
-                    const startDateString = getDisplayDate(event.start_date);
-                    const endDateString = getDisplayDate(event.end_date);
-                    return {
-                        ...event,
-                        imageUrl: finalEventUrls[i],
-                        start_date: startDateString ? `${startDateString}T00:00:00Z` : new Date().toISOString(),
-                        end_date: endDateString ? `${endDateString}T23:59:59Z` : new Date().toISOString(),
-                    };
-                })
-                .filter(e => e.name.trim()) : [];
+            const tempLogoUrl = logoFile ? formData.logoUrl : formData.logoUrl; // If new file, keep old URL temporarily or use blank if strictly new
+            const tempCoverUrl = coverFile ? formData.coverUrl : formData.coverUrl;
 
             const payload = {
                 name: formData.name.trim(),
@@ -466,12 +424,12 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                 openingHours: formData.is24Hours ? '24 Jam' : `${formData.openingTime} - ${formData.closingTime}`,
                 priceTier: Number(formData.priceTier),
                 coords: { lat: parseFloat(String(formData.lat)), lng: parseFloat(String(formData.lng)) },
-                logoUrl: finalLogoUrl,
-                coverUrl: finalCoverUrl,
+                logoUrl: tempLogoUrl,
+                coverUrl: tempCoverUrl,
                 vibes: formData.vibes,
                 amenities: formData.amenities,
-                spots: finalSpots,
-                events: finalEvents,
+                spots: formData.spots, // Spots with existing URLs or empty
+                events: !isAdmin ? formData.events : [],
                 isSponsored: isAdmin ? formData.isSponsored : (cafe?.isSponsored || false),
                 sponsoredUntil: isAdmin && formData.isSponsored && formData.sponsoredUntil ? `${formData.sponsoredUntil}T12:00:00.000Z` : null,
                 sponsoredRank: isAdmin && formData.isSponsored ? Number(formData.sponsoredRank) : 0,
@@ -480,9 +438,59 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
             };
 
             if (!payload.logoUrl) delete (payload as any).logoUrl;
-            
-            const { error } = await onSave(payload);
+            if (!payload.coverUrl && !coverFile) delete (payload as any).coverUrl; // If no file and no url, don't send empty string if possible
+
+            // 2. SAVE TEXT DATA TO DB
+            const { data: savedCafe, error } = await onSave(payload);
             if (error) throw error;
+
+            const cafeId = savedCafe.id; // Get the ID of the newly created/updated cafe
+
+            // 3. UPLOAD IMAGES (If new files exist)
+            if (logoFile || coverFile || spotFiles.some(f => f !== null) || eventFiles.some(f => f !== null)) {
+                setIsUploading(true);
+                setNotification({ message: 'Data tersimpan. Mengupload gambar...', type: 'info' });
+
+                const logoUploadPromise = logoFile ? fileToBase64(logoFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(null);
+                const coverUploadPromise = coverFile ? fileToBase64(coverFile).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(null);
+                
+                const spotUploadPromises = formData.spots.map((spot, i) => spotFiles[i] ? fileToBase64(spotFiles[i]!).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(spot.photoUrl));
+                
+                const eventUploadPromises = !isAdmin ? formData.events.map((event, i) => eventFiles[i] ? fileToBase64(eventFiles[i]!).then(base64 => cloudinaryService.uploadImage(base64)) : Promise.resolve(event.imageUrl || '')) : [];
+
+                const [newLogoUrl, newCoverUrl, ...restUrls] = await Promise.all([logoUploadPromise, coverUploadPromise, ...spotUploadPromises, ...eventUploadPromises]);
+                
+                const finalSpotUrls = restUrls.slice(0, spotUploadPromises.length);
+                const finalEventUrls = restUrls.slice(spotUploadPromises.length);
+
+                // 4. UPDATE RECORD WITH IMAGE URLS
+                const updatePayload: any = {};
+                if (newLogoUrl) updatePayload.logoUrl = newLogoUrl;
+                if (newCoverUrl) updatePayload.coverUrl = newCoverUrl;
+
+                // Reconstruct spots/events with new URLs
+                const updatedSpots = formData.spots.map((spot, i) => ({ ...spot, photoUrl: finalSpotUrls[i] || spot.photoUrl }));
+                const updatedEvents = !isAdmin ? formData.events.map((event, i) => {
+                     const startDateString = getDisplayDate(event.start_date);
+                     const endDateString = getDisplayDate(event.end_date);
+                     return {
+                        ...event,
+                        imageUrl: finalEventUrls[i] || event.imageUrl,
+                        start_date: startDateString ? `${startDateString}T00:00:00Z` : new Date().toISOString(),
+                        end_date: endDateString ? `${endDateString}T23:59:59Z` : new Date().toISOString(),
+                     }
+                }) : [];
+
+                if (spotFiles.some(f => f) || eventFiles.some(f => f)) {
+                     updatePayload.spots = updatedSpots;
+                     updatePayload.events = updatedEvents;
+                }
+
+                if (Object.keys(updatePayload).length > 0) {
+                     await updateCafe(cafeId, updatePayload);
+                }
+            }
+            
             onSuccess();
 
         } catch (error: any) {
@@ -491,6 +499,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
             setNotification({ message: `Gagal menyimpan data: ${errorMsg}`, type: 'error' });
         } finally {
             setIsSaving(false);
+            setIsUploading(false);
         }
     };
     
@@ -532,8 +541,8 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                             </fieldset> 
                             <fieldset className={fieldsetStyles}> 
                                 <legend className={legendStyles}><MapIcon className="h-5 w-5 text-brand"/> Lokasi</legend> 
-                                {!isEditMode && ( <div className="flex bg-soft dark:bg-gray-700/50 p-1 rounded-xl mb-4"> <button type="button" onClick={() => setLocationInputType('coords')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'coords' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Koordinat Peta</button> <button type="button" onClick={() => setLocationInputType('plusCode')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'plusCode' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Plus Code</button> </div> )} 
-                                {locationInputType === 'coords' || isEditMode ? ( <FormGroup> <FormLabel htmlFor="coords" icon={<MapPinIcon className="h-4 w-4" />}>Koordinat Peta<span className="text-accent-pink ml-1">*</span></FormLabel> <input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /> <FormHelperText>Salin & tempel koordinat dari Google Maps. {isEditMode ? '' : 'Alamat akan terisi otomatis.'}</FormHelperText> </FormGroup> ) : ( <FormGroup> <FormLabel htmlFor="plusCode" icon={<MapPinIcon className="h-4 w-4" />}>Google Maps Plus Code<span className="text-accent-pink ml-1">*</span></FormLabel> <div className="relative"> <input id="plusCode" name="plusCode" type="text" value={plusCodeInput} onChange={handlePlusCodeInputChange} placeholder="Contoh: 6P5G2QG8+R8" className={`${inputClass} pr-10`} /> {isConvertingPlusCode && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>} </div> <FormHelperText>Masukkan Full Plus Code (minimal 8 karakter, contoh: 6P5G2QG8+R8). Koordinat akan terisi otomatis.</FormHelperText> </FormGroup> )} 
+                                {!isEditMode && ( <div className="flex bg-soft dark:bg-gray-700/50 p-1 rounded-xl mb-4"> <button type="button" onClick={() => setLocationInputType('coords')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'coords' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Koordinat Peta</button> <button type="button" onClick={() => setLocationInputType('mapsLink')} className={`w-1/2 py-2 text-sm font-bold rounded-lg transition-colors ${locationInputType === 'mapsLink' ? 'bg-brand text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}>Link Google Maps</button> </div> )} 
+                                {locationInputType === 'coords' || isEditMode ? ( <FormGroup> <FormLabel htmlFor="coords" icon={<MapPinIcon className="h-4 w-4" />}>Koordinat Peta<span className="text-accent-pink ml-1">*</span></FormLabel> <input id="coords" name="coords" type="text" value={coordsInput} onChange={handleCoordsChange} placeholder="-2.9760, 104.7458" className={inputClass} required /> <FormHelperText>Salin & tempel koordinat dari Google Maps. {isEditMode ? '' : 'Alamat akan terisi otomatis.'}</FormHelperText> </FormGroup> ) : ( <FormGroup> <FormLabel htmlFor="mapsLink" icon={<LinkIcon className="h-4 w-4" />}>Link Google Maps / Plus Code<span className="text-accent-pink ml-1">*</span></FormLabel> <div className="relative"> <input id="mapsLink" name="mapsLink" type="text" value={mapsLinkInput} onChange={handleMapsLinkChange} placeholder="https://www.google.com/maps/... atau 6P5G+R8" className={inputClass} /> </div> <FormHelperText>Paste link Maps atau Plus Code (e.g. 6P5G+R8). Koordinat & alamat akan terisi otomatis.</FormHelperText> </FormGroup> )} 
                                 <FormGroup><FormLabel htmlFor="address" icon={<MapPinIcon className="h-4 w-4" />}>Alamat {isEditMode ? '' : '(Otomatis)'}<span className="text-accent-pink ml-1">*</span></FormLabel><div className="relative"><input id="address" name="address" value={formData.address} onChange={handleChange} placeholder="Menunggu koordinat..." className={`${inputClass} pr-10`} required />{isGeocoding && <div className="absolute right-3 top-1/2 -translate-y-1/2"><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-brand"></div></div>}</div><FormHelperText>Pastikan alamat lengkap dan jelas.</FormHelperText></FormGroup> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <FormGroup> <FormLabel htmlFor="city" icon={<BuildingOffice2Icon className="h-4 w-4" />}>Kota / Kabupaten<span className="text-accent-pink ml-1">*</span></FormLabel> <select id="city" name="city" value={formData.city} onChange={handleChange} className={inputClass}> {SOUTH_SUMATRA_CITIES.map(city => (<option key={city} value={city}>{city}</option>))} </select> </FormGroup> <FormGroup> <FormLabel htmlFor="district" icon={<BuildingOffice2Icon className="h-4 w-4" />}>Kecamatan<span className="text-accent-pink ml-1">*</span></FormLabel> <input id="district" name="district" value={formData.district} onChange={handleChange} placeholder="Contoh: Ilir Barat I" className={inputClass} required /> </FormGroup> </div> 
                             </fieldset> 
                         </div>
@@ -556,7 +565,6 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                                                 <FormGroup><FormLabel htmlFor="closingTime" icon={<ClockIcon className="h-4 w-4"/>}>Tutup</FormLabel><input type="time" id="closingTime" name="closingTime" value={formData.closingTime} onChange={handleChange} className={inputClass} /></FormGroup>
                                             </div>
                                         )}
-                                        {/* Spacer to balance visual height if needed */}
                                         <div className="flex-grow"></div>
                                     </div>
                                 </fieldset>
@@ -734,7 +742,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                         </button>
                     ) : (
                         <button onClick={handleSubmit} disabled={isSaving} className="px-8 py-2.5 bg-brand text-white rounded-xl font-bold hover:bg-brand/90 transition-all shadow-lg shadow-brand/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait">
-                            {isSaving ? 'Menyimpan...' : (isEditMode ? 'Simpan Perubahan' : 'Kirim Data')}
+                            {isUploading ? 'Mengupload...' : (isSaving ? 'Menyimpan...' : (isEditMode ? 'Simpan Perubahan' : 'Kirim Data'))}
                         </button>
                     )}
                 </div>

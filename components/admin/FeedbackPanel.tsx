@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { EnvelopeIcon, CheckCircleIcon, ArchiveBoxXMarkIcon, UserCircleIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
+import { EnvelopeIcon, CheckCircleIcon, TrashIcon, UserCircleIcon, BuildingStorefrontIcon } from '@heroicons/react/24/solid';
 import ConfirmationModal from '../common/ConfirmationModal';
 import FloatingNotification from '../common/FloatingNotification';
 
@@ -24,6 +24,7 @@ const FeedbackPanel: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [itemToProcess, setItemToProcess] = useState<{ id: number; action: 'archive' | 'delete' } | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const fetchFeedback = useCallback(async () => {
         setIsLoading(true);
@@ -47,6 +48,7 @@ const FeedbackPanel: React.FC = () => {
     }, [fetchFeedback]);
 
     const handleUpdateStatus = async (id: number, status: 'read' | 'archived') => {
+        setIsProcessing(true);
         const { error } = await supabase.from('feedback').update({ status }).eq('id', id);
         if (error) {
             setNotification({ message: 'Gagal update status.', type: 'error' });
@@ -54,17 +56,20 @@ const FeedbackPanel: React.FC = () => {
             setNotification({ message: 'Status berhasil diperbarui.', type: 'success' });
             fetchFeedback();
         }
+        setIsProcessing(false);
         setItemToProcess(null);
     };
 
     const handleDelete = async (id: number) => {
+        setIsProcessing(true);
         const { error } = await supabase.from('feedback').delete().eq('id', id);
         if (error) {
-            setNotification({ message: 'Gagal menghapus feedback.', type: 'error' });
+            setNotification({ message: `Gagal menghapus feedback: ${error.message}`, type: 'error' });
         } else {
-            setNotification({ message: 'Feedback berhasil dihapus.', type: 'success' });
+            setNotification({ message: 'Feedback berhasil dihapus permanen.', type: 'success' });
             fetchFeedback();
         }
+        setIsProcessing(false);
         setItemToProcess(null);
     };
 
@@ -116,6 +121,9 @@ const FeedbackPanel: React.FC = () => {
                                         <span className={`text-xs font-semibold ${!item.profile && 'text-purple-600 dark:text-purple-400'}`}>
                                             {!item.profile ? '(Tamu)' : `(${(item.profile.role || '').replace('admin_cafe', 'Pengelola')})`}
                                         </span>
+                                        {item.status === 'archived' && (
+                                            <span className="text-[10px] bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full text-muted font-bold">Arsip</span>
+                                        )}
                                     </div>
                                     <p className="text-xs text-muted">{new Date(item.created_at).toLocaleString('id-ID')}</p>
                                 </div>
@@ -125,8 +133,8 @@ const FeedbackPanel: React.FC = () => {
                                             <CheckCircleIcon className="h-5 w-5" />
                                         </button>
                                     )}
-                                    <button onClick={() => setItemToProcess({ id: item.id, action: 'delete' })} className="p-1.5 text-red-500 hover:text-red-700" title="Hapus">
-                                        <ArchiveBoxXMarkIcon className="h-5 w-5" />
+                                    <button onClick={() => setItemToProcess({ id: item.id, action: 'delete' })} className="p-1.5 text-red-500 hover:text-red-700" title="Hapus Permanen">
+                                        <TrashIcon className="h-5 w-5" />
                                     </button>
                                 </div>
                             </div>
@@ -138,10 +146,11 @@ const FeedbackPanel: React.FC = () => {
             {itemToProcess && (
                 <ConfirmationModal
                     title={`Konfirmasi ${itemToProcess.action === 'archive' ? 'Arsip' : 'Hapus'}`}
-                    message={`Anda yakin ingin ${itemToProcess.action === 'archive' ? 'mengarsipkan' : 'menghapus'} masukan ini?`}
+                    message={`Anda yakin ingin ${itemToProcess.action === 'archive' ? 'mengarsipkan' : 'menghapus permanen'} masukan ini?`}
                     onConfirm={handleConfirm}
                     onCancel={() => setItemToProcess(null)}
-                    confirmText={`Ya, ${itemToProcess.action === 'archive' ? 'Arsipkan' : 'Hapus'}`}
+                    confirmText={`Ya, ${itemToProcess.action === 'archive' ? 'Arsipkan' : 'Hapus Permanen'}`}
+                    isConfirming={isProcessing}
                 />
             )}
         </div>

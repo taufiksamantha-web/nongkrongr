@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier, Tag, User } from '../types';
@@ -477,14 +476,14 @@ const ExplorePage: React.FC = () => {
 
       {/* Main Content - Fluid width */}
       <div className="flex-1 w-full min-w-0 pb-20">
-        {/* Mobile Filter Floating Button - Restored */}
+        {/* Mobile Filter Floating Button - Redesigned */}
         <button 
             onClick={() => setIsFiltersOpen(true)}
-            className="lg:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 py-3 px-6 bg-card/90 dark:bg-gray-800/90 backdrop-blur-md border border-brand/50 text-primary dark:text-white rounded-full font-bold shadow-2xl active:scale-95 transition-all hover:bg-brand/5 disabled:opacity-50 ring-1 ring-white/20"
+            className="lg:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2.5 px-6 py-3.5 bg-gray-900/80 dark:bg-white/80 backdrop-blur-xl border border-white/10 dark:border-black/5 text-white dark:text-gray-900 rounded-full shadow-2xl shadow-brand/25 hover:scale-105 active:scale-95 transition-all duration-300 ring-1 ring-white/20 dark:ring-black/10 disabled:opacity-50"
             disabled={isSpecialView}
         >
-            <AdjustmentsHorizontalIcon className="h-6 w-6 text-brand" />
-            <span>Filter & Urutkan</span>
+            <AdjustmentsHorizontalIcon className="h-5 w-5 text-brand" />
+            <span className="font-bold text-sm tracking-wide">Filter & Urutkan</span>
         </button>
 
         <div className="relative mb-8">

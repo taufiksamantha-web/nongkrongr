@@ -20,12 +20,12 @@ const PRICE_OPTIONS = [
 
 const CrowdSlider: React.FC<{ icon: React.ReactNode, label: string, value: number, onChange: (val: number) => void, colorClass: string, disabled: boolean }> = ({ icon, label, value, onChange, colorClass, disabled }) => (
     <div className="text-center">
-        <div className="flex items-center justify-center gap-2 text-muted mb-2">
-            {icon}
-            <span className="font-semibold text-sm">{label}</span>
+        <div className="flex items-center justify-center gap-1 sm:gap-2 text-muted mb-1 sm:mb-2">
+            <div className="transform scale-75 sm:scale-100">{icon}</div>
+            <span className="font-semibold text-[10px] sm:text-sm">{label}</span>
         </div>
-        <input type="range" min="1" max="5" value={value} onChange={e => onChange(parseInt(e.target.value))} className={`w-full ${colorClass}`} disabled={disabled}/>
-        <p className="font-bold text-lg text-primary">{value}</p>
+        <input type="range" min="1" max="5" value={value} onChange={e => onChange(parseInt(e.target.value))} className={`w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 ${colorClass}`} disabled={disabled}/>
+        <p className="font-bold text-sm sm:text-lg text-primary mt-1">{value}</p>
     </div>
 );
 
@@ -74,7 +74,6 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
     // Accordion states for mobile - Default CLOSED
     const [sectionsOpen, setSectionsOpen] = useState({
         score: false,
-        crowd: false,
         details: false
     });
 
@@ -122,7 +121,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
         setCrowdMorning(3); setCrowdAfternoon(3); setCrowdEvening(3);
         setPriceSpent(''); setPhoto(null);
         setIsConfirming(false);
-        setSectionsOpen({ score: false, crowd: false, details: false });
+        setSectionsOpen({ score: false, details: false });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -156,7 +155,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
         if (author.trim() && text.trim()) {
             setIsConfirming(true);
             // Open all sections if they are closed when clicking submit to show review details
-            setSectionsOpen({ score: true, crowd: true, details: true });
+            setSectionsOpen({ score: true, details: true });
         } else {
             // This will trigger the form's native validation hints
             e.currentTarget.form?.requestSubmit();
@@ -177,37 +176,35 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
             </div>
             
             <FormSection 
-                title="Beri Skor" 
+                title="Beri Skor & Keramaian" 
                 isOpen={sectionsOpen.score} 
                 onToggle={() => toggleSection('score')}
                 disabled={formDisabled}
             >
-                <div className="space-y-3">
-                     <div>
-                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white">
-                           <SparklesIcon className="h-5 w-5 text-accent-pink"/> Estetik ({ratingAesthetic})
-                        </label>
-                        <input type="range" min="1" max="10" value={ratingAesthetic} onChange={e => setRatingAesthetic(parseInt(e.target.value))} className="w-full accent-accent-pink"/>
+                <div className="space-y-6">
+                     <div className="space-y-3">
+                         <div>
+                            <label className="flex items-center gap-2 font-semibold text-primary dark:text-white text-sm mb-1">
+                               <SparklesIcon className="h-4 w-4 text-accent-pink"/> Estetik ({ratingAesthetic})
+                            </label>
+                            <input type="range" min="1" max="10" value={ratingAesthetic} onChange={e => setRatingAesthetic(parseInt(e.target.value))} className="w-full accent-accent-pink h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"/>
+                        </div>
+                        <div>
+                            <label className="flex items-center gap-2 font-semibold text-primary dark:text-white text-sm mb-1">
+                               <BriefcaseIcon className="h-4 w-4 text-accent-cyan"/> Nugas / Kerja ({ratingWork})
+                            </label>
+                            <input type="range" min="1" max="10" value={ratingWork} onChange={e => setRatingWork(parseInt(e.target.value))} className="w-full accent-accent-cyan h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"/>
+                        </div>
                     </div>
-                    <div>
-                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white">
-                           <BriefcaseIcon className="h-5 w-5 text-accent-cyan"/> Nugas / Kerja ({ratingWork})
-                        </label>
-                        <input type="range" min="1" max="10" value={ratingWork} onChange={e => setRatingWork(parseInt(e.target.value))} className="w-full accent-accent-cyan"/>
-                    </div>
-                </div>
-            </FormSection>
 
-            <FormSection 
-                title="Tingkat Keramaian" 
-                isOpen={sectionsOpen.crowd} 
-                onToggle={() => toggleSection('crowd')}
-                disabled={formDisabled}
-            >
-                <div className="grid grid-cols-3 gap-4 p-2 bg-soft dark:bg-gray-700/50 rounded-xl">
-                   <CrowdSlider icon={<SunIcon className="h-5 w-5"/>} label="Pagi" value={crowdMorning} onChange={setCrowdMorning} colorClass="accent-accent-amber" disabled={formDisabled}/>
-                   <CrowdSlider icon={<UserGroupIcon className="h-5 w-5"/>} label="Siang" value={crowdAfternoon} onChange={setCrowdAfternoon} colorClass="accent-brand/75" disabled={formDisabled}/>
-                   <CrowdSlider icon={<MoonIcon className="h-5 w-5"/>} label="Malam" value={crowdEvening} onChange={setCrowdEvening} colorClass="accent-brand" disabled={formDisabled}/>
+                    <div className="pt-2 border-t border-border">
+                        <p className="font-semibold text-sm text-primary dark:text-white mb-3">Tingkat Keramaian (1-5)</p>
+                        <div className="grid grid-cols-3 gap-2 sm:gap-4 p-3 bg-soft dark:bg-gray-700/50 rounded-xl">
+                           <CrowdSlider icon={<SunIcon className="h-4 w-4"/>} label="Pagi" value={crowdMorning} onChange={setCrowdMorning} colorClass="accent-accent-amber" disabled={formDisabled}/>
+                           <CrowdSlider icon={<UserGroupIcon className="h-4 w-4"/>} label="Siang" value={crowdAfternoon} onChange={setCrowdAfternoon} colorClass="accent-brand/75" disabled={formDisabled}/>
+                           <CrowdSlider icon={<MoonIcon className="h-4 w-4"/>} label="Malam" value={crowdEvening} onChange={setCrowdEvening} colorClass="accent-brand" disabled={formDisabled}/>
+                        </div>
+                    </div>
                 </div>
             </FormSection>
 
@@ -219,8 +216,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
             >
                 <div className="space-y-4">
                     <div>
-                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white mb-2">
-                           <CurrencyDollarIcon className="h-5 w-5 text-green-500"/> Total Jajan (per orang)
+                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white mb-2 text-sm">
+                           <CurrencyDollarIcon className="h-4 w-4 text-green-500"/> Total Jajan (per orang)
                         </label>
                         <div className="flex flex-wrap gap-2">
                             {PRICE_OPTIONS.map(opt => (
@@ -228,7 +225,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                                     type="button"
                                     key={opt.value}
                                     onClick={() => setPriceSpent(prev => prev === opt.value ? '' : opt.value)}
-                                    className={`px-4 py-2 rounded-full font-semibold text-sm border-2 transition-all disabled:opacity-70 ${priceSpent === opt.value ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}
+                                    className={`px-3 py-1.5 rounded-full font-semibold text-xs sm:text-sm border-2 transition-all disabled:opacity-70 ${priceSpent === opt.value ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}
                                 >
                                     {opt.label}
                                 </button>
@@ -236,8 +233,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                         </div>
                     </div>
                     <div>
-                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white mb-2">
-                           <PhotoIcon className="h-5 w-5 text-blue-500"/> Foto (Opsional)
+                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white mb-2 text-sm">
+                           <PhotoIcon className="h-4 w-4 text-blue-500"/> Foto (Opsional)
                         </label>
                         {photo ? (
                              <div className="relative group">
