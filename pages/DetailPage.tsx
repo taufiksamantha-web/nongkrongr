@@ -162,7 +162,7 @@ const DetailPage: React.FC = () => {
     };
 
     const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${cafe.coords.lat},${cafe.coords.lng}`;
-    const approvedReviews = cafe.reviews?.filter(r => r.status === 'approved') || [];
+    const approvedReviews = cafe.reviews?.filter(r => r.status === 'approved').sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [];
     const visibleReviews = approvedReviews.slice(0, visibleReviewsCount);
     const cafeEvents = cafe.events?.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()) || [];
 
@@ -431,6 +431,8 @@ const DetailPage: React.FC = () => {
                                 <ReviewCard 
                                     key={review.id} 
                                     review={{...review, cafeName: cafe.name, cafeSlug: cafe.slug}} 
+                                    isDetailView={true}
+                                    onImageClick={openImageModal}
                                 />
                             )) : <div className="p-6 bg-soft rounded-2xl text-center text-muted">Belum ada review. Jadilah yang pertama!</div>}
                          </div>

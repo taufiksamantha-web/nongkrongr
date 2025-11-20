@@ -90,18 +90,32 @@ const ReviewManagement: React.FC = () => {
 
     const handleUpdateStatus = async (reviewId: string, status: Review['status']) => {
         setLoadingReviewId(reviewId);
+        
+        // Panggil fungsi dari context
         const { error } = await updateReviewStatus(reviewId, status);
+        
         if (error) {
-            setNotification({ message: `Gagal memperbarui status review: ${error.message}`, type: 'error' });
+            console.error("Update failed:", error);
+            setNotification({ 
+                message: `Gagal memperbarui status: ${error.message || 'Kesalahan teknis saat update database.'}`, 
+                type: 'error' 
+            });
         } else {
-            setNotification({ message: `Status review berhasil diubah menjadi ${status}.`, type: 'success' });
-            // Optimistic update: Remove from current list immediately
-            setReviews(prev => prev.filter(r => r.id !== reviewId));
-            setTotalCount(prev => Math.max(0, prev - 1));
+            setNotification({ 
+                message: `Status review berhasil diubah menjadi ${status}.`, 
+                type: 'success' 
+            });
             
-            // Optionally trigger a background refresh if needed, but immediate UI feedback is key
-            // fetchReviews(); 
+            // Optimistic UI Update:
+            // Langsung hapus review dari list tampilan saat ini karena statusnya sudah berubah
+            // (misal: dari 'pending' pindah ke 'approved', jadi tidak boleh tampil di tab 'pending' lagi)
+            setReviews(prevReviews => prevReviews.filter(r => r.id !== reviewId));
+            setTotalCount(prevCount => Math.max(0, prevCount - 1));
+            
+            // Kita tidak perlu memanggil fetchReviews() lagi karena item tersebut sudah "hilang" dari view ini
+            // dan akan muncul di tab yang sesuai jika user pindah tab nanti.
         }
+        
         setLoadingReviewId(null);
     };
 

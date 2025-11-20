@@ -339,13 +339,23 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const updateReviewStatus = async (reviewId: string, status: Review['status']) => {
         try {
-            const { data, error } = await supabase.from('reviews').update({ status }).eq('id', reviewId).select();
+            const { data, error } = await supabase
+                .from('reviews')
+                .update({ status: status })
+                .eq('id', reviewId)
+                .select();
+
             if (error) throw error;
-            // Invalidate to ensure global state (like cafe cards) reflects the new review status
+            
+            // Safety check: did we actually update a row?
+            if (!data || data.length === 0) {
+                 throw new Error('Gagal: Review tidak ditemukan atau tidak dapat diubah.');
+            }
+
             queryClient.invalidateQueries({ queryKey: ['cafes'] });
             return { error: null, data };
         } catch (err: any) {
-            return { error: err };
+            return { error: err, data: null };
         }
     };
 
