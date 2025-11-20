@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, ReactNode, useContext, useEffect, useCallback, useRef } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -41,9 +40,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return null;
     });
 
-    // Keep a ref to access current value inside useCallback without adding to dependency array
     const currentUserRef = useRef(currentUser);
     useEffect(() => { currentUserRef.current = currentUser; }, [currentUser]);
+
+    // Ref to prevent auto-login redirect loop during signup
+    const isSigningUpRef = useRef(false);
 
     // 2. Loading is only true if we have NO cache and are waiting for initial check
     const [loading, setLoading] = useState<boolean>(() => {
@@ -56,12 +57,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const fetchUserAndSetState = useCallback(async (session: Session | null): Promise<void> => {
         if (!session?.user) {
             if (currentUserRef.current !== null) {
+                console.log('[AUTH DEBUG] No session found, clearing user state.');
                 setCurrentUser(null);
                 localStorage.removeItem(USER_STORAGE_KEY);
             }
             setLoading(false);
             return;
         }
+
+        console.log('[AUTH DEBUG] Session valid, fetching profile for:', session.user.id);
 
         // Fetch profile to validate account status
         const { data: profile, error } = await supabase
@@ -71,25 +75,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .single();
 
         if (error || !profile) {
-            // CASE: Admin deleted the user from 'profiles' table
-            console.error("Session validation failed. User profile deleted.", error?.message || error);
-            await supabase.auth.signOut();
-            setCurrentUser(null);
-            localStorage.removeItem(USER_STORAGE_KEY);
+            console.warn("[AUTH DEBUG] Profile missing or error:", error?.message);
+            // Kemungkinan trigger database belum selesai berjalan (sedikit delay)
+            // Kita tidak force logout di sini agar tidak loop, biarkan UI menangani state 'no profile'
         } else if (profile.status === 'rejected') {
-             // CASE: Admin rejected the manager application
-             console.warn("User login attempted but status is rejected.");
+             console.warn("[AUTH DEBUG] User rejected, signing out.");
              await supabase.auth.signOut();
              setCurrentUser(null);
              localStorage.removeItem(USER_STORAGE_KEY);
         } else if (profile.status === 'archived') {
-             // CASE: Account archived (soft deleted)
-             console.warn("User login attempted but status is archived.");
+             console.warn("[AUTH DEBUG] User archived, signing out.");
              await supabase.auth.signOut();
              setCurrentUser(null);
              localStorage.removeItem(USER_STORAGE_KEY);
         } else {
-            // All good - Update State only if data changed to prevent flicker/re-renders
+            console.log('[AUTH DEBUG] Profile loaded successfully:', profile.username);
             const userData = profile as User;
             const currentStr = JSON.stringify(currentUserRef.current);
             const newStr = JSON.stringify(userData);
@@ -103,14 +103,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     useEffect(() => {
-        // Initial session check (Background if cache exists)
+        // Check Initial Session
         supabase.auth.getSession().then(({ data: { session } }) => {
             fetchUserAndSetState(session);
         });
 
-        // Listener for auth changes
+        // Listen for Auth Changes
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
+                console.log(`[AUTH DEBUG] Auth Event: ${event}`);
+
+                // CRITICAL: Ignore SIGNED_IN event if we are in the middle of a signup process.
+                // This prevents the app from automatically redirecting to Home (via GuestRoute) 
+                // before we have a chance to sign the user out.
+                if (isSigningUpRef.current && event === 'SIGNED_IN') {
+                    console.log('[AUTH DEBUG] Signup in progress, ignoring auto-signin event to prevent redirect.');
+                    return;
+                }
+
                 if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'PASSWORD_RECOVERY') {
                     fetchUserAndSetState(session);
                 } else if (event === 'SIGNED_OUT') {
@@ -127,8 +137,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [fetchUserAndSetState]);
 
     const login = async (identifier: string, password: string) => {
-        let emailToLogin = identifier;
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+        console.log('[AUTH DEBUG] Attempting login for:', identifier);
+        // Aggressive trim to prevent whitespace issues
+        let emailToLogin = identifier.trim();
+        
+        // Simple check if it looks like an email
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToLogin);
 
         if (!isEmail) {
             const { data: profile, error: profileError } = await supabase
@@ -146,33 +160,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const { data, error } = await supabase.auth.signInWithPassword({ email: emailToLogin, password });
         
         if (error) {
-            if (error.message === 'Invalid login credentials') {
-                return { error: new AuthError("Username/email atau password salah.") };
-            }
-            return { error };
+            console.error('[AUTH DEBUG] Login failed:', error.message);
+            return { error: new AuthError("Username/email atau password salah.") };
         }
 
-        // Post-Login Validation: Check Profile Status
+        // Check status immediately after login
         if (data.user) {
-            const { data: profile, error: profileFetchError } = await supabase
+            const { data: profile } = await supabase
                 .from('profiles')
                 .select('status')
                 .eq('id', data.user.id)
                 .single();
             
-            if (profileFetchError || !profile) {
-                await supabase.auth.signOut();
-                return { error: new AuthError("Akun Anda telah dihapus oleh Admin.") };
-            }
-
-            if (profile.status === 'rejected') {
-                await supabase.auth.signOut();
-                return { error: new AuthError("Pendaftaran akun Anda ditolak oleh Admin.") };
-            }
-
-            if (profile.status === 'archived') {
-                await supabase.auth.signOut();
-                return { error: new AuthError("Akun ini telah diarsipkan. Hubungi admin untuk memulihkan.") };
+            if (profile) {
+                if (profile.status === 'rejected') {
+                    await supabase.auth.signOut();
+                    return { error: new AuthError("Pendaftaran akun Anda ditolak oleh Admin.") };
+                }
+                if (profile.status === 'archived') {
+                    await supabase.auth.signOut();
+                    return { error: new AuthError("Akun ini telah diarsipkan.") };
+                }
             }
         }
 
@@ -180,57 +188,68 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const signup = async (username: string, email: string, password: string, isCafeAdmin: boolean = false) => {
-        // 1. Pre-check Username Uniqueness
-        const { count: usernameCount, error: userCheckError } = await supabase
+        // Set flag to true to block onAuthStateChange from reacting to the temporary session
+        isSigningUpRef.current = true;
+        
+        // AGGRESSIVE SANITIZATION
+        // Remove all spaces from username, lowercase everything
+        const safeUsername = username.trim().toLowerCase().replace(/\s/g, '');
+        const safeEmail = email.trim().toLowerCase();
+
+        console.log('[AUTH DEBUG] Starting signup process for:', safeUsername, safeEmail);
+
+        // 1. Validasi Username Unik (Frontend Check)
+        const { count, error: countError } = await supabase
             .from('profiles')
             .select('id', { count: 'exact', head: true })
-            .eq('username', username);
+            .eq('username', safeUsername);
         
-        if (userCheckError) {
-             return { error: new AuthError("Gagal memvalidasi username. Silakan coba lagi.") };
+        if (countError) {
+            console.error('[AUTH DEBUG] Database check failed:', countError);
         }
-        if (usernameCount !== null && usernameCount > 0) {
+        
+        if (count !== null && count > 0) {
+            isSigningUpRef.current = false;
             return { error: new AuthError("Username sudah digunakan. Silakan pilih yang lain.") };
         }
 
-        // 2. Pre-check Email Uniqueness
-        const { count: emailCount } = await supabase
-            .from('profiles')
-            .select('id', { count: 'exact', head: true })
-            .eq('email', email);
-
-        if (emailCount !== null && emailCount > 0) {
-            return { error: new AuthError("Email sudah terdaftar. Silakan login.") };
-        }
-
-        // 3. Proceed with Auth Signup
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-        });
-
-        if (signUpError) {
-            return { error: signUpError };
-        }
-        if (!signUpData.user) {
-             return { error: new AuthError("Sign up successful, but no user data returned.") };
-        }
-        
         const role = isCafeAdmin ? 'admin_cafe' : 'user';
         const status = isCafeAdmin ? 'pending_approval' : 'active';
 
-        // 4. Create Profile
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({ id: signUpData.user.id, username, email, role, status });
+        // 2. Signup Auth dengan Metadata
+        // PENTING: Kita TIDAK melakukan insert manual ke tabel profiles di sini.
+        // Kita kirim data via `options.data` dan membiarkan TRIGGER database yang bekerja.
+        const { data, error } = await supabase.auth.signUp({
+            email: safeEmail,
+            password,
+            options: {
+                data: {
+                    username: safeUsername, // Trigger akan membaca ini
+                    role,     // Trigger akan membaca ini
+                    status    // Trigger akan membaca ini
+                }
+            }
+        });
+
+        if (error) {
+            console.error('[AUTH DEBUG] Signup API failed:', error.message);
+            isSigningUpRef.current = false;
+            return { error };
+        }
         
-        if (profileError) {
-            console.error("Critical: Failed to create user profile after signup.", profileError);
-            return { error: new AuthError(profileError.message) };
+        if (data.user) {
+            console.log('[AUTH DEBUG] Signup successful, user created:', data.user.id);
         }
 
-        // 5. FORCE LOGOUT to prevent auto-login/redirect
+        // 3. FORCE LOGOUT IMMEDIATELY
+        // Logout user immediately so they have to login manually.
+        // This also ensures the session is cleared and they stay on the login page.
         await supabase.auth.signOut();
+        
+        // Reset flag after a delay to ensure any pending async events are ignored
+        setTimeout(() => {
+            isSigningUpRef.current = false;
+        }, 2000);
         
         return { error: null };
     };
@@ -248,7 +267,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .single();
 
         if (error) {
-            console.error('Error updating user profile:', error);
             return { error };
         }
 
@@ -262,27 +280,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = async () => {
-        const { error } = await supabase.auth.signOut();
+        console.log('[AUTH DEBUG] Logging out...');
+        // 1. Aggressive Local Cleanup (Hapus semua cache SEBELUM call server)
+        // Ini mencegah 'flash' user login jika server call lambat atau gagal.
         setCurrentUser(null);
         localStorage.removeItem(USER_STORAGE_KEY);
+        localStorage.removeItem('nongkrongr_guest_read_notifications');
+        localStorage.removeItem('nongkrongr_guest_deleted_notifications');
+        localStorage.removeItem('nongkrongr_favorites'); // Optional: clear favorites cache too
 
-        if (error) {
-            const isSessionError = 
-                error.message.includes('Auth session missing') || 
-                error.message.includes('session_not_found') ||
-                error.status === 401 ||
-                error.status === 403;
-            
-            if (isSessionError) {
-                return { error: null };
-            }
-        }
+        // 2. Server SignOut
+        const { error } = await supabase.auth.signOut();
+        if (error) console.error('[AUTH DEBUG] Server signOut error:', error.message);
         
         return { error };
     };
 
     const resetPasswordForEmail = async (email: string) => {
-        // Use current window location as redirect URL
         const redirectTo = `${window.location.origin}/#/reset-password`;
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo,
