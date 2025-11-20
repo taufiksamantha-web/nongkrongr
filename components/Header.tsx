@@ -127,13 +127,14 @@ const Header: React.FC = () => {
   return (
     <>
       <div className="container mx-auto px-4 pt-4 sticky top-4 z-50 w-full max-w-screen-2xl">
-        <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 sm:p-4 shadow-sm flex items-center justify-between transition-all duration-300">
+        <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-2 px-3 sm:p-4 shadow-sm flex items-center justify-between transition-all duration-300">
           <nav className="w-full flex items-center justify-between relative">
+            {/* Logo Section */}
             <Link to="/" className="flex items-center mr-2 sm:mr-6 flex-shrink-0">
               <img 
                 src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" 
                 alt="Nongkrongr Logo" 
-                className="h-8 w-auto block sm:hidden object-contain" 
+                className="h-7 w-auto block sm:hidden object-contain" 
               />
               <img 
                 src="https://res.cloudinary.com/dovouihq8/image/upload/logo.png" 
@@ -142,13 +143,15 @@ const Header: React.FC = () => {
               />
             </Link>
             
-            <div className="absolute left-1/2 -translate-x-1/2">
+            {/* Center Navigation (Desktop) */}
+            <div className="absolute left-1/2 -translate-x-1/2 hidden lg:block">
                 <NavPill />
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center bg-brand/5 dark:bg-gray-700/50 rounded-full p-1.5 border border-brand/10 dark:border-gray-600">
-                  {/* Hide Theme Toggle on Mobile (moved to menu) */}
+            {/* Right Section: Actions */}
+            <div className="flex items-center gap-1.5 sm:gap-3">
+              <div className="flex items-center bg-brand/5 dark:bg-gray-700/50 rounded-full p-1 sm:p-1.5 border border-brand/10 dark:border-gray-600">
+                  {/* Desktop Theme Toggle */}
                   <button 
                     onClick={toggleTheme} 
                     className="hidden sm:block p-2 rounded-full text-muted hover:text-yellow-500 hover:bg-white dark:hover:bg-gray-600 transition-all"
@@ -176,7 +179,8 @@ const Header: React.FC = () => {
                      </>
                   )}
                   
-                  <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                  {/* Separator for Profile (Hidden on mobile if guest, visible if user but styled differently) */}
+                  {currentUser && <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1 hidden sm:block"></div>}
                   
                   {currentUser ? (
                     <>
@@ -195,26 +199,28 @@ const Header: React.FC = () => {
                             <ArrowRightOnRectangleIcon className="h-5 w-5" />
                         </button>
                         
-                        {/* Mobile User Button - Proportional Sizing */}
-                        <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden flex items-center justify-center rounded-full hover:bg-brand/10 transition-all p-0.5" aria-label="Buka menu pengguna">
+                        {/* Mobile User Button */}
+                        <button onClick={() => setIsMobileMenuOpen(prev => !prev)} className="sm:hidden flex items-center justify-center rounded-full hover:bg-brand/10 transition-all p-0.5 ml-1" aria-label="Buka menu pengguna">
                              {currentUser.avatar_url ? (
-                                <img src={currentUser.avatar_url} alt="Profile" className="h-9 w-9 rounded-full object-cover border-2 border-brand/20" />
+                                <img src={currentUser.avatar_url} alt="Profile" className="h-8 w-8 rounded-full object-cover border-2 border-brand/20" />
                              ) : (
-                                <div className="h-9 w-9 rounded-full bg-brand text-white flex items-center justify-center shadow-lg shadow-brand/20">
-                                    <UserCircleIcon className="h-6 w-6"/>
+                                <div className="h-8 w-8 rounded-full bg-brand text-white flex items-center justify-center shadow-lg shadow-brand/20">
+                                    <UserCircleIcon className="h-5 w-5"/>
                                 </div>
                              )}
                         </button>
                     </>
                   ) : (
-                     <Link to="/login" className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold bg-brand text-white hover:bg-brand/90 transition-all shadow-md shadow-brand/20" aria-label="Login">
+                     <Link to="/login" className="flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold bg-brand text-white hover:bg-brand/90 transition-all shadow-md shadow-brand/20 ml-1" aria-label="Login">
                         <span className="hidden sm:inline">Login</span>
-                        <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                        <span className="sm:hidden">Masuk</span>
+                        <ArrowRightOnRectangleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                     </Link>
                   )}
               </div>
             </div>
             
+             {/* Mobile Dropdown Menu */}
              {isMobileMenuOpen && currentUser && (
                   <div ref={mobileMenuRef} className="absolute top-full right-0 mt-4 w-64 bg-card dark:bg-gray-800 rounded-3xl shadow-xl border border-border p-3 z-50 sm:hidden animate-fade-in-down">
                       <Link to={getDashboardPath(currentUser.role)} onClick={() => setIsMobileMenuOpen(false)} className="block">
@@ -234,7 +240,7 @@ const Header: React.FC = () => {
                           <NavLink to="/explore" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Explore</NavLink>
                           <NavLink to="/about" onClick={() => setIsMobileMenuOpen(false)} className={({ isActive }) => `block w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors ${isActive ? 'bg-brand text-white' : 'text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700'}`}>Tentang Kami</NavLink>
                           
-                          {/* Mobile Dark Mode Toggle */}
+                          {/* Mobile Dark Mode Toggle - Inside Menu */}
                           <button 
                             onClick={toggleTheme}
                             className="w-full text-left px-4 py-3 rounded-xl font-semibold transition-colors text-primary dark:text-white hover:bg-soft dark:hover:bg-gray-700 flex items-center justify-between group"

@@ -1,15 +1,17 @@
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import UserDashboard from '../components/admin/UserDashboard';
 import AdminCafeDashboard from '../components/admin/AdminCafeDashboard';
 import FloatingNotification from '../components/common/FloatingNotification';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import ProfileUpdateModal from '../components/admin/ProfileUpdateModal';
+import NotificationPanel from '../components/NotificationPanel';
 import { ThemeContext } from '../App';
-import { SunIcon, MoonIcon, InformationCircleIcon, HomeIcon, ArrowRightOnRectangleIcon, PencilSquareIcon } from '@heroicons/react/24/solid';
+import { SunIcon, MoonIcon, InformationCircleIcon, HomeIcon, ArrowRightOnRectangleIcon, PencilSquareIcon, BellIcon } from '@heroicons/react/24/solid';
 
 const LoadingSpinner: React.FC = () => (
     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -32,13 +34,31 @@ const PendingApprovalScreen: React.FC = () => (
 const AdminPage: React.FC = () => {
     const { currentUser, logout } = useAuth();
     const { theme, toggleTheme } = useContext(ThemeContext);
+    const { unreadCount } = useNotifications();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     
+    // Notification State for Dashboard Header
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const notifRef = useRef<HTMLDivElement>(null);
+    
     const location = useLocation();
     const navigate = useNavigate();
+
+    // Close notification panel when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+                setIsNotifOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     // Enforce correct URL for role
     useEffect(() => {
@@ -145,7 +165,26 @@ const AdminPage: React.FC = () => {
                             <HomeIcon className="h-5 w-5"/>
                             <span className="hidden lg:inline">Home</span>
                         </Link>
+                        
                         <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                        
+                        {/* Notification Bell */}
+                        <div className="relative" ref={notifRef}>
+                              <button
+                                  onClick={() => setIsNotifOpen(!isNotifOpen)}
+                                  className="p-2 rounded-full text-muted hover:text-brand hover:bg-white dark:hover:bg-gray-600 transition-all relative"
+                                  aria-label="Notifikasi"
+                              >
+                                  <BellIcon className="h-5 w-5" />
+                                  {unreadCount > 0 && (
+                                      <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full border border-white dark:border-gray-700"></span>
+                                  )}
+                              </button>
+                              <NotificationPanel isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
+                        </div>
+
+                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
                         <button 
                             onClick={toggleTheme} 
                             className="p-2 rounded-full text-muted hover:text-yellow-500 hover:bg-white dark:hover:bg-gray-600 transition-all"
@@ -153,7 +192,9 @@ const AdminPage: React.FC = () => {
                         >
                             {theme === 'light' ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
                         </button>
+                        
                         <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                        
                         <button 
                             onClick={() => setIsLogoutModalOpen(true)} 
                             className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
