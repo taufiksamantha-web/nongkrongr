@@ -4,7 +4,7 @@ import { Review } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { cloudinaryService } from '../services/cloudinaryService';
 import { fileToBase64 } from '../utils/fileUtils';
-import { PhotoIcon, SparklesIcon, BriefcaseIcon, SunIcon, MoonIcon, UserGroupIcon, CurrencyDollarIcon, XCircleIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
+import { PhotoIcon, SparklesIcon, BriefcaseIcon, SunIcon, MoonIcon, UserGroupIcon, CurrencyDollarIcon, XCircleIcon, ChevronDownIcon, CloudArrowUpIcon, BanknotesIcon } from '@heroicons/react/24/solid';
 
 interface ReviewFormProps {
     onSubmit: (review: Omit<Review, 'id' | 'createdAt' | 'status' | 'helpful_count'> & { cafe_id: string }) => Promise<void>;
@@ -13,21 +13,98 @@ interface ReviewFormProps {
 }
 
 const PRICE_OPTIONS = [
-    { label: '< 25rb', value: '25000' },
-    { label: '25-50rb', value: '50000' },
-    { label: '> 50rb', value: '75000' }
+    { label: '< 25rb', value: '25000', desc: 'Hemat', icons: 1 },
+    { label: '25-50rb', value: '50000', desc: 'Standar', icons: 2 },
+    { label: '> 50rb', value: '75000', desc: 'Sultan', icons: 3 }
 ];
 
-const CrowdSlider: React.FC<{ icon: React.ReactNode, label: string, value: number, onChange: (val: number) => void, colorClass: string, disabled: boolean }> = ({ icon, label, value, onChange, colorClass, disabled }) => (
-    <div className="text-center">
-        <div className="flex items-center justify-center gap-1 sm:gap-2 text-muted mb-1 sm:mb-2">
-            <div className="transform scale-75 sm:scale-100">{icon}</div>
-            <span className="font-semibold text-[10px] sm:text-sm">{label}</span>
+// --- Helper Visuals ---
+
+const getRatingLabel = (value: number) => {
+    if (value >= 9) return "Sempurna! 😍";
+    if (value >= 7) return "Keren 👍";
+    if (value >= 5) return "Lumayan 🙂";
+    if (value >= 3) return "Biasa Aja 😐";
+    return "Kurang 😞";
+};
+
+const getCrowdLabel = (value: number) => {
+    if (value === 1) return "Sepi (Nyaman)";
+    if (value === 2) return "Agak Sepi";
+    if (value === 3) return "Sedang";
+    if (value === 4) return "Ramai";
+    return "Padat Merayap";
+};
+
+const getCrowdColor = (value: number) => {
+    if (value <= 2) return '#10b981'; // Emerald-500
+    if (value === 3) return '#f59e0b'; // Amber-500
+    return '#ef4444'; // Red-500
+};
+
+// --- Custom Slider Component ---
+interface RangeSliderProps {
+    min: number;
+    max: number;
+    value: number;
+    onChange: (val: number) => void;
+    disabled?: boolean;
+    fillColor?: string; // Hex or specific color string
+    dynamicColor?: boolean; // If true, changes color based on value (for Crowd)
+}
+
+const RangeSlider: React.FC<RangeSliderProps> = ({ min, max, value, onChange, disabled, fillColor = '#7C4DFF', dynamicColor = false }) => {
+    const percentage = ((value - min) / (max - min)) * 100;
+    
+    // Determine active color
+    const activeColor = dynamicColor ? getCrowdColor(value) : fillColor;
+    
+    return (
+        <div className="relative w-full h-6 flex items-center group">
+            <input 
+                type="range" 
+                min={min} 
+                max={max} 
+                value={value} 
+                onChange={(e) => onChange(parseInt(e.target.value))} 
+                disabled={disabled}
+                className="w-full h-3 rounded-full appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand/50 transition-all z-10 bg-gray-200 dark:bg-gray-700"
+                style={{
+                    background: `linear-gradient(to right, ${activeColor} 0%, ${activeColor} ${percentage}%, transparent ${percentage}%, transparent 100%)`
+                }}
+            />
+            {/* Custom Thumb Styles via Global CSS or these utilities are tricky without standard CSS, 
+                but the standard appearance-none + background gradient gives the "Fill" effect requested. 
+            */}
+            <style>{`
+                input[type=range]::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    height: 20px;
+                    width: 20px;
+                    border-radius: 50%;
+                    background: #ffffff;
+                    border: 3px solid ${activeColor};
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                    margin-top: 0px; /* Adjust if needed */
+                    transition: transform 0.1s, border-color 0.3s;
+                }
+                input[type=range]::-webkit-slider-thumb:hover {
+                    transform: scale(1.2);
+                }
+                input[type=range]::-moz-range-thumb {
+                    height: 20px;
+                    width: 20px;
+                    border-radius: 50%;
+                    background: #ffffff;
+                    border: 3px solid ${activeColor};
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                    transition: transform 0.1s, border-color 0.3s;
+                }
+            `}</style>
         </div>
-        <input type="range" min="1" max="5" value={value} onChange={e => onChange(parseInt(e.target.value))} className={`w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 ${colorClass}`} disabled={disabled}/>
-        <p className="font-bold text-sm sm:text-lg text-primary mt-1">{value}</p>
-    </div>
-);
+    );
+};
+
 
 // Helper component for the responsive accordion sections
 const FormSection: React.FC<{ 
@@ -182,27 +259,74 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                 disabled={formDisabled}
             >
                 <div className="space-y-6">
-                     <div className="space-y-3">
-                         <div>
-                            <label className="flex items-center gap-2 font-semibold text-primary dark:text-white text-sm mb-1">
-                               <SparklesIcon className="h-4 w-4 text-accent-pink"/> Estetik ({ratingAesthetic})
+                     {/* Aesthetic Score */}
+                     <div className="space-y-2">
+                         <div className="flex justify-between items-center">
+                            <label className="flex items-center gap-2 font-bold text-primary dark:text-white text-sm">
+                               <SparklesIcon className="h-4 w-4 text-accent-pink"/> Estetik
                             </label>
-                            <input type="range" min="1" max="10" value={ratingAesthetic} onChange={e => setRatingAesthetic(parseInt(e.target.value))} className="w-full accent-accent-pink h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"/>
-                        </div>
-                        <div>
-                            <label className="flex items-center gap-2 font-semibold text-primary dark:text-white text-sm mb-1">
-                               <BriefcaseIcon className="h-4 w-4 text-accent-cyan"/> Nugas / Kerja ({ratingWork})
-                            </label>
-                            <input type="range" min="1" max="10" value={ratingWork} onChange={e => setRatingWork(parseInt(e.target.value))} className="w-full accent-accent-cyan h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"/>
-                        </div>
+                            <span className="text-xs font-bold text-accent-pink px-2 py-0.5 bg-accent-pink/10 rounded-full">
+                                {ratingAesthetic}/10 • {getRatingLabel(ratingAesthetic)}
+                            </span>
+                         </div>
+                         <RangeSlider 
+                            min={1} max={10} 
+                            value={ratingAesthetic} 
+                            onChange={setRatingAesthetic} 
+                            fillColor="#FF4081" // accent-pink
+                            disabled={formDisabled} 
+                        />
                     </div>
 
-                    <div className="pt-2 border-t border-border">
-                        <p className="font-semibold text-sm text-primary dark:text-white mb-3">Tingkat Keramaian (1-5)</p>
-                        <div className="grid grid-cols-3 gap-2 sm:gap-4 p-3 bg-soft dark:bg-gray-700/50 rounded-xl">
-                           <CrowdSlider icon={<SunIcon className="h-4 w-4"/>} label="Pagi" value={crowdMorning} onChange={setCrowdMorning} colorClass="accent-accent-amber" disabled={formDisabled}/>
-                           <CrowdSlider icon={<UserGroupIcon className="h-4 w-4"/>} label="Siang" value={crowdAfternoon} onChange={setCrowdAfternoon} colorClass="accent-brand/75" disabled={formDisabled}/>
-                           <CrowdSlider icon={<MoonIcon className="h-4 w-4"/>} label="Malam" value={crowdEvening} onChange={setCrowdEvening} colorClass="accent-brand" disabled={formDisabled}/>
+                    {/* Work Score */}
+                    <div className="space-y-2">
+                         <div className="flex justify-between items-center">
+                            <label className="flex items-center gap-2 font-bold text-primary dark:text-white text-sm">
+                               <BriefcaseIcon className="h-4 w-4 text-accent-cyan"/> Nugas / Kerja
+                            </label>
+                            <span className="text-xs font-bold text-accent-cyan px-2 py-0.5 bg-accent-cyan/10 rounded-full">
+                                {ratingWork}/10 • {getRatingLabel(ratingWork)}
+                            </span>
+                         </div>
+                         <RangeSlider 
+                            min={1} max={10} 
+                            value={ratingWork} 
+                            onChange={setRatingWork} 
+                            fillColor="#00E5FF" // accent-cyan
+                            disabled={formDisabled} 
+                        />
+                    </div>
+
+                    <div className="pt-4 border-t border-border">
+                        <p className="font-bold text-sm text-primary dark:text-white mb-4">Tingkat Keramaian</p>
+                        
+                        <div className="space-y-5">
+                            {/* Morning Crowd */}
+                            <div className="space-y-1">
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span className="flex items-center gap-1 text-muted font-semibold"><SunIcon className="h-3 w-3"/> Pagi</span>
+                                    <span className="font-bold" style={{ color: getCrowdColor(crowdMorning) }}>{getCrowdLabel(crowdMorning)}</span>
+                                </div>
+                                <RangeSlider min={1} max={5} value={crowdMorning} onChange={setCrowdMorning} dynamicColor={true} disabled={formDisabled}/>
+                            </div>
+
+                             {/* Afternoon Crowd */}
+                             <div className="space-y-1">
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span className="flex items-center gap-1 text-muted font-semibold"><UserGroupIcon className="h-3 w-3"/> Siang</span>
+                                    <span className="font-bold" style={{ color: getCrowdColor(crowdAfternoon) }}>{getCrowdLabel(crowdAfternoon)}</span>
+                                </div>
+                                <RangeSlider min={1} max={5} value={crowdAfternoon} onChange={setCrowdAfternoon} dynamicColor={true} disabled={formDisabled}/>
+                            </div>
+
+                             {/* Evening Crowd */}
+                             <div className="space-y-1">
+                                <div className="flex justify-between text-xs mb-1">
+                                    <span className="flex items-center gap-1 text-muted font-semibold"><MoonIcon className="h-3 w-3"/> Malam</span>
+                                    <span className="font-bold" style={{ color: getCrowdColor(crowdEvening) }}>{getCrowdLabel(crowdEvening)}</span>
+                                </div>
+                                <RangeSlider min={1} max={5} value={crowdEvening} onChange={setCrowdEvening} dynamicColor={true} disabled={formDisabled}/>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -214,46 +338,86 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                 onToggle={() => toggleSection('details')}
                 disabled={formDisabled}
             >
-                <div className="space-y-4">
+                <div className="space-y-5">
+                    {/* Price Selection - Styled as Cards */}
                     <div>
-                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white mb-2 text-sm">
+                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white mb-3 text-sm">
                            <CurrencyDollarIcon className="h-4 w-4 text-green-500"/> Total Jajan (per orang)
                         </label>
-                        <div className="flex flex-wrap gap-2">
-                            {PRICE_OPTIONS.map(opt => (
-                                <button
-                                    type="button"
-                                    key={opt.value}
-                                    onClick={() => setPriceSpent(prev => prev === opt.value ? '' : opt.value)}
-                                    className={`px-3 py-1.5 rounded-full font-semibold text-xs sm:text-sm border-2 transition-all disabled:opacity-70 ${priceSpent === opt.value ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
+                        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                            {PRICE_OPTIONS.map(opt => {
+                                const isSelected = priceSpent === opt.value;
+                                return (
+                                    <button
+                                        type="button"
+                                        key={opt.value}
+                                        onClick={() => setPriceSpent(prev => prev === opt.value ? '' : opt.value)}
+                                        disabled={formDisabled}
+                                        className={`
+                                            relative flex flex-col items-center justify-center py-3 px-1 rounded-xl border-2 transition-all duration-300 group
+                                            ${isSelected 
+                                                ? 'bg-gradient-to-br from-brand/90 to-brand border-brand text-white shadow-lg shadow-brand/20 scale-[1.02]' 
+                                                : 'bg-soft dark:bg-gray-700/50 border-border text-muted hover:border-brand/40 hover:bg-brand/5'
+                                            }
+                                            disabled:opacity-60 disabled:cursor-not-allowed
+                                        `}
+                                    >
+                                        <div className={`flex mb-1 ${isSelected ? 'text-yellow-300' : 'text-muted group-hover:text-brand'}`}>
+                                            {[...Array(opt.icons)].map((_, i) => (
+                                                <BanknotesIcon key={i} className="h-3.5 w-3.5 sm:h-4 sm:w-4 -ml-1 first:ml-0" />
+                                            ))}
+                                        </div>
+                                        <span className={`text-[10px] sm:text-xs font-bold ${isSelected ? 'text-white' : 'text-primary dark:text-white'}`}>{opt.label}</span>
+                                        <span className={`text-[9px] mt-0.5 font-medium ${isSelected ? 'text-white/80' : 'text-muted'}`}>{opt.desc}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
+
+                    {/* Photo Upload - Styled Dropzone */}
                     <div>
-                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white mb-2 text-sm">
+                        <label className="flex items-center gap-2 font-semibold text-primary dark:text-white mb-3 text-sm">
                            <PhotoIcon className="h-4 w-4 text-blue-500"/> Foto (Opsional)
                         </label>
                         {photo ? (
-                             <div className="relative group">
-                                <img src={photo} alt="Preview" className="w-full h-40 object-cover rounded-xl"/>
-                                <button type="button" onClick={() => setPhoto(null)} className={`absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full transition-opacity ${formDisabled ? 'hidden' : 'opacity-0 group-hover:opacity-100'}`} aria-label="Hapus gambar">
-                                    <XCircleIcon className="h-6 w-6"/>
+                             <div className="relative group animate-fade-in-up">
+                                <img src={photo} alt="Preview" className="w-full h-48 object-cover rounded-2xl border border-border shadow-sm"/>
+                                <div className="absolute inset-0 bg-black/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <button 
+                                    type="button" 
+                                    onClick={() => setPhoto(null)} 
+                                    className={`absolute top-3 right-3 p-1.5 bg-red-500 text-white rounded-full shadow-lg transform hover:scale-110 transition-all ${formDisabled ? 'hidden' : ''}`} 
+                                    aria-label="Hapus gambar"
+                                >
+                                    <XCircleIcon className="h-5 w-5"/>
                                 </button>
+                                <div className="absolute bottom-3 left-3 bg-black/60 text-white text-xs px-3 py-1.5 rounded-lg backdrop-blur-md">
+                                    Siap Diupload
+                                </div>
                              </div>
                         ) : (
                              <label 
                                 htmlFor="photo-upload" 
-                                className={`w-full text-center p-6 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-colors ${formDisabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} ${isDragOver ? 'border-brand bg-brand/10' : 'border-border bg-soft hover:border-brand/50 dark:bg-gray-700'}`}
+                                className={`
+                                    relative w-full h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer overflow-hidden
+                                    ${isDragOver 
+                                        ? 'border-brand bg-brand/10 scale-[1.01]' 
+                                        : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30 hover:border-brand/50 hover:bg-brand/5'
+                                    }
+                                    ${formDisabled ? 'opacity-60 cursor-not-allowed' : ''}
+                                `}
                                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if(!formDisabled) setIsDragOver(true); }}
                                 onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }}
                                 onDrop={onDrop}
                              >
-                                <PhotoIcon className="h-8 w-8 text-muted mb-2"/>
-                                <span className="font-semibold text-primary dark:text-gray-200">Pilih atau jatuhkan foto di sini</span>
-                                <span className="text-xs text-muted">Maks. 5MB</span>
+                                <div className={`p-3 rounded-full bg-white dark:bg-gray-600 mb-3 shadow-sm transition-transform duration-300 ${isDragOver ? 'scale-110' : ''}`}>
+                                    <CloudArrowUpIcon className={`h-6 w-6 ${isDragOver ? 'text-brand' : 'text-muted'}`}/>
+                                </div>
+                                <span className="font-semibold text-sm text-primary dark:text-gray-200">
+                                    {isDragOver ? 'Lepaskan Foto Disini' : 'Klik atau Drag Foto'}
+                                </span>
+                                <span className="text-xs text-muted mt-1">Format JPG/PNG, Maks. 5MB</span>
                             </label>
                         )}
                         <input id="photo-upload" type="file" accept="image/*" onChange={(e) => handleFileChange(e.target.files ? e.target.files[0] : null)} className="hidden" disabled={formDisabled} />
@@ -262,12 +426,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
             </FormSection>
 
             {isConfirming ? (
-                <div className="flex justify-end gap-4">
-                    <button type="button" onClick={() => setIsConfirming(false)} className="px-6 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
-                        Batal
+                <div className="flex justify-end gap-4 pt-2">
+                    <button type="button" onClick={() => setIsConfirming(false)} className="px-6 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        Edit Lagi
                     </button>
-                    <button type="submit" disabled={totalSubmitting} className="px-6 py-2 bg-brand text-white rounded-xl font-semibold hover:bg-brand/90 transition-colors disabled:bg-brand/50 disabled:cursor-wait">
-                        {isUploading ? 'Uploading...' : (isSubmitting ? 'Mengirim...' : 'Kirim')}
+                    <button type="submit" disabled={totalSubmitting} className="px-6 py-2.5 bg-gradient-to-r from-brand to-brand-light text-white rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-brand/25 disabled:opacity-70 disabled:cursor-wait flex items-center gap-2">
+                        {isUploading ? 'Mengupload...' : (isSubmitting ? 'Mengirim...' : 'Ya, Kirim!')}
                     </button>
                 </div>
             ) : (
@@ -275,7 +439,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, isSubmitting, cafeId 
                     type="button"
                     onClick={handleInitialSubmitClick}
                     disabled={totalSubmitting}
-                    className="w-full bg-brand text-white font-bold py-3 rounded-2xl hover:bg-brand/90 transition-all disabled:bg-brand/50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full bg-brand text-white font-bold py-3.5 rounded-2xl hover:bg-brand/90 transition-all disabled:bg-brand/50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-brand/20 hover:shadow-brand/30 hover:-translate-y-0.5"
                 >
                     Kirim Review
                 </button>
