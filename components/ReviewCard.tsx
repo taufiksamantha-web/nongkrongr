@@ -99,31 +99,54 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, animationDelay, isDetai
             {review.text}
         </p>
         
-        {/* Photo Gallery */}
+        {/* Photo Gallery - Proportional Grid */}
         {hasPhotos && (
-            <div className={`mt-3 grid gap-2 ${review.photos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                {review.photos.map((photo, index) => (
-                    <div 
-                        key={index} 
-                        className={`relative overflow-hidden rounded-xl border border-border group ${review.photos.length === 1 ? 'aspect-[21/9] sm:aspect-[2/1]' : 'aspect-[4/3]'}`}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (onImageClick) onImageClick(photo);
-                        }}
-                    >
-                        <ImageWithFallback 
-                            src={photo} 
-                            alt={`Foto review oleh ${review.author} ${index + 1}`}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-zoom-in"
-                            width={400}
-                            height={300}
-                        />
-                        {onImageClick && (
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
-                        )}
-                    </div>
-                ))}
+            <div className={`mt-3 grid gap-2 ${
+                review.photos.length === 1 ? 'grid-cols-1' : 
+                review.photos.length === 2 ? 'grid-cols-2' : 
+                'grid-cols-2 sm:grid-cols-3'
+            }`}>
+                {review.photos.map((photo, index) => {
+                    // Logic for aspect ratios:
+                    // 1 Photo: Wide (16:9)
+                    // 2 Photos: Square (1:1)
+                    // 3+ Photos: 
+                    //    - If index 0 (first): Span 2 cols if grid is 2-col, or square if 3-col.
+                    //    - Actually, simpler is better: keep them consistent.
+                    
+                    let aspectClass = 'aspect-[4/3]'; // Default for multi-grid
+                    if (review.photos.length === 1) aspectClass = 'aspect-[16/9] sm:aspect-[2/1]';
+                    if (review.photos.length === 2) aspectClass = 'aspect-square';
+
+                    // If we have 3 photos, make the first one span full width on small screens (grid-cols-2), 
+                    // but normal on larger (grid-cols-3)
+                    const spanClass = (review.photos.length === 3 && index === 0) 
+                        ? 'col-span-2 sm:col-span-1' 
+                        : '';
+
+                    return (
+                        <div 
+                            key={index} 
+                            className={`relative overflow-hidden rounded-xl border border-border group ${aspectClass} ${spanClass}`}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (onImageClick) onImageClick(photo);
+                            }}
+                        >
+                            <ImageWithFallback 
+                                src={photo} 
+                                alt={`Foto review oleh ${review.author} ${index + 1}`}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-zoom-in"
+                                width={400}
+                                height={300}
+                            />
+                            {onImageClick && (
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                            )}
+                        </div>
+                    );
+                })}
             </div>
         )}
 

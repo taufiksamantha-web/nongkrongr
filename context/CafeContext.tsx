@@ -8,6 +8,36 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 // Constants
 const ITEMS_PER_PAGE = 12;
 
+// --- Helper: Robust Array Parser for Supabase/Postgres ---
+// Menangani format array Postgres "{item1,item2}" atau JSON array standar
+const parseSupabaseArray = (input: any): string[] => {
+    if (!input) return [];
+    if (Array.isArray(input)) return input.filter(Boolean);
+    
+    if (typeof input === 'string') {
+        // Cek format Postgres Array: "{url1,url2}"
+        if (input.startsWith('{') && input.endsWith('}')) {
+            return input
+                .slice(1, -1) // Hapus kurung kurawal { }
+                .split(',')   // Pisahkan dengan koma
+                .map(s => s.trim().replace(/^"|"$/g, '')) // Hapus tanda kutip jika ada
+                .filter(s => s.length > 0 && s !== 'NULL');
+        }
+        // Cek jika string biasa (single url tapi salah format)
+        if (input.trim().startsWith('http')) {
+            return [input.trim()];
+        }
+        // Cek jika format JSON string "[\"url\"]"
+        try {
+            const parsed = JSON.parse(input);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            // Ignore JSON parse error
+        }
+    }
+    return [];
+};
+
 // --- Client-Side Data Processing ---
 const calculateAverages = (cafe: Cafe): Cafe => {
     const approvedReviews = cafe.reviews?.filter(r => r.status === 'approved') || [];
@@ -112,7 +142,8 @@ const fetchCafesPage = async ({ pageParam = 0 }: { pageParam: number }) => {
         spots: cafe.spots || [], events: cafe.events || [],
         reviews: (cafe.reviews || []).map((r: any) => ({ 
             ...r, 
-            photos: Array.isArray(r.photos) ? r.photos.filter(Boolean) : [], 
+            // Apply robust parsing here
+            photos: parseSupabaseArray(r.photos), 
             helpful_count: r.helpful_count || 0,
             // Map profile data to flat author properties for UI
             author: r.profile?.username || 'Anonymous',
@@ -315,8 +346,6 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             id: `review-${crypto.randomUUID()}`,
             cafe_id: review.cafe_id,
             author_id: currentUser?.id, // Store author_id from current session
-            // Note: We are NOT storing 'author' string anymore as it's removed from the table.
-            // The UI might pass it, but we ignore it for the DB insert.
             ratingAesthetic: review.ratingAesthetic,
             ratingWork: review.ratingWork,
             crowdMorning: review.crowdMorning,
@@ -324,7 +353,7 @@ export const CafeProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             crowdEvening: review.crowdEvening,
             priceSpent: review.priceSpent,
             text: review.text,
-            photos: review.photos,
+            photos: review.photos, // Supabase client handles array insert usually
             status: 'pending' as const, 
             createdAt: new Date().toISOString(), 
             helpful_count: 0 
