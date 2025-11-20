@@ -29,6 +29,7 @@ export const NotificationContext = createContext<NotificationContextType | undef
 
 const GUEST_READ_KEY = 'nongkrongr_guest_read_notifications';
 const GUEST_DELETED_KEY = 'nongkrongr_guest_deleted_notifications';
+const NOTIFICATION_ICON = 'https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png';
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { fetchCafes } = useContext(CafeContext)!;
@@ -51,6 +52,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     // Helper to check if deleted (using ref for realtime context)
     const isDeleted = useCallback((id: string) => deletedIdsRef.current.has(id), []);
     const isRead = useCallback((id: string) => readIdsRef.current.has(id), []);
+
+    // --- 0. Request Browser Notification Permission ---
+    useEffect(() => {
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+            if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+    }, []);
 
     // --- 1. Load Read/Deleted State from Persistence ---
     useEffect(() => {
@@ -226,6 +236,29 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
             if (newItem) {
                 setNotifications(prev => [newItem!, ...prev]);
+                
+                // --- Browser Push Notification Trigger ---
+                if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                    try {
+                        const browserNotif = new Notification(newItem.title, {
+                            body: newItem.message,
+                            icon: NOTIFICATION_ICON,
+                            tag: newItem.id // Dedup in browser tray
+                        });
+                        
+                        browserNotif.onclick = (e) => {
+                            e.preventDefault();
+                            window.focus();
+                            if (newItem?.link) {
+                                // Support hash routing
+                                window.location.href = window.location.origin + '/#' + newItem.link;
+                            }
+                            browserNotif.close();
+                        };
+                    } catch (err) {
+                        console.error("Failed to show browser notification", err);
+                    }
+                }
             }
         };
 
