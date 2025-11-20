@@ -50,7 +50,18 @@ const UserManagementPanel: React.FC = () => {
 
     const filteredUsers = useMemo(() => {
         return users
-            .filter(user => user.role === activeTab)
+            .filter(user => {
+                // Filter by Role Tab
+                if (user.role !== activeTab) return false;
+
+                // PENTING: Untuk Pengelola Cafe (admin_cafe), hanya tampilkan yang statusnya 'active'.
+                // Status 'pending_approval' atau 'rejected' dikelola di ApprovalHub, bukan di sini.
+                if (activeTab === 'admin_cafe' && user.status !== 'active') {
+                    return false;
+                }
+
+                return true;
+            })
             .filter(user => user.username.toLowerCase().includes(searchQuery.toLowerCase()));
     }, [users, searchQuery, activeTab]);
 
@@ -61,7 +72,7 @@ const UserManagementPanel: React.FC = () => {
     );
 
     const counts = useMemo(() => ({
-        admin_cafe: users.filter(u => u.role === 'admin_cafe').length,
+        admin_cafe: users.filter(u => u.role === 'admin_cafe' && u.status === 'active').length, // Count active only
         user: users.filter(u => u.role === 'user').length,
         admin: users.filter(u => u.role === 'admin').length,
     }), [users]);
@@ -162,7 +173,7 @@ const UserManagementPanel: React.FC = () => {
             </h2>
 
              <div className="flex border-b border-border mb-4 overflow-x-auto justify-center">
-                <TabButton role="admin_cafe" icon={<BuildingStorefrontIcon className="h-5 w-5"/>} label="Pengelola" count={counts.admin_cafe} />
+                <TabButton role="admin_cafe" icon={<BuildingStorefrontIcon className="h-5 w-5"/>} label="Pengelola (Aktif)" count={counts.admin_cafe} />
                 <TabButton role="user" icon={<UserCircleIcon className="h-5 w-5"/>} label="User" count={counts.user} />
                 <TabButton role="admin" icon={<PencilIcon className="h-5 w-5"/>} label="Admin" count={counts.admin} />
             </div>

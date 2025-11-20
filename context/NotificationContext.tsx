@@ -86,7 +86,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         const dateLimit = sevenDaysAgo.toISOString();
 
-        // Generic: New Cafes (Exclude Managers)
+        // Generic: New Cafes (Exclude Managers from seeing generic new cafe notifs to avoid clutter)
         if (currentUser?.role !== 'admin_cafe') {
             const { data: newCafes } = await supabase.from('cafes').select('id, name, slug, created_at, status').eq('status', 'approved').gt('created_at', dateLimit).limit(5);
             newCafes?.forEach(cafe => {
@@ -96,23 +96,76 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
 
         if (currentUser) {
-            // ADMIN
+            // --- SUPERADMIN LOGIC ---
             if (currentUser.role === 'admin') {
+                // 1. Pusat Persetujuan: Pending Reviews
                 const { data: pReviews } = await supabase.from('reviews').select('id, author, created_at, cafes(name)').eq('status', 'pending').limit(10);
-                pReviews?.forEach((r: any) => { const id = `admin-review-${r.id}`; if(!isDeleted(id)) fetchedNotifs.push({ id, title: 'Review Perlu Moderasi', message: `${r.author} mereview ${r.cafes?.name}.`, type: 'info', date: new Date(r.created_at), link: '/dashboard-admin', isRead: isRead(id) }); });
+                pReviews?.forEach((r: any) => { 
+                    const id = `admin-review-${r.id}`; 
+                    if(!isDeleted(id)) fetchedNotifs.push({ 
+                        id, 
+                        title: 'Review Perlu Moderasi', 
+                        message: `${r.author} mereview ${r.cafes?.name}.`, 
+                        type: 'warning', 
+                        date: new Date(r.created_at), 
+                        link: '/dashboard-admin', 
+                        isRead: isRead(id) 
+                    }); 
+                });
 
-                const { data: pCafes } = await supabase.from('cafes').select('id, name, created_at').eq('status', 'pending').limit(5);
-                pCafes?.forEach(c => { const id = `admin-cafe-${c.id}`; if(!isDeleted(id)) fetchedNotifs.push({ id, title: 'Pendaftaran Cafe', message: `${c.name} menunggu persetujuan.`, type: 'info', date: new Date(c.created_at), link: '/dashboard-admin', isRead: isRead(id) }); });
+                // 2. Pusat Persetujuan: Pending Cafes (Kafe Baru oleh Pengelola)
+                const { data: pCafes } = await supabase.from('cafes').select('id, name, created_at, manager_id').eq('status', 'pending').limit(5);
+                pCafes?.forEach(c => { 
+                    const id = `admin-cafe-${c.id}`; 
+                    if(!isDeleted(id)) fetchedNotifs.push({ 
+                        id, 
+                        title: 'Persetujuan Kafe Baru', 
+                        message: `Kafe "${c.name}" menunggu persetujuan Anda.`, 
+                        type: 'warning', 
+                        date: new Date(c.created_at), 
+                        link: '/dashboard-admin', 
+                        isRead: isRead(id) 
+                    }); 
+                });
                 
-                const { data: newUsers } = await supabase.from('profiles').select('id, username, role, created_at').gt('created_at', dateLimit).limit(5);
-                newUsers?.forEach(u => { const id = `admin-user-${u.id}`; if(!isDeleted(id)) fetchedNotifs.push({ id, title: 'User Baru', message: `${u.username} (${u.role}).`, type: 'info', date: new Date(u.created_at || new Date()), link: '/dashboard-admin', isRead: isRead(id) }); });
+                // 3. Pusat Persetujuan: Pending Cafe Managers (Pengelola Baru)
+                const { data: pManagers } = await supabase.from('profiles').select('id, username, created_at').eq('role', 'admin_cafe').eq('status', 'pending_approval').limit(5);
+                pManagers?.forEach(u => {
+                    const id = `admin-new-user-${u.id}`;
+                    if (!isDeleted(id)) fetchedNotifs.push({
+                        id,
+                        title: 'Persetujuan Pengelola',
+                        message: `${u.username} mendaftar sebagai pengelola kafe.`,
+                        type: 'warning',
+                        date: new Date(u.created_at || new Date()),
+                        link: '/dashboard-admin',
+                        isRead: isRead(id)
+                    });
+                });
+
+                // 4. Saran & Masukan (Feedback)
+                const { data: newFeedback } = await supabase.from('feedback').select('id, name, created_at').eq('status', 'new').limit(5);
+                newFeedback?.forEach(f => {
+                    const id = `admin-feedback-${f.id}`;
+                    if (!isDeleted(id)) fetchedNotifs.push({
+                        id,
+                        title: 'Masukan Baru',
+                        message: `Pesan baru dari ${f.name}.`,
+                        type: 'info', // Info type maps to generic info icon usually, specific handling in panel can use Envelope
+                        date: new Date(f.created_at),
+                        link: '/dashboard-admin',
+                        isRead: isRead(id)
+                    });
+                });
             }
-            // MANAGER
+
+            // --- CAFE MANAGER LOGIC ---
             if (currentUser.role === 'admin_cafe') {
                 const { data: myCafes } = await supabase.from('cafes').select('id, name, slug, status, created_at').eq('manager_id', currentUser.id).neq('status', 'pending');
                 myCafes?.forEach(c => { const id = `mgr-cafe-${c.id}-${c.status}`; if(!isDeleted(id)) fetchedNotifs.push({ id, title: `Cafe ${c.status === 'approved' ? 'Disetujui' : 'Ditolak'}`, message: c.name, type: c.status==='approved'?'success':'alert', date: new Date(c.created_at), link: '/dashboard-pengelola', isRead: isRead(id) }); });
             }
-            // COMMON: My Reviews
+            
+            // --- USER COMMON LOGIC: My Reviews Status ---
             const { data: myReviews } = await supabase.from('reviews').select('id, status, created_at, cafes(name, slug)').eq('author', currentUser.username).neq('status', 'pending').limit(5);
             myReviews?.forEach((r: any) => { const id = `my-review-${r.id}-${r.status}`; if(!isDeleted(id)) fetchedNotifs.push({ id, title: 'Status Review', message: `Review di ${r.cafes?.name} ${r.status}.`, type: r.status==='approved'?'success':'alert', date: new Date(r.created_at), link: `/cafe/${r.cafes?.slug}`, isRead: isRead(id) }); });
         }
