@@ -248,6 +248,11 @@ const CafeManagementPanel: React.FC = () => {
         </button>
     );
 
+    const getPaginationGroup = () => {
+        let start = Math.floor((currentPage - 1) / 5) * 5;
+        return new Array(Math.min(5, totalPages - start)).fill(0).map((_, idx) => start + idx + 1);
+    };
+
     const userCanManage = (cafe: Cafe) => currentUser?.role === 'admin' || currentUser?.id === cafe.manager_id;
     const findUserName = (userId: string | undefined) => allUsers.find(u => u.id === userId)?.username || 'N/A';
 
@@ -485,10 +490,77 @@ const CafeManagementPanel: React.FC = () => {
             )}
             
             {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4 w-full">
-                    <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 text-sm"><ChevronLeftIcon className="h-4 w-4"/>Sebelumnya</button>
-                    <span className="font-semibold text-muted text-xs sm:text-sm order-first sm:order-none">Halaman {currentPage} dari {totalPages}</span>
-                    <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 text-sm">Selanjutnya<ChevronRightIcon className="h-4 w-4" /></button>
+                <div className="flex flex-col sm:flex-row justify-between items-center mt-8 gap-4 w-full border-t border-border pt-6">
+                    <p className="text-sm text-muted font-medium order-2 sm:order-1 text-center sm:text-left">
+                        Menampilkan <span className="font-bold text-primary dark:text-white">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> - <span className="font-bold text-primary dark:text-white">{Math.min(currentPage * ITEMS_PER_PAGE, sortedAndFilteredCafes.length)}</span> dari <span className="font-bold text-primary dark:text-white">{sortedAndFilteredCafes.length}</span> data
+                    </p>
+                    
+                    <div className="flex items-center gap-2 order-1 sm:order-2 overflow-x-auto w-full sm:w-auto justify-center sm:justify-end pb-2 sm:pb-0">
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                            disabled={currentPage === 1} 
+                            className="w-10 h-10 flex items-center justify-center rounded-xl border border-border bg-soft hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        >
+                            <ChevronLeftIcon className="h-5 w-5 text-muted" />
+                        </button>
+                        
+                        {(() => {
+                            const pages = [];
+                            const delta = 1; // How many pages to show around current
+                            const range = [];
+                            const rangeWithDots = [];
+                            let l;
+
+                            range.push(1);
+
+                            for (let i = currentPage - delta; i <= currentPage + delta; i++) {
+                                if (i < totalPages && i > 1) {
+                                    range.push(i);
+                                }
+                            }
+
+                            if (totalPages > 1) {
+                                range.push(totalPages);
+                            }
+
+                            for (let i of range) {
+                                if (l) {
+                                    if (i - l === 2) {
+                                        rangeWithDots.push(l + 1);
+                                    } else if (i - l !== 1) {
+                                        rangeWithDots.push('...');
+                                    }
+                                }
+                                rangeWithDots.push(i);
+                                l = i;
+                            }
+
+                            return rangeWithDots.map((item, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => typeof item === 'number' && setCurrentPage(item)}
+                                    disabled={item === '...'}
+                                    className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
+                                        item === currentPage 
+                                        ? 'bg-brand text-white shadow-lg shadow-brand/20 border border-brand transform scale-105' 
+                                        : item === '...' 
+                                            ? 'cursor-default text-muted' 
+                                            : 'bg-soft hover:bg-brand/10 border border-border text-muted hover:text-brand dark:bg-gray-800 dark:hover:bg-gray-700'
+                                    }`}
+                                >
+                                    {item}
+                                </button>
+                            ));
+                        })()}
+
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                            disabled={currentPage === totalPages} 
+                            className="w-10 h-10 flex items-center justify-center rounded-xl border border-border bg-soft hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        >
+                            <ChevronRightIcon className="h-5 w-5 text-muted" />
+                        </button>
+                    </div>
                 </div>
             )}
 
