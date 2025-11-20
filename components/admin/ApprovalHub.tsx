@@ -3,7 +3,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Profile, Cafe } from '../../types';
 import { CafeContext } from '../../context/CafeContext';
 import { userService } from '../../services/userService';
-import { UserGroupIcon, BuildingStorefrontIcon, CheckCircleIcon, XCircleIcon, ArrowPathIcon, MapPinIcon, ClockIcon } from '@heroicons/react/24/solid';
+import { UserGroupIcon, BuildingStorefrontIcon, CheckCircleIcon, XCircleIcon, ArrowPathIcon, MapPinIcon, ClockIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+
+const ITEMS_PER_PAGE = 10;
 
 const ApprovalHub: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'users' | 'cafes'>('users');
@@ -17,6 +19,7 @@ const ApprovalHub: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [processingId, setProcessingId] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
 
     const { getPendingCafes, getRejectedCafes, updateCafeStatus } = useContext(CafeContext)!;
 
@@ -46,6 +49,10 @@ const ApprovalHub: React.FC = () => {
     useEffect(() => {
         fetchPendingData();
     }, [getPendingCafes, getRejectedCafes, filterStatus]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, filterStatus]);
 
     const handleUserApproval = async (userId: string, isApproved: boolean) => {
         setProcessingId(userId);
@@ -92,8 +99,13 @@ const ApprovalHub: React.FC = () => {
         </button>
     );
 
-    const usersToDisplay = filterStatus === 'pending' ? pendingUsers : rejectedUsers;
-    const cafesToDisplay = filterStatus === 'pending' ? pendingCafes : rejectedCafes;
+    const fullList = activeTab === 'users' 
+        ? (filterStatus === 'pending' ? pendingUsers : rejectedUsers)
+        : (filterStatus === 'pending' ? pendingCafes : rejectedCafes);
+
+    const totalItems = fullList.length;
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    const paginatedList = fullList.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     return (
         <div>
@@ -129,13 +141,13 @@ const ApprovalHub: React.FC = () => {
                     <>
                         {activeTab === 'users' && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {usersToDisplay.length === 0 ? (
+                                {paginatedList.length === 0 ? (
                                     <div className="col-span-full text-center text-muted py-10 bg-soft/50 rounded-3xl border border-dashed border-border">
                                         <UserGroupIcon className="h-12 w-12 mx-auto mb-2 opacity-20"/>
                                         <p>Tidak ada data user {filterStatus === 'pending' ? 'menunggu' : 'ditolak'}.</p>
                                     </div>
                                 ) : (
-                                    usersToDisplay.map(user => (
+                                    (paginatedList as Profile[]).map(user => (
                                         <div key={user.id} className="bg-card dark:bg-gray-800 p-5 rounded-3xl border border-border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
                                             <div>
                                                 <div className="flex items-center gap-3 mb-3">
@@ -175,13 +187,13 @@ const ApprovalHub: React.FC = () => {
                         )}
                          {activeTab === 'cafes' && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                 {cafesToDisplay.length === 0 ? (
+                                 {paginatedList.length === 0 ? (
                                      <div className="col-span-full text-center text-muted py-10 bg-soft/50 rounded-3xl border border-dashed border-border">
                                         <BuildingStorefrontIcon className="h-12 w-12 mx-auto mb-2 opacity-20"/>
                                         <p>Tidak ada data kafe {filterStatus === 'pending' ? 'menunggu' : 'ditolak'}.</p>
                                     </div>
                                 ) : (
-                                    cafesToDisplay.map(cafe => (
+                                    (paginatedList as Cafe[]).map(cafe => (
                                         <div key={cafe.id} className="bg-card dark:bg-gray-800 p-5 rounded-3xl border border-border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
                                             <div>
                                                 <div className="relative h-32 rounded-2xl bg-gray-200 dark:bg-gray-700 overflow-hidden mb-3">
@@ -227,6 +239,74 @@ const ApprovalHub: React.FC = () => {
                     </>
                 )}
             </div>
+
+             {/* Pagination UI */}
+             {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row justify-between items-center mt-8 gap-4 w-full border-t border-border pt-6">
+                    <p className="text-sm text-muted font-medium order-2 sm:order-1 text-center sm:text-left">
+                        Menampilkan <span className="font-bold text-primary dark:text-white">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> - <span className="font-bold text-primary dark:text-white">{Math.min(currentPage * ITEMS_PER_PAGE, totalItems)}</span> dari <span className="font-bold text-primary dark:text-white">{totalItems}</span> data
+                    </p>
+                    
+                    <div className="flex items-center gap-2 order-1 sm:order-2 overflow-x-auto w-full sm:w-auto justify-center sm:justify-end pb-2 sm:pb-0">
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                            disabled={currentPage === 1} 
+                            className="w-10 h-10 flex items-center justify-center rounded-xl border border-border bg-soft hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        >
+                            <ChevronLeftIcon className="h-5 w-5 text-muted" />
+                        </button>
+                        
+                        {(() => {
+                            const range = [];
+                            const delta = 1;
+                            const rangeWithDots = [];
+                            let l;
+
+                            range.push(1);
+                            for (let i = currentPage - delta; i <= currentPage + delta; i++) {
+                                if (i < totalPages && i > 1) {
+                                    range.push(i);
+                                }
+                            }
+                            if (totalPages > 1) range.push(totalPages);
+
+                            for (let i of range) {
+                                if (l) {
+                                    if (i - l === 2) rangeWithDots.push(l + 1);
+                                    else if (i - l !== 1) rangeWithDots.push('...');
+                                }
+                                rangeWithDots.push(i);
+                                l = i;
+                            }
+
+                            return rangeWithDots.map((item, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => typeof item === 'number' && setCurrentPage(item)}
+                                    disabled={item === '...'}
+                                    className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
+                                        item === currentPage 
+                                        ? 'bg-brand text-white shadow-lg shadow-brand/20 border border-brand transform scale-105' 
+                                        : item === '...' 
+                                            ? 'cursor-default text-muted' 
+                                            : 'bg-soft hover:bg-brand/10 border border-border text-muted hover:text-brand dark:bg-gray-800 dark:hover:bg-gray-700'
+                                    }`}
+                                >
+                                    {item}
+                                </button>
+                            ));
+                        })()}
+
+                        <button 
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                            disabled={currentPage === totalPages} 
+                            className="w-10 h-10 flex items-center justify-center rounded-xl border border-border bg-soft hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        >
+                            <ChevronRightIcon className="h-5 w-5 text-muted" />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
