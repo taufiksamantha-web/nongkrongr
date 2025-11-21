@@ -1,4 +1,13 @@
 
+// Fix: Shim for JSX.IntrinsicElements to resolve missing HTML tag types in this environment
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+  }
+}
+
 export enum PriceTier {
   BUDGET = 1,
   STANDARD = 2,

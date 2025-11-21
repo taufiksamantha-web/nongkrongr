@@ -100,7 +100,8 @@ const HomePage: React.FC = () => {
   const [isLocating, setIsLocating] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
-  const [scrollY, setScrollY] = useState(0);
+  
+  // PERFORMANCE FIX: Removed scrollY state and listener
 
   // Visibility Settings
   const [showSectionRecs, setShowSectionRecs] = useState(true);
@@ -126,13 +127,7 @@ const HomePage: React.FC = () => {
     fetchSettings();
   }, []);
   
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  // PERFORMANCE FIX: Removed scroll event listener
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -324,15 +319,13 @@ const HomePage: React.FC = () => {
     <div className="relative">
       {/* Hero Section */}
       <div className="relative bg-gray-900 overflow-hidden -mt-32">
-        <div 
-          className="absolute inset-0 z-0"
-          style={{ transform: `translateY(${scrollY * 0.4}px)`, willChange: 'transform' }}
-        >
+        <div className="absolute inset-0 z-0">
            {heroBgUrl ? (
                 <img 
                     src={optimizeCloudinaryImage(heroBgUrl, 1280, 720)}
                     alt="Suasana cafe yang nyaman"
                     className="w-full h-full object-cover animate-ken-burns"
+                    decoding="async"
                 />
            ) : (
                 <div className="w-full h-full bg-gray-800"></div>

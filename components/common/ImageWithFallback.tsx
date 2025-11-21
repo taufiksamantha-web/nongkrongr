@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { optimizeCloudinaryImage } from '../../utils/imageOptimizer';
 
@@ -47,6 +48,7 @@ const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, defaultSrc, 
             className={className} 
             onError={handleError} 
             loading="lazy" 
+            decoding="async"
         />
     </div>
     );
