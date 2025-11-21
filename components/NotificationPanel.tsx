@@ -122,7 +122,13 @@ const GroupHeader: React.FC<{ title: string }> = ({ title }) => (
     </div>
 );
 
-const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({ isOpen, onClose }) => {
+interface NotificationPanelProps {
+    isOpen: boolean;
+    onClose: () => void;
+    origin?: 'top' | 'bottom' | 'bottom-center'; // Added bottom-center
+}
+
+const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, onClose, origin = 'top' }) => {
     const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, clearAll, refresh } = useNotifications();
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -168,10 +174,26 @@ const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({
         return groups;
     }, [notifications]);
 
-    if (!isOpen) return null;
+    // Dynamic classes based on origin
+    let positionClasses = '';
+    
+    if (origin === 'bottom') {
+        positionClasses = 'absolute bottom-full right-0 mb-4 w-80 sm:w-96 origin-bottom-right';
+    } else if (origin === 'bottom-center') {
+        // Fixed centering for mobile docks
+        positionClasses = 'fixed bottom-24 left-1/2 -translate-x-1/2 w-[90vw] max-w-sm origin-bottom shadow-2xl';
+    } else {
+        // Top (Default)
+        positionClasses = 'fixed left-4 right-4 top-20 w-auto sm:absolute sm:top-full sm:right-0 sm:left-auto sm:-right-10 sm:mt-3 sm:w-96 origin-top sm:origin-top-right';
+    }
+
+    // Animation classes based on open state
+    const animationClasses = isOpen 
+        ? 'opacity-100 scale-100 pointer-events-auto translate-y-0' 
+        : 'opacity-0 scale-95 pointer-events-none translate-y-2';
 
     return (
-        <div className="fixed left-4 right-4 top-20 w-auto sm:absolute sm:top-full sm:right-0 sm:left-auto sm:-right-10 sm:mt-3 sm:w-96 bg-card dark:bg-gray-800 rounded-2xl shadow-2xl border border-border z-50 overflow-hidden animate-fade-in-up origin-top sm:origin-top-right flex flex-col max-h-[80vh] sm:max-h-[500px]">
+        <div className={`${positionClasses} ${animationClasses} bg-card dark:bg-gray-800 rounded-2xl shadow-2xl border border-border z-[150] overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] flex flex-col max-h-[60vh] sm:max-h-[500px]`}>
             <div className="p-4 border-b border-border flex justify-between items-center bg-card dark:bg-gray-800 z-20">
                 <div className="flex items-center gap-2">
                      <h3 className="font-bold font-jakarta text-base">Notifikasi</h3>
@@ -203,6 +225,10 @@ const NotificationPanel: React.FC<{ isOpen: boolean, onClose: () => void }> = ({
                             <TrashIcon className="h-4 w-4" />
                         </button>
                     )}
+                    {/* Close button for mobile specifically if needed, though click outside handles it */}
+                    <button onClick={onClose} className="p-1.5 text-muted hover:text-primary rounded-full lg:hidden">
+                        <XMarkIcon className="h-4 w-4" />
+                    </button>
                 </div>
             </div>
             

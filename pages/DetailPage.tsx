@@ -198,7 +198,7 @@ const DetailPage: React.FC = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-6 transition-all duration-300 ease-in-out w-full max-w-7xl">
+        <div className="container mx-auto px-4 sm:px-6 py-6 transition-all duration-300 ease-in-out w-full max-w-6xl">
             <button
                 onClick={() => navigate(-1)}
                 className="mb-4 inline-flex items-center gap-2 text-muted hover:text-brand dark:hover:text-brand-light font-semibold transition-colors duration-300 group text-sm sm:text-base"
