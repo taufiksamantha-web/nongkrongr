@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Cafe, PriceTier, Tag, User } from '../types';
@@ -452,7 +453,7 @@ const ExplorePage: React.FC = () => {
   const isSpecialView = isFavoritesView || sortParam === 'trending';
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-8 flex flex-col lg:flex-row gap-6 lg:gap-8 w-full max-w-screen-2xl">
+    <div className="container mx-auto px-4 sm:px-6 py-8 flex flex-col lg:flex-row gap-6 lg:gap-8 w-full max-w-7xl">
       {/* Filter Modal for Mobile */}
       <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[1200] lg:hidden transition-opacity duration-300 ${isFiltersOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsFiltersOpen(false)}>
           <div 

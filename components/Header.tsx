@@ -126,7 +126,7 @@ const Header: React.FC = () => {
 
   return (
     <>
-      <div className="container mx-auto px-4 pt-4 sticky top-4 z-50 w-full max-w-screen-2xl">
+      <div className="container mx-auto px-4 pt-4 sticky top-4 z-50 w-full max-w-7xl">
         <header className="bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-2 px-3 sm:p-4 shadow-sm flex items-center justify-between transition-all duration-300">
           <nav className="w-full flex items-center justify-between relative">
             {/* Logo Section */}

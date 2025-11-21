@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { settingsService } from '../services/settingsService';
@@ -46,7 +47,7 @@ const Footer: React.FC = () => {
 
     return (
         <footer className="bg-card border-t border-border mt-16">
-            <div className="container mx-auto px-6 py-12">
+            <div className="container mx-auto px-6 py-12 max-w-7xl">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-left">
                     {/* Branding & About */}
                     <div className="col-span-1 md:col-span-2">

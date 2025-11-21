@@ -124,7 +124,7 @@ const AdminPage: React.FC = () => {
                 />
             )}
             
-            <div className="container mx-auto px-4 pt-4">
+            <div className="container mx-auto px-4 pt-4 max-w-7xl">
                 {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
                 
                 {/* Optimized Navigation Header */}
