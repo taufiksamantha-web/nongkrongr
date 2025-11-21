@@ -508,7 +508,8 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
     
     return (
         <>
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in-up" onClick={handleAttemptClose}>
+        {/* High z-index [1200] to cover Floating Dock (z-100) */}
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[1200] animate-fade-in-up" onClick={handleAttemptClose}>
             <div className="bg-card dark:bg-gray-800 rounded-3xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-border" onClick={e => e.stopPropagation()}>
                 <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
                     <div className="flex justify-between items-center mb-4">
@@ -520,7 +521,8 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                     <MultiStepProgressBar steps={formSteps} currentStep={step} onStepClick={handleStepClick} />
                 </div>
                 
-                <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-4 sm:p-6 space-y-6 overflow-y-auto flex-grow">
+                {/* min-h-0 is critical for flex container overflow to work correctly */}
+                <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="p-4 sm:p-6 space-y-6 overflow-y-auto flex-grow min-h-0">
                     {step === 1 && ( 
                         <div className="space-y-6 animate-fade-in-up"> 
                             <h3 className="font-bold text-xl mb-2 dark:text-white">Langkah 1: Info & Vibe</h3> 
@@ -730,7 +732,7 @@ const AdminCafeForm: React.FC<AdminCafeFormProps> = ({ cafe, onSave, onCancel, u
                     )}
                 </form>
 
-                <div className="p-4 sm:p-6 border-t border-border flex justify-between items-center bg-soft/50 flex-shrink-0">
+                <div className="p-4 sm:p-6 border-t border-border flex justify-between items-center bg-card flex-shrink-0 z-10 relative">
                     <button onClick={step === 1 ? handleAttemptClose : prevStep} className="px-6 py-2.5 rounded-xl font-bold text-muted hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" disabled={isSaving}>
                         {step === 1 ? 'Batal' : 'Kembali'}
                     </button>
