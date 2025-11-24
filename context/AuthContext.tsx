@@ -28,7 +28,7 @@ const FullScreenLoader: React.FC = () => (
 );
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    // 1. INITIALIZE STATE FROM CACHE (Instant Load)
+    // 1. INITIALIZE STATE FROM CACHE (Instant Load - Optimistic UI)
     const [currentUser, setCurrentUser] = useState<User | null>(() => {
         if (typeof window !== 'undefined') {
             const cached = localStorage.getItem(USER_STORAGE_KEY);
@@ -47,7 +47,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Ref to prevent auto-login redirect loop during signup
     const isSigningUpRef = useRef(false);
 
-    // 2. Loading is only true if we have NO cache and are waiting for initial check
+    // 2. Loading Strategy:
+    // Only show full screen loader if we have NO cached user.
+    // If we have a cached user, we treat it as "Soft Refresh" (background validation).
     const [loading, setLoading] = useState<boolean>(() => {
         if (typeof window !== 'undefined') {
             return !localStorage.getItem(USER_STORAGE_KEY);
@@ -58,6 +60,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const fetchUserAndSetState = useCallback(async (session: Session | null): Promise<void> => {
         if (!session?.user) {
             if (currentUserRef.current !== null) {
+                // Session is explicitly null/invalid, clear everything
                 setCurrentUser(null);
                 localStorage.removeItem(USER_STORAGE_KEY);
             }
@@ -65,7 +68,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        // Fetch profile to validate account status
+        // Optimization: If we have a cached user and the ID matches, we can prioritize UI responsiveness
+        // However, we still MUST fetch the profile to check for 'status' (banned/archived)
+        
         const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
@@ -73,7 +78,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .single();
 
         if (error || !profile) {
-            // Profile missing or error, let UI handle state
+            // If profile fetch fails but session exists, usually implies sync error.
+            // Keep cached user for now if exists to prevent UI flash, or clear if critical.
+            // For safety:
+            console.error("Error fetching profile:", error);
         } else if (profile.status === 'rejected') {
              await supabase.auth.signOut();
              setCurrentUser(null);
@@ -87,6 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const currentStr = JSON.stringify(currentUserRef.current);
             const newStr = JSON.stringify(userData);
             
+            // Only update state if data actually changed to prevent re-renders
             if (currentStr !== newStr) {
                 setCurrentUser(userData);
                 localStorage.setItem(USER_STORAGE_KEY, newStr);
@@ -104,7 +113,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Listen for Auth Changes
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                // CRITICAL: Ignore SIGNED_IN event if we are in the middle of a signup process.
                 if (isSigningUpRef.current && event === 'SIGNED_IN') {
                     return;
                 }
@@ -124,11 +132,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, [fetchUserAndSetState]);
 
+    // --- PWA SOFT REFRESH LOGIC ---
+    // When the app comes from background to foreground (Android Resume),
+    // silently validate the session without blocking the UI.
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // console.log('App resumed (Soft Refresh): Validating session...');
+                supabase.auth.getSession().then(({ data }) => {
+                    // Pass true/false logic or check session validity
+                    // If session expired, AuthStateChange usually catches it, 
+                    // but explicit fetch ensures we have fresh profile data (e.g. role changes)
+                    if (data.session) {
+                        fetchUserAndSetState(data.session);
+                    }
+                });
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [fetchUserAndSetState]);
+
+
     const login = async (identifier: string, password: string) => {
-        // Aggressive trim to prevent whitespace issues
         let emailToLogin = identifier.trim();
-        
-        // Simple check if it looks like an email
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToLogin);
 
         if (!isEmail) {
@@ -150,7 +178,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return { error: new AuthError("Username/email atau password salah.") };
         }
 
-        // Check status immediately after login
         if (data.user) {
             const { data: profile } = await supabase
                 .from('profiles')
@@ -174,14 +201,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const signup = async (username: string, email: string, password: string, isCafeAdmin: boolean = false) => {
-        // Set flag to true to block onAuthStateChange from reacting to the temporary session
         isSigningUpRef.current = true;
-        
-        // AGGRESSIVE SANITIZATION
         const safeUsername = username.trim().toLowerCase().replace(/\s/g, '');
         const safeEmail = email.trim().toLowerCase();
 
-        // 1. Validasi Username Unik (Frontend Check)
         const { count } = await supabase
             .from('profiles')
             .select('id', { count: 'exact', head: true })
@@ -195,16 +218,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const role = isCafeAdmin ? 'admin_cafe' : 'user';
         const status = isCafeAdmin ? 'pending_approval' : 'active';
 
-        // 2. Signup Auth dengan Metadata
         const { data, error } = await supabase.auth.signUp({
             email: safeEmail,
             password,
             options: {
-                data: {
-                    username: safeUsername, // Trigger akan membaca ini
-                    role,     // Trigger akan membaca ini
-                    status    // Trigger akan membaca ini
-                }
+                data: { username: safeUsername, role, status }
             }
         });
 
@@ -213,10 +231,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return { error };
         }
         
-        // 3. FORCE LOGOUT IMMEDIATELY
         await supabase.auth.signOut();
         
-        // Reset flag after a delay
         setTimeout(() => {
             isSigningUpRef.current = false;
         }, 2000);
@@ -236,9 +252,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .select()
             .single();
 
-        if (error) {
-            return { error };
-        }
+        if (error) return { error };
 
         if (data) {
             const updatedUser = data as User;
@@ -250,16 +264,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = async () => {
-        // 1. Aggressive Local Cleanup
         setCurrentUser(null);
         localStorage.removeItem(USER_STORAGE_KEY);
         localStorage.removeItem('nongkrongr_guest_read_notifications');
         localStorage.removeItem('nongkrongr_guest_deleted_notifications');
         localStorage.removeItem('nongkrongr_favorites'); 
 
-        // 2. Server SignOut
         const { error } = await supabase.auth.signOut();
-        
         return { error };
     };
 
@@ -287,6 +298,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updatePassword,
     };
 
+    // Only block if we really don't have any data yet
     if (loading) {
         return <FullScreenLoader />;
     }

@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Components
 import Header from './components/Header';
-import WelcomeModal from './components/WelcomeModal';
+// WelcomeModal sekarang di-lazy load karena tidak selalu dibutuhkan
+const WelcomeModal = lazy(() => import('./components/WelcomeModal'));
 import Footer from './components/Footer';
 import ErrorBoundary from './components/ErrorBoundary';
 import ScrollToTopOnNavigate from './components/ScrollToTopOnNavigate';
@@ -84,7 +85,11 @@ const MainLayout: React.FC = () => {
 
     return (
         <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col transition-colors duration-300 w-full">
-            {showWelcome && isHomePage && <WelcomeModal onClose={handleCloseWelcome} />}
+            {showWelcome && isHomePage && (
+                <Suspense fallback={null}>
+                    <WelcomeModal onClose={handleCloseWelcome} />
+                </Suspense>
+            )}
             <Header />
             <main className="flex-grow pt-4 w-full">
                 <Suspense fallback={<LoadingFallback />}>

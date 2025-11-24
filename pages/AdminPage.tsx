@@ -1,17 +1,32 @@
 
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, Suspense, lazy } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import AdminDashboard from '../components/admin/AdminDashboard';
-import UserDashboard from '../components/admin/UserDashboard';
-import AdminCafeDashboard from '../components/admin/AdminCafeDashboard';
 import FloatingNotification from '../components/common/FloatingNotification';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import ProfileUpdateModal from '../components/admin/ProfileUpdateModal';
 import NotificationPanel from '../components/NotificationPanel';
 import { ThemeContext } from '../App';
 import { ArrowRightOnRectangleIcon, PencilSquareIcon, HomeIcon, SunIcon, MoonIcon, BellIcon } from '@heroicons/react/24/solid';
+
+// Lazy Load Dashboard Components to optimize initial bundle
+const AdminDashboard = lazy(() => import('../components/admin/AdminDashboard'));
+const UserDashboard = lazy(() => import('../components/admin/UserDashboard'));
+const AdminCafeDashboard = lazy(() => import('../components/admin/AdminCafeDashboard'));
+
+// Fallback for lazy loaded dashboards
+const DashboardSkeleton = () => (
+    <div className="space-y-4 p-4 animate-pulse">
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+        </div>
+        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-3xl mt-6"></div>
+    </div>
+);
 
 const PendingApprovalScreen: React.FC = () => (
     <div className="bg-card p-8 rounded-3xl shadow-sm border border-border text-center mt-8 animate-fade-in-up">
@@ -147,16 +162,22 @@ const AdminPage: React.FC = () => {
     }
 
     const renderDashboardByRole = () => {
-        switch (currentUser.role) {
-            case 'admin':
-                return <AdminDashboard />;
-            case 'admin_cafe':
-                return <AdminCafeDashboard />;
-            case 'user':
-                return <UserDashboard />;
-            default:
-                return <UserDashboard />;
-        }
+        return (
+            <Suspense fallback={<DashboardSkeleton />}>
+                {(() => {
+                    switch (currentUser.role) {
+                        case 'admin':
+                            return <AdminDashboard />;
+                        case 'admin_cafe':
+                            return <AdminCafeDashboard />;
+                        case 'user':
+                            return <UserDashboard />;
+                        default:
+                            return <UserDashboard />;
+                    }
+                })()}
+            </Suspense>
+        );
     };
 
     return (
