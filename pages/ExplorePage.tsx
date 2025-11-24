@@ -471,7 +471,8 @@ const ExplorePage: React.FC = () => {
       </div>
 
       {/* Filters Sidebar for Desktop - Fluid width */}
-      <aside className={`hidden lg:block lg:w-1/4 xl:w-1/5 min-w-[250px] bg-card dark:bg-gray-800 p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-24 transition-opacity ${isSpecialView ? 'opacity-50 pointer-events-none' : ''}`}>
+      {/* INCREASED TOP OFFSET: Changed lg:top-24 to lg:top-32 */}
+      <aside className={`hidden lg:block lg:w-1/4 xl:w-1/5 min-w-[250px] bg-card dark:bg-gray-800 p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-32 transition-opacity ${isSpecialView ? 'opacity-50 pointer-events-none' : ''}`}>
         <FilterPanelContent {...filterPanelProps} />
       </aside>
 
