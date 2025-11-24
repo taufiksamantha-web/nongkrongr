@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -216,6 +217,11 @@
       .review-card-optimized {
         content-visibility: auto;
         contain-intrinsic-size: 280px; /* Approximate height of a ReviewCard */
+      }
+      
+      /* Ensure placeholder text has good contrast if system overrides it */
+      input::placeholder, textarea::placeholder {
+        opacity: 1; /* Firefox */
       }
       
       /* MOBILE PERFORMANCE OPTIMIZATIONS */

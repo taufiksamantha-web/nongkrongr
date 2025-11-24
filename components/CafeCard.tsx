@@ -72,7 +72,7 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) =
         )}
         <button 
           onClick={handleFavoriteClick}
-          className="absolute top-2 left-2 sm:top-3 sm:left-3 p-2.5 bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-black/60 hover:text-accent-pink transition-all duration-200 touch-manipulation z-10"
+          className="absolute top-2 left-2 sm:top-3 sm:left-3 p-2.5 bg-gray-900/60 rounded-full text-white hover:bg-black hover:text-accent-pink transition-all duration-200 touch-manipulation z-10"
           aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
         >
           {favorited ? <HeartIcon className="h-5 w-5 text-accent-pink"/> : <HeartIconOutline className="h-5 w-5" />}

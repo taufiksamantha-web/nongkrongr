@@ -343,7 +343,14 @@ const HomePage: React.FC = () => {
             <div ref={searchContainerRef} className="relative">
               <form onSubmit={handleSearchSubmit} className="relative">
                 <SparklesIcon className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-yellow-300 pointer-events-none" />
-                <input type="text" placeholder={rotatingPlaceholders[placeholderIndex]} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)} className="w-full py-3 sm:py-4 pl-12 sm:pl-14 pr-24 sm:pr-32 text-base sm:text-lg rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm focus:ring-4 focus:ring-brand/20 focus:border-brand transition-all duration-300 shadow-sm text-white placeholder-gray-300" />
+                <input 
+                    type="text" 
+                    placeholder={rotatingPlaceholders[placeholderIndex]} 
+                    value={searchQuery} 
+                    onChange={(e) => setSearchQuery(e.target.value)} 
+                    onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)} 
+                    className="w-full py-3 sm:py-4 pl-12 sm:pl-14 pr-24 sm:pr-32 text-base sm:text-lg rounded-2xl border-2 border-white/30 bg-black/30 backdrop-blur-sm focus:ring-4 focus:ring-brand/20 focus:border-brand focus:bg-black/50 transition-all duration-300 shadow-sm text-white placeholder-gray-200" 
+                />
                 <button type="submit" className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 bg-brand text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl font-bold hover:bg-brand/90 transition-all duration-300 text-sm sm:text-base">Cari</button>
               </form>
               {isResultsVisible && (
@@ -358,7 +365,7 @@ const HomePage: React.FC = () => {
             </div>
           </div>
           <div className="mt-10 sm:mt-16 flex flex-wrap justify-center gap-2 sm:gap-3 px-2">
-            {VIBES.slice(0, 4).map(vibe => (<Link to={`/explore?vibe=${vibe.id}`} key={vibe.id} className="bg-white/10 backdrop-blur-sm border border-white/20 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl text-white hover:bg-white/20 transition-all duration-300 font-semibold text-sm sm:text-base">{vibe.name}</Link>))}
+            {VIBES.slice(0, 4).map(vibe => (<Link to={`/explore?vibe=${vibe.id}`} key={vibe.id} className="bg-black/30 backdrop-blur-sm border border-white/30 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl text-white hover:bg-black/50 transition-all duration-300 font-semibold text-sm sm:text-base">{vibe.name}</Link>))}
           </div>
         </div>
       </div>
