@@ -25,15 +25,19 @@
           // These MUST match the CSS variables defined below
           var darkBg = '#0c0c0d'; 
           var lightBg = '#fbfaff'; 
+          var darkText = '#f1f5f9'; // slate-100 approx
+          var lightText = '#1a1a1a'; // neutral-900 approx
 
           if (storedTheme === 'dark') {
             root.classList.add('dark');
             root.style.backgroundColor = darkBg;
-            root.style.color = '#fbfaff'; // Set text color immediately too
+            root.style.color = darkText; 
+            root.style.colorScheme = 'dark'; // Force browser UI to dark
           } else {
             root.classList.remove('dark');
             root.style.backgroundColor = lightBg;
-            root.style.color = '#0c0c0d';
+            root.style.color = lightText;
+            root.style.colorScheme = 'light'; // Force browser UI to light
           }
         } catch (e) {
           console.error('Theme script error', e);
@@ -143,6 +147,9 @@
     </script>
     <style>
       :root {
+        /* CRITICAL FIX: Force browser to respect app theme over system theme */
+        color-scheme: light; 
+        
         /* Brand-infused light theme */
         --soft: 260 100% 98%;    /* bg-soft: Sangat terang, putih lavender */
         --card: 0 0% 100%;        /* bg-card: Putih bersih untuk kontras tinggi */
@@ -156,6 +163,9 @@
         --accent-cyan: 187 100% 50%;
       }
       .dark {
+        /* CRITICAL FIX: Force browser to respect app theme over system theme */
+        color-scheme: dark;
+
         --soft: 240 4% 5%;
         --card: 240 4% 10%;
         --border: 240 4% 15%;
@@ -164,6 +174,15 @@
         --foreground: 0 0% 98%;
         --muted: 240 4% 65%;
       }
+      
+      /* Default Body Styles to prevent flash */
+      body {
+        background-color: hsl(var(--soft));
+        color: hsl(var(--foreground));
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
       /* IMAGE PROTECTION STYLES */
       img {
         -webkit-user-drag: none;
@@ -336,13 +355,11 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/open-location-code@1.0.4/openlocationcode.min.js"></script>
-  <script type="module" src="/index.tsx"></script>
-</body>
+  </body>
 </html>
