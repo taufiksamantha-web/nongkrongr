@@ -1,43 +1,9 @@
+
 import { createClient } from '@supabase/supabase-js';
-import { Cafe, Review, Spot } from '../types';
 
-// Augment Supabase types to match our schema for better type safety
-export interface Database {
-  public: {
-    Tables: {
-      cafes: {
-        Row: Cafe;
-        Insert: Omit<Cafe, 'id' | 'created_at'>;
-        Update: Partial<Cafe>;
-      };
-      reviews: {
-        Row: Review & { cafe_id: string };
-        Insert: Omit<Review, 'id' | 'created_at'> & { cafe_id: string };
-        Update: Partial<Review>;
-      };
-      spots: {
-        Row: Spot & { cafe_id: string };
-        Insert: Omit<Spot, 'id' | 'created_at'> & { cafe_id: string };
-        Update: Partial<Spot>;
-      };
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      [_ in never]: never;
-    };
-  };
-}
+// GANTI DENGAN SUPABASE URL DAN ANON KEY ANDA
+// Jika menggunakan environment variables:
+const supabaseUrl = process.env.SUPABASE_URL || 'https://aphxtzzyhlkfokpvwiqk.supabase.co';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwaHh0enp5aGxrZm9rcHZ3aXFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI3Mzc0MjEsImV4cCI6MjA3ODMxMzQyMX0.0282GRJNa1-upmVYusI4gyylg4APTb_OO-ZV0zL6L-E';
 
-
-// Fix: Use process.env to access environment variables, consistent with other parts of the app.
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-// Fix: Use process.env to access environment variables, consistent with other parts of the app.
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Supabase URL and Anon Key must be provided in .env file");
-}
-
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

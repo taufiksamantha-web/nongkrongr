@@ -1,128 +1,69 @@
 
-// Fix: Shim for JSX.IntrinsicElements to resolve missing HTML tag types in this environment
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      [elemName: string]: any;
-    }
-  }
+
+export enum NewsStatus {
+  HOAX = 'HOAKS',
+  FAKTA = 'FAKTA',
+  DISINFORMASI = 'DISINFORMASI',
+  HATE_SPEECH = 'HATE SPEECH',
 }
 
-export enum PriceTier {
-  BUDGET = 1,
-  STANDARD = 2,
-  PREMIUM = 3,
-  LUXURY = 4,
-}
-
-export interface Amenity {
+export interface NewsItem {
   id: string;
-  name: string;
-  icon: string; // Emoji or SVG string
-  created_at?: string;
-}
-
-export interface Vibe {
-  id:string;
-  name: string;
-  created_at?: string;
-}
-
-export interface Tag {
-  id: string;
-  name: string;
-  created_by?: string;
-}
-
-export interface Spot {
-  id: string;
-  cafe_id?: string;
   title: string;
-  tip: string;
-  photoUrl: string;
-  created_at?: string;
+  content: string;
+  date: string;
+  status: NewsStatus;
+  imageUrl: string;
+  source?: string;
+  tags: string[];
+  viewCount?: number; // Added logic view count
+  referenceLink?: string; // Changed to single string to match DB column 'reference_link'
 }
 
-export interface Event {
-  id: string;
-  cafe_id?: string;
+export interface ReportFormData {
   name: string;
-  description: string;
-  start_date: string | Date;
-  end_date: string | Date;
-  imageUrl?: string;
-  created_at?: string;
-}
-
-export interface Review {
-  id: string;
-  cafe_id?: string;
-  author_id?: string; // ID of the user (UUID)
-  author: string; // Username (display name)
-  ratingAesthetic: number; // 1-10
-  ratingWork: number; // 1-10
-  crowdMorning: number; // 1-5
-  crowdAfternoon: number; // 1-5
-  crowdEvening: number; // 1-5
-  priceSpent: number;
-  text: string;
-  photos: string[];
-  createdAt: string | Date;
-  status: 'pending' | 'approved' | 'rejected';
-  helpful_count: number;
-  author_avatar_url?: string | null;
-}
-
-export interface Cafe {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  address: string;
-  city: string;
-  district: string;
-  openingHours: string;
-  priceTier: PriceTier;
-  coords: {
-    lat: number;
-    lng: number;
-  };
-  isSponsored: boolean;
-  sponsoredUntil: Date | string | null;
-  sponsoredRank: number; // for ordering sponsored results
-  logoUrl?: string; // Optional: URL for the cafe's logo
-  coverUrl: string;
-  vibes: Vibe[];
-  amenities: Amenity[];
-  tags: Tag[];
-  spots: Spot[];
-  reviews: Review[];
-  events: Event[];
-  manager_id?: string; // ID of the user who manages this cafe
-  created_by?: string; // ID of the user who created this cafe entry
-  created_at?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'archived';
-  // Aggregated scores
-  avgAestheticScore: number;
-  avgWorkScore: number;
-  avgCrowdMorning: number;
-  avgCrowdAfternoon: number;
-  avgCrowdEvening: number;
-  // Contact Info
-  phoneNumber?: string;
-  websiteUrl?: string;
-}
-
-// For Supabase 'profiles' table
-export interface Profile {
-  id: string;
-  username: string;
   email: string;
-  role: 'admin' | 'user' | 'admin_cafe';
-  status: 'active' | 'pending_approval' | 'rejected' | 'archived';
-  updated_at?: string;
-  avatar_url?: string;
+  phone: string;
+  content: string;
+  category: string;
+  evidence?: File | null;
+  evidenceUrl?: string; // Added for Cloudinary URL
 }
 
-// Combined user object for the app
-export interface User extends Profile {}
+// Renamed from Ticket to TicketData to avoid conflict with Lucide Icons
+export interface TicketData {
+  id: string;
+  reportData: ReportFormData;
+  status: 'pending' | 'investigating' | 'verified' | 'rejected';
+  submissionDate: string;
+  history: { date: string; note: string }[];
+}
+
+export interface SearchStat {
+  keyword: string;
+  count: number;
+}
+
+export interface CtaConfig {
+  title?: string; // Added title for customization
+  description?: string;
+  showFormBtn?: boolean;
+  showWaBtn?: boolean;
+  waNumber?: string;
+}
+
+export interface SocialConfig {
+  twitter?: string;
+  instagram?: string;
+  youtube?: string;
+}
+
+export interface AppConfig {
+  logoUrl?: string;
+  secondaryLogoUrl?: string; 
+  heroBgUrl?: string;
+  heroTitle?: string;
+  heroDescription?: string;
+  cta?: CtaConfig;
+  socials?: SocialConfig;
+}
