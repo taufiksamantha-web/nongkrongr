@@ -477,10 +477,10 @@ const ExplorePage: React.FC = () => {
 
       {/* Main Content - Fluid width */}
       <div className="flex-1 w-full min-w-0 pb-20">
-        {/* Mobile Filter Floating Button - Redesigned */}
+        {/* Mobile Filter Floating Button - Moved up to bottom-28 to avoid floating dock overlap */}
         <button 
             onClick={() => setIsFiltersOpen(true)}
-            className="lg:hidden fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2.5 px-6 py-3.5 bg-gray-900/80 dark:bg-white/80 backdrop-blur-xl border border-white/10 dark:border-black/5 text-white dark:text-gray-900 rounded-full shadow-2xl shadow-brand/25 hover:scale-105 active:scale-95 transition-all duration-300 ring-1 ring-white/20 dark:ring-black/10 disabled:opacity-50"
+            className="lg:hidden fixed bottom-28 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2.5 px-6 py-3.5 bg-gray-900/80 dark:bg-white/80 backdrop-blur-xl border border-white/10 dark:border-black/5 text-white dark:text-gray-900 rounded-full shadow-2xl shadow-brand/25 hover:scale-105 active:scale-95 transition-all duration-300 ring-1 ring-white/20 dark:ring-black/10 disabled:opacity-50"
             disabled={isSpecialView}
         >
             <AdjustmentsHorizontalIcon className="h-5 w-5 text-brand" />

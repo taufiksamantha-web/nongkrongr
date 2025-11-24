@@ -78,9 +78,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .single();
 
         if (error || !profile) {
-            // If profile fetch fails but session exists, usually implies sync error.
+            // If profile fetch fails but session exists (e.g. network error), usually implies sync error.
             // Keep cached user for now if exists to prevent UI flash, or clear if critical.
-            // For safety:
+            // We do NOT log out immediately on network error to allow offline usage.
             console.error("Error fetching profile:", error);
         } else if (profile.status === 'rejected') {
              await supabase.auth.signOut();
@@ -138,13 +138,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                // console.log('App resumed (Soft Refresh): Validating session...');
+                // Validasi sesi secara 'silent' (background check).
+                // Jika cache ada, UI tidak akan loading blocking.
                 supabase.auth.getSession().then(({ data }) => {
-                    // Pass true/false logic or check session validity
-                    // If session expired, AuthStateChange usually catches it, 
-                    // but explicit fetch ensures we have fresh profile data (e.g. role changes)
+                    // Jika sesi ada, validasi ulang profil untuk memastikan status tidak berubah (misal: banned)
                     if (data.session) {
                         fetchUserAndSetState(data.session);
+                    } else {
+                        // Jika sesi hilang saat resume (jarang terjadi kecuali token expired/revoked)
+                        // Sign out hanya jika sebelumnya user login
+                        if (currentUserRef.current) {
+                            setCurrentUser(null);
+                            localStorage.removeItem(USER_STORAGE_KEY);
+                        }
                     }
                 });
             }
