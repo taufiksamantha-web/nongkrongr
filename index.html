@@ -184,7 +184,7 @@
         -moz-osx-font-smoothing: grayscale;
       }
 
-      /* IMAGE PROTECTION STYLES */
+      /* IMAGE PROTECTION & GPU ACCELERATION STYLES */
       img {
         -webkit-user-drag: none;
         -khtml-user-drag: none;
@@ -199,7 +199,7 @@
         user-select: none;
         pointer-events: auto; /* Ensure clicks still work for navigation/buttons */
         
-        /* GPU Acceleration for Images */
+        /* GPU Acceleration for Images - Keep this enabled! */
         transform: translateZ(0);
         will-change: opacity;
       }
@@ -213,6 +213,8 @@
       .cafe-card-optimized {
         content-visibility: auto;
         contain-intrinsic-size: 350px; /* Approximate height of a CafeCard */
+        /* Force GPU for cards too */
+        transform: translateZ(0); 
       }
       .review-card-optimized {
         content-visibility: auto;
@@ -222,27 +224,9 @@
       /* Ensure placeholder text has good contrast if system overrides it */
       input::placeholder, textarea::placeholder {
         opacity: 1; /* Firefox */
+        color: #9ca3af; /* gray-400 fallback */
       }
       
-      /* MOBILE PERFORMANCE OPTIMIZATIONS */
-      /* Disable heavy hover effects on touch devices to prevent lag */
-      @media (hover: none) {
-        .group:hover .group-hover\:scale-105 { transform: none !important; }
-        .hover\:-translate-y-1:hover { transform: none !important; }
-        .hover\:shadow-xl:hover { 
-            box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow) !important; 
-        }
-        /* Reduce backdrop blur cost on low-end mobile */
-        .backdrop-blur-sm, .backdrop-blur-md, .backdrop-blur-xl {
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            background-color: rgba(255, 255, 255, 0.95) !important; /* Fallback solid-ish color */
-        }
-        .dark .backdrop-blur-sm, .dark .backdrop-blur-md, .dark .backdrop-blur-xl {
-            background-color: rgba(12, 12, 13, 0.95) !important;
-        }
-      }
-
       /* Styles for user location marker on the map */
       .user-location-marker {
         position: relative;

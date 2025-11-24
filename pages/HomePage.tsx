@@ -101,8 +101,6 @@ const HomePage: React.FC = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [heroBgUrl, setHeroBgUrl] = useState<string | null>(null);
   
-  // PERFORMANCE FIX: Removed scrollY state and listener
-
   // Visibility Settings
   const [showSectionRecs, setShowSectionRecs] = useState(true);
   const [showSectionCOTW, setShowSectionCOTW] = useState(true);
@@ -127,8 +125,6 @@ const HomePage: React.FC = () => {
     fetchSettings();
   }, []);
   
-  // PERFORMANCE FIX: Removed scroll event listener
-
   useEffect(() => {
     const intervalId = setInterval(() => {
       setPlaceholderIndex(prevIndex => (prevIndex + 1) % rotatingPlaceholders.length);
@@ -349,9 +345,9 @@ const HomePage: React.FC = () => {
                     value={searchQuery} 
                     onChange={(e) => setSearchQuery(e.target.value)} 
                     onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)} 
-                    className="w-full py-3 sm:py-4 pl-12 sm:pl-14 pr-24 sm:pr-32 text-base sm:text-lg rounded-2xl border-2 border-white/30 bg-black/30 backdrop-blur-sm focus:ring-4 focus:ring-brand/20 focus:border-brand focus:bg-black/50 transition-all duration-300 shadow-sm text-white placeholder-gray-200" 
+                    className="w-full py-3 sm:py-4 pl-12 sm:pl-14 pr-24 sm:pr-32 text-base sm:text-lg rounded-2xl border-2 border-white/20 bg-white/10 backdrop-blur-md focus:ring-4 focus:ring-brand/20 focus:border-brand focus:bg-white/20 transition-all duration-300 shadow-lg text-white placeholder-gray-200" 
                 />
-                <button type="submit" className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 bg-brand text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl font-bold hover:bg-brand/90 transition-all duration-300 text-sm sm:text-base">Cari</button>
+                <button type="submit" className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 bg-brand text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl font-bold hover:bg-brand/90 transition-all duration-300 text-sm sm:text-base shadow-lg">Cari</button>
               </form>
               {isResultsVisible && (
                 <div className="absolute top-full mt-2 w-full bg-card rounded-2xl shadow-lg border border-subtle z-10 max-h-80 overflow-y-auto text-left">
@@ -365,7 +361,7 @@ const HomePage: React.FC = () => {
             </div>
           </div>
           <div className="mt-10 sm:mt-16 flex flex-wrap justify-center gap-2 sm:gap-3 px-2">
-            {VIBES.slice(0, 4).map(vibe => (<Link to={`/explore?vibe=${vibe.id}`} key={vibe.id} className="bg-black/30 backdrop-blur-sm border border-white/30 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl text-white hover:bg-black/50 transition-all duration-300 font-semibold text-sm sm:text-base">{vibe.name}</Link>))}
+            {VIBES.slice(0, 4).map(vibe => (<Link to={`/explore?vibe=${vibe.id}`} key={vibe.id} className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl text-white hover:bg-white/20 transition-all duration-300 font-semibold text-sm sm:text-base shadow-lg">{vibe.name}</Link>))}
           </div>
         </div>
       </div>

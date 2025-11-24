@@ -168,14 +168,13 @@ const DetailPage: React.FC = () => {
 
     // Reusable Buttons for cleaner render logic (Mobile vs Desktop)
     const ActionButtons = ({ isMobile }: { isMobile: boolean }) => {
-        // Mobile: Solid Dark Grey for visibility without backdrop blur
-        // Desktop: Clean button style matching info card
+        // Restored backdrop blur for aesthetics on mobile
         const shareClass = isMobile 
-            ? "p-2 sm:p-3 rounded-full bg-gray-900/80 text-white hover:bg-black transition-all shadow-sm active:scale-90"
+            ? "p-2 sm:p-3 rounded-full bg-black/30 backdrop-blur-md text-white border border-white/10 hover:bg-black/50 transition-all shadow-sm active:scale-90"
             : "p-2 rounded-xl bg-soft dark:bg-gray-700/30 text-muted hover:text-brand hover:bg-brand/5 border border-border transition-all shadow-sm active:scale-95";
             
         const favClass = isMobile
-            ? `p-2 sm:p-3 rounded-full transition-all duration-300 shadow-sm active:scale-75 bg-gray-900/80 text-white hover:bg-black ${favorited ? 'text-accent-pink' : ''} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`
+            ? `p-2 sm:p-3 rounded-full transition-all duration-300 shadow-sm active:scale-75 bg-black/30 backdrop-blur-md text-white border border-white/10 hover:bg-black/50 ${favorited ? 'text-accent-pink' : ''} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`
             : `p-2 rounded-xl transition-all duration-300 shadow-sm active:scale-90 border border-border ${favorited ? 'bg-accent-pink/10 text-accent-pink border-accent-pink/20' : 'bg-soft dark:bg-gray-700/30 text-muted hover:text-accent-pink hover:bg-accent-pink/5'} ${isAnimatingFavorite ? 'animate-subtle-bounce' : ''}`;
 
         return (
