@@ -11,6 +11,7 @@ import Footer from './components/Footer';
 import ErrorBoundary from './components/ErrorBoundary';
 import ScrollToTopOnNavigate from './components/ScrollToTopOnNavigate';
 import ScrollToTopButton from './components/ScrollToTopButton';
+import InstallPrompt from './components/InstallPrompt'; // Import Install Prompt
 
 // Contexts
 import { CafeProvider } from './context/CafeContext';
@@ -85,6 +86,7 @@ const MainLayout: React.FC = () => {
 
     return (
         <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col transition-colors duration-300 w-full">
+            <InstallPrompt /> {/* Add PWA Install Prompt here */}
             {showWelcome && isHomePage && (
                 <Suspense fallback={null}>
                     <WelcomeModal onClose={handleCloseWelcome} />
