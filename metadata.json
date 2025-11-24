@@ -1,7 +1,7 @@
 {
-  "name": "SumselCekFakta",
-  "description": "Aplikasi Cek Fakta modern dengan pendekatan search-centric dan mobile-first untuk masyarakat Sumatera Selatan.",
+  "name": "Nongkrongr: Cafe Finder",
+  "description": "A vibrant web application for Gen Z to discover aesthetic cafes in South Sumatra, perfect for hanging out, photo hunting, and studying. Features include trending spots, advanced filters, detailed cafe profiles with user reviews, and an admin dashboard.",
   "requestFramePermissions": [
-    "camera"
+    "geolocation"
   ]
 }

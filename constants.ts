@@ -1,24 +1,30 @@
+import { Amenity, Vibe } from './types';
 
-import { SearchStat } from './types';
-
-// --- KONFIGURASI STATIS ---
-
-// Statistik Pencarian Populer (Ini tetap dipertahankan sebagai sugesti UI)
-export const MOCK_SEARCH_STATS: SearchStat[] = [
-  { keyword: 'Bansos', count: 1500 },
-  { keyword: 'Jembatan Ampera', count: 1200 },
-  { keyword: 'Pemutihan Pajak', count: 980 },
-  { keyword: 'Loker PNS', count: 850 },
-  { keyword: 'Jalan Rusak', count: 600 },
-  { keyword: 'Begal', count: 450 },
+export const AMENITIES: Amenity[] = [
+  { id: 'wifi', name: 'WiFi Cepat', icon: '📶' },
+  { id: 'power', name: 'Stop Kontak', icon: '🔌' },
+  { id: 'ac', name: 'AC Dingin', icon: '❄️' },
+  { id: 'outdoor', name: 'Outdoor Area', icon: '🌳' },
+  { id: 'indoor', name: 'Indoor Area', icon: '🏠' },
+  { id: 'musholla', name: 'Musholla', icon: '🕌' },
+  { id: 'parking', name: 'Parkir Luas', icon: '🅿️' },
 ];
 
-// Kategori Laporan
-export const CATEGORIES = [
-  'Kesehatan',
-  'Politik',
-  'Bencana Alam',
-  'Penipuan Online',
-  'Lalulintas',
-  'Lainnya'
+export const VIBES: Vibe[] = [
+  { id: 'cozy', name: 'Cozy' },
+  { id: 'minimalis', name: 'Minimalis' },
+  { id: 'industrial', name: 'Industrial' },
+  { id: 'tropical', name: 'Tropical' },
+  { id: 'classic', name: 'Klasik' },
 ];
+
+export const SOUTH_SUMATRA_CITIES: string[] = [
+    "Palembang", "Prabumulih", "Lubuklinggau", "Pagar Alam", 
+    "Banyuasin", "Empat Lawang", "Lahat", "Muara Enim", "Musi Banyuasin",
+    "Musi Rawas", "Musi Rawas Utara", "Ogan Ilir", "Ogan Komering Ilir",
+    "Ogan Komering Ulu", "OKU Selatan", "OKU Timur", "Penukal Abab Lematang Ilir"
+];
+
+// Fallback image URLs
+export const DEFAULT_FAVICON_URL = "https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png";
+export const DEFAULT_COVER_URL = "https://res.cloudinary.com/dovouihq8/image/upload/v1722244300/cover-placeholder-1_pqz5kl.jpg";
