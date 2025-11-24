@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { BeforeInstallPromptEvent } from '../types';
 import { XMarkIcon, ArrowDownTrayIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/solid';
@@ -14,18 +13,23 @@ const InstallPrompt: React.FC = () => {
       // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
       
-      // Check if user has dismissed it recently (e.g., within 24 hours)
+      // Logic Check:
+      // Browser (Chrome) prevents this event from firing frequently if user dismissed it recently (Cool-down period).
+      // If the event FIRES, it means the browser allows it. We should show it.
+      // However, we check our local storage just to avoid spamming in the SAME session if they just closed it.
+      
       const dismissedAt = localStorage.getItem('nongkrongr_install_dismissed');
       if (dismissedAt) {
         const diff = Date.now() - parseInt(dismissedAt, 10);
-        // If dismissed less than 24 hours ago, don't show
-        if (diff < 24 * 60 * 60 * 1000) {
+        // Reduced cool-down to 1 hour for our internal logic. 
+        // Rely on the browser's stricter heuristic for long-term throttling.
+        if (diff < 1 * 60 * 60 * 1000) { 
             return;
         }
       }
 
       // Show the UI
-      setTimeout(() => setIsVisible(true), 3000); // Delay a bit so it doesn't pop up immediately on load
+      setTimeout(() => setIsVisible(true), 2000); 
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -52,6 +56,8 @@ const InstallPrompt: React.FC = () => {
     if (outcome === 'accepted') {
       setDeferredPrompt(null);
       setIsVisible(false);
+      // Clear dismissal history if they accept, so they can install again if they uninstall later
+      localStorage.removeItem('nongkrongr_install_dismissed');
     }
   };
 
