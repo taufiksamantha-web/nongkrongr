@@ -1,6 +1,6 @@
 
-import React, { useContext } from 'react';
-import { CafeContext } from '../../context/CafeContext';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 import { BuildingStorefrontIcon, CheckBadgeIcon, ClockIcon, ArchiveBoxArrowDownIcon } from '@heroicons/react/24/outline';
 import CafeManagementPanel from './CafeManagementPanel';
 import ReviewManagement from './PendingReviews';
@@ -14,19 +14,69 @@ import AdminWelcomeHint from './AdminWelcomeHint';
 import ApprovalHub from './ApprovalHub';
 
 const AdminDashboard: React.FC = () => {
-    const { cafes } = useContext(CafeContext)!;
-    
-    const totalCafes = cafes.length;
-    const archivedCafes = cafes.filter(c => c.status === 'archived').length;
-    const sponsoredCafes = cafes.filter(cafe => cafe.isSponsored && cafe.status !== 'archived').length;
-    
-    // Active (non-archived) breakdown
-    const activeCafes = cafes.filter(c => c.status !== 'archived');
-    const approvedCafes = activeCafes.filter(cafe => cafe.status === 'approved').length;
-    const pendingCafes = activeCafes.filter(cafe => cafe.status === 'pending').length;
-    
-    // For the chart, we compare Sponsored vs Regular (Active only)
-    const nonSponsoredActiveCafes = activeCafes.length - sponsoredCafes;
+    // State for accurate counts direct from DB
+    const [stats, setStats] = useState({
+        total: 0,
+        approved: 0,
+        pending: 0,
+        sponsored: 0,
+        archived: 0,
+        regular: 0
+    });
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchRealtimeStats = async () => {
+        setIsLoading(true);
+        try {
+            // We use Promise.all to fetch counts in parallel for "Power Mode" speed
+            const [
+                { count: totalCount },
+                { count: approvedCount },
+                { count: pendingCount },
+                { count: archivedCount },
+                { count: sponsoredCount }
+            ] = await Promise.all([
+                supabase.from('cafes').select('*', { count: 'exact', head: true }),
+                supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+                supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+                supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('status', 'archived'),
+                supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('isSponsored', true).neq('status', 'archived')
+            ]);
+
+            const safeTotal = totalCount || 0;
+            const safeSponsored = sponsoredCount || 0;
+            // Regular active cafes (Approved - Sponsored)
+            const safeRegular = (approvedCount || 0) - safeSponsored;
+
+            setStats({
+                total: safeTotal,
+                approved: approvedCount || 0,
+                pending: pendingCount || 0,
+                archived: archivedCount || 0,
+                sponsored: safeSponsored,
+                regular: safeRegular
+            });
+        } catch (error) {
+            console.error("Error fetching admin stats:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRealtimeStats();
+        
+        // Subscribe to realtime changes for the dashboard counters
+        const channel = supabase.channel('admin-dashboard-stats')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'cafes' }, () => {
+                fetchRealtimeStats();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
 
     return (
         <div className="w-full max-w-full">
@@ -42,7 +92,7 @@ const AdminDashboard: React.FC = () => {
             {/* Cafe Summary Section - Fluid Grid with Highlighted Total */}
             <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border space-y-6 mt-6 sm:mt-8 w-full">
                 <div>
-                    <h3 className="text-xl font-bold font-jakarta mb-6 text-center text-primary dark:text-white">Ringkasan Kafe</h3>
+                    <h3 className="text-xl font-bold font-jakarta mb-6 text-center text-primary dark:text-white">Ringkasan Kafe (Real-time)</h3>
                     
                     {/* 
                         Grid Layout Strategy:
@@ -58,38 +108,40 @@ const AdminDashboard: React.FC = () => {
                                 <p className="text-sm sm:text-base text-brand font-bold uppercase tracking-wide">Total Cafe</p>
                                 <BuildingStorefrontIcon className="h-8 w-8 text-brand" />
                             </div>
-                            <p className="text-4xl sm:text-5xl font-extrabold font-jakarta text-brand mt-2 relative z-10">{totalCafes}</p>
-                            <p className="text-xs text-muted mt-1 relative z-10">Termasuk arsip & pending</p>
+                            <p className="text-4xl sm:text-5xl font-extrabold font-jakarta text-brand mt-2 relative z-10">
+                                {isLoading ? <span className="animate-pulse">...</span> : stats.total}
+                            </p>
+                            <p className="text-xs text-muted mt-1 relative z-10">Database Uptodate</p>
                         </div>
 
                         {/* Standard Cards */}
                         <StatCard 
                             title="Disetujui" 
-                            value={approvedCafes} 
+                            value={stats.approved} 
                             icon={<CheckBadgeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />} 
                             color="green" 
                         />
                         <StatCard 
                             title="Tertunda" 
-                            value={pendingCafes} 
+                            value={stats.pending} 
                             icon={<ClockIcon className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500" />} 
                             color="yellow" 
                         />
                          <StatCard 
                             title="Sponsored" 
-                            value={sponsoredCafes} 
+                            value={stats.sponsored} 
                             icon={<CheckBadgeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />} 
                             color="purple" 
                         />
                         <StatCard 
                             title="Diarsipkan" 
-                            value={archivedCafes} 
+                            value={stats.archived} 
                             icon={<ArchiveBoxArrowDownIcon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-500" />} 
                             color="gray" 
                         />
                     </div>
                 </div>
-                <StatChart sponsored={sponsoredCafes} regular={nonSponsoredActiveCafes} total={activeCafes.length} />
+                {!isLoading && <StatChart sponsored={stats.sponsored} regular={stats.regular} total={stats.approved} />}
             </div>
             
             {/* Main Content Grid - Fluid Breakpoints */}
