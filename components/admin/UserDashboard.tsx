@@ -1,12 +1,12 @@
 
-import React, { useContext, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { CafeContext } from '../../context/CafeContext';
-import { useFavorites } from '../../context/FavoriteContext';
+import { supabase } from '../../lib/supabaseClient';
+import { Cafe, Review } from '../../types';
 import CafeCard from '../CafeCard';
 import ReviewCard from '../ReviewCard';
-import { HeartIcon, ChatBubbleBottomCenterTextIcon, MagnifyingGlassIcon, UserCircleIcon } from '@heroicons/react/24/solid';
+import { HeartIcon, ChatBubbleBottomCenterTextIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import SkeletonCard from '../SkeletonCard';
 import SkeletonReviewCard from '../SkeletonReviewCard';
 
@@ -41,24 +41,114 @@ const EmptyState: React.FC<{ title: string; message: string; ctaLink: string; ct
     </div>
 );
 
+// Helper to calculate scores client-side for fetching direct favorites
+const calculateCafeScores = (cafeData: any): Cafe => {
+    const reviews = cafeData.reviews || [];
+    const approvedReviews = reviews.filter((r: any) => r.status === 'approved');
+    
+    let avgAestheticScore = 0;
+    let avgWorkScore = 0;
+    let avgCrowdEvening = 0;
+
+    if (approvedReviews.length > 0) {
+        const totalAesthetic = approvedReviews.reduce((acc: number, r: any) => acc + r.ratingAesthetic, 0);
+        const totalWork = approvedReviews.reduce((acc: number, r: any) => acc + r.ratingWork, 0);
+        const totalCrowd = approvedReviews.reduce((acc: number, r: any) => acc + r.crowdEvening, 0);
+        
+        avgAestheticScore = parseFloat((totalAesthetic / approvedReviews.length).toFixed(1));
+        avgWorkScore = parseFloat((totalWork / approvedReviews.length).toFixed(1));
+        avgCrowdEvening = parseFloat((totalCrowd / approvedReviews.length).toFixed(1));
+    }
+
+    // Map raw DB data to Cafe type
+    return {
+        ...cafeData,
+        coords: { lat: cafeData.lat, lng: cafeData.lng },
+        vibes: cafeData.vibes?.map((v: any) => v.vibes).filter(Boolean) || [],
+        amenities: [], // Not needed for card view usually, save bandwidth
+        tags: [],
+        spots: [],
+        reviews: reviews, // Keep reviews for other logic if needed
+        events: [],
+        avgAestheticScore,
+        avgWorkScore,
+        avgCrowdEvening,
+        // Mock remaining
+        avgCrowdMorning: 0,
+        avgCrowdAfternoon: 0
+    } as Cafe;
+};
+
 const UserDashboard: React.FC = () => {
     const { currentUser } = useAuth();
-    const { cafes, loading } = useContext(CafeContext)!;
-    const { favoriteIds } = useFavorites();
     
+    const [favoriteCafes, setFavoriteCafes] = useState<Cafe[]>([]);
+    const [userReviews, setUserReviews] = useState<(Review & { cafeName: string, cafeSlug: string })[]>([]);
+    const [loading, setLoading] = useState(true);
     const [welcomeMessage] = useState(() => welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)]);
 
-    if (!currentUser) return null;
+    useEffect(() => {
+        if (!currentUser) return;
 
-    const favoriteCafes = cafes.filter(cafe => favoriteIds.includes(cafe.id));
-    
-    // Find reviews by the current user.
-    // The author field in reviews is just a string, so we match it with username.
-    const userReviews = cafes.flatMap(cafe => 
-        cafe.reviews
-            .filter(review => review.author === currentUser.username && review.status === 'approved')
-            .map(review => ({ ...review, cafeName: cafe.name, cafeSlug: cafe.slug }))
-    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by most recent
+        const fetchUserData = async () => {
+            setLoading(true);
+            try {
+                // 1. Fetch Favorites Directly
+                // Join user_favorites -> cafes -> vibes (nested) & reviews (nested for scoring)
+                const { data: favData, error: favError } = await supabase
+                    .from('user_favorites')
+                    .select(`
+                        cafe:cafes (
+                            *,
+                            vibes:cafe_vibes(vibes(id, name)),
+                            reviews(ratingAesthetic, ratingWork, crowdEvening, status)
+                        )
+                    `)
+                    .eq('user_id', currentUser.id);
+
+                if (favError) throw favError;
+
+                const processedFavs = (favData || [])
+                    .map((item: any) => item.cafe)
+                    .filter(Boolean)
+                    .map(calculateCafeScores);
+                
+                setFavoriteCafes(processedFavs);
+
+                // 2. Fetch User Reviews Directly
+                const { data: reviewData, error: reviewError } = await supabase
+                    .from('reviews')
+                    .select(`
+                        *,
+                        cafes (name, slug)
+                    `)
+                    .eq('author_id', currentUser.id)
+                    .order('createdAt', { ascending: false })
+                    .limit(5);
+
+                if (reviewError) throw reviewError;
+
+                const processedReviews = (reviewData || []).map((r: any) => ({
+                    ...r,
+                    cafeName: r.cafes?.name || 'Unknown Cafe',
+                    cafeSlug: r.cafes?.slug || '',
+                    photos: r.photos || [], // Handle null photos
+                    helpful_count: r.helpful_count || 0
+                }));
+
+                setUserReviews(processedReviews);
+
+            } catch (err) {
+                console.error("Error fetching user dashboard data:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUserData();
+    }, [currentUser]);
+
+    if (!currentUser) return null;
 
     return (
         <div className="space-y-8">
@@ -93,7 +183,7 @@ const UserDashboard: React.FC = () => {
                     </div>
                 ) : userReviews.length > 0 ? (
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {userReviews.slice(0, 3).map((review, i) => <ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />)}
+                        {userReviews.map((review, i) => <ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />)}
                     </div>
                 ) : (
                      <EmptyState 
