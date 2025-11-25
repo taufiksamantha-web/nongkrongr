@@ -145,8 +145,9 @@ const fetchCafesPage = async ({ pageParam = 0 }: { pageParam: number }) => {
             // Apply robust parsing here
             photos: parseSupabaseArray(r.photos), 
             helpful_count: r.helpful_count || 0,
-            // Map profile data to flat author properties for UI
-            author: r.profile?.username || 'Anonymous',
+            // FIX: Robust fallback if profile join fails (e.g. due to RLS for guests)
+            // Jika r.profile null (guest tidak bisa baca tabel profiles), gunakan 'Sobat Nongkrong'
+            author: r.profile?.username || 'Sobat Nongkrong',
             author_avatar_url: r.profile?.avatar_url || null,
             author_id: r.author_id
         })),

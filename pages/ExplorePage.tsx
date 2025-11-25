@@ -39,13 +39,16 @@ const FilterPanelContent: React.FC<{
         { value: 'closed', label: 'Tutup' },
     ];
     
+    // Style untuk input yang lebih kontras di mobile/desktop
+    const inputClass = "w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-900 text-primary dark:text-white focus:ring-2 focus:ring-brand focus:border-brand transition-colors text-sm font-medium";
+
     return (
         <>
             {/* City */}
             <div className="py-2">
-                <label className="font-semibold block text-primary dark:text-white">Kota/Kabupaten</label>
-                <div className="mt-2">
-                    <select value={filters.city} onChange={e => handleFilterChange('city', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 dark:text-white text-primary focus:ring-2 focus:ring-brand">
+                <label className="font-bold block text-sm text-primary dark:text-gray-200 mb-1.5">Kota/Kabupaten</label>
+                <div>
+                    <select value={filters.city} onChange={e => handleFilterChange('city', e.target.value)} className={inputClass}>
                         <option value="all">Semua Kota/Kabupaten</option>
                         {SOUTH_SUMATRA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
@@ -59,8 +62,8 @@ const FilterPanelContent: React.FC<{
                     disabled={isLocating}
                     className={`w-full flex items-center justify-center gap-2 p-3 text-sm rounded-xl border-2 font-bold transition-all ${
                         sortBy === 'distance'
-                            ? 'bg-brand text-white border-brand'
-                            : 'bg-soft border-border text-primary hover:border-brand/50 dark:text-white dark:bg-gray-700'
+                            ? 'bg-brand text-white border-brand shadow-lg shadow-brand/20'
+                            : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-primary hover:border-brand/50 dark:text-white'
                     } disabled:opacity-50 disabled:cursor-wait`}
                 >
                     {isLocating ? (
@@ -79,23 +82,23 @@ const FilterPanelContent: React.FC<{
             </div>
 
             {/* Opening Status */}
-            <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none text-primary dark:text-white">
+            <details className="py-2 border-t border-border group" open>
+                <summary className="flex justify-between items-center font-bold text-sm cursor-pointer list-none text-primary dark:text-gray-200 mb-2">
                     Status Buka
-                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                    <ChevronDownIcon className="h-4 w-4 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
-                <div className="mt-4 space-y-2">
+                <div className="mt-2 space-y-2">
                     {openingStatusOptions.map(({ value, label }) => (
-                        <label key={value} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-soft dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
+                        <label key={value} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
                             <input
                                 type="radio"
                                 name="openingStatus"
                                 value={value}
                                 checked={filters.openingStatus === value}
                                 onChange={() => setOpeningStatus(value)}
-                                className="h-4 w-4 text-brand focus:ring-brand focus:ring-2 border-gray-300 dark:border-gray-500 bg-soft dark:bg-gray-700"
+                                className="h-4 w-4 text-brand focus:ring-brand focus:ring-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800"
                             />
-                            <span className="font-medium text-primary dark:text-white">{label}</span>
+                            <span className="text-sm font-medium text-primary dark:text-gray-300">{label}</span>
                         </label>
                     ))}
                 </div>
@@ -103,19 +106,19 @@ const FilterPanelContent: React.FC<{
             
             {/* Price Tier */}
             <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none text-primary dark:text-white">
+                <summary className="flex justify-between items-center font-bold text-sm cursor-pointer list-none text-primary dark:text-gray-200 mb-2">
                     Harga
-                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                    <ChevronDownIcon className="h-4 w-4 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
-                <div className="mt-4 grid grid-cols-4 gap-2">
+                <div className="mt-2 grid grid-cols-4 gap-2">
                     {([1, 2, 3, 4] as const).map(tier => (
                         <button
                             key={tier}
                             onClick={() => handleFilterChange('priceTier', tier)}
-                            className={`py-2 text-sm rounded-lg border-2 font-bold transition-all ${
+                            className={`py-2 text-sm rounded-lg border font-bold transition-all ${
                                 filters.priceTier === tier
                                     ? 'bg-brand text-white border-brand'
-                                    : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700 dark:text-gray-200'
+                                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-muted hover:border-brand/50 dark:text-gray-300'
                             }`}
                         >
                             {'$'.repeat(tier)}
@@ -126,19 +129,19 @@ const FilterPanelContent: React.FC<{
 
             {/* Vibes */}
             <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none text-primary dark:text-white">
+                <summary className="flex justify-between items-center font-bold text-sm cursor-pointer list-none text-primary dark:text-gray-200 mb-2">
                     Vibe
-                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                    <ChevronDownIcon className="h-4 w-4 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                     {VIBES.map(vibe => (
                         <button
                             key={vibe.id}
                             onClick={() => toggleMultiSelect('vibes', vibe.id)}
-                            className={`px-3 py-1.5 text-sm rounded-full border-2 font-bold transition-all ${
+                            className={`px-3 py-1.5 text-xs rounded-full border font-bold transition-all ${
                                 filters.vibes.includes(vibe.id)
                                     ? 'bg-brand text-white border-brand'
-                                    : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700 dark:text-gray-200'
+                                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-muted hover:border-brand/50 dark:text-gray-300'
                             }`}
                         >
                             {vibe.name}
@@ -149,17 +152,17 @@ const FilterPanelContent: React.FC<{
 
             {/* Amenities */}
             <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none text-primary dark:text-white">
+                <summary className="flex justify-between items-center font-bold text-sm cursor-pointer list-none text-primary dark:text-gray-200 mb-2">
                     Fasilitas
-                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                    <ChevronDownIcon className="h-4 w-4 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
-                <div className="mt-4 grid grid-cols-4 gap-2">
+                <div className="mt-2 grid grid-cols-4 gap-2">
                     {AMENITIES.map(amenity => (
                         <button 
                             key={amenity.id} 
                             onClick={() => toggleMultiSelect('amenities', amenity.id)} 
                             title={amenity.name}
-                            className={`p-3 text-2xl rounded-lg border-2 transition-all flex items-center justify-center ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700 dark:text-gray-200'}`}
+                            className={`p-3 text-xl rounded-lg border transition-all flex items-center justify-center ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-muted hover:border-brand/50 dark:text-gray-300'}`}
                         >
                             {amenity.icon}
                         </button>
@@ -169,22 +172,22 @@ const FilterPanelContent: React.FC<{
 
             {/* Crowd Level */}
             <details className="py-2 border-t border-border group">
-                <summary className="flex justify-between items-center font-semibold cursor-pointer list-none text-primary dark:text-white">
+                <summary className="flex justify-between items-center font-bold text-sm cursor-pointer list-none text-primary dark:text-gray-200 mb-2">
                     Tingkat Keramaian (Maks.)
-                    <ChevronDownIcon className="h-5 w-5 transition-transform duration-300 group-open:rotate-180" />
+                    <ChevronDownIcon className="h-4 w-4 transition-transform duration-300 group-open:rotate-180" />
                 </summary>
-                <div className="mt-4 space-y-4">
+                <div className="mt-2 space-y-4 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-border">
                     <div>
-                        <label className="text-sm font-medium text-muted">Pagi ({filters.crowdMorning})</label>
-                        <input type="range" min="1" max="5" value={filters.crowdMorning} onChange={e => handleFilterChange('crowdMorning', parseInt(e.target.value))} className="w-full mt-1 accent-accent-amber"/>
+                        <label className="text-xs font-bold text-muted uppercase mb-1 block">Pagi ({filters.crowdMorning})</label>
+                        <input type="range" min="1" max="5" value={filters.crowdMorning} onChange={e => handleFilterChange('crowdMorning', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-accent-amber"/>
                     </div>
                      <div>
-                        <label className="text-sm font-medium text-muted">Siang ({filters.crowdAfternoon})</label>
-                        <input type="range" min="1" max="5" value={filters.crowdAfternoon} onChange={e => handleFilterChange('crowdAfternoon', parseInt(e.target.value))} className="w-full mt-1 accent-brand/75"/>
+                        <label className="text-xs font-bold text-muted uppercase mb-1 block">Siang ({filters.crowdAfternoon})</label>
+                        <input type="range" min="1" max="5" value={filters.crowdAfternoon} onChange={e => handleFilterChange('crowdAfternoon', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand/75"/>
                     </div>
                      <div>
-                        <label className="text-sm font-medium text-muted">Malam ({filters.crowdEvening})</label>
-                        <input type="range" min="1" max="5" value={filters.crowdEvening} onChange={e => handleFilterChange('crowdEvening', parseInt(e.target.value))} className="w-full mt-1 accent-brand"/>
+                        <label className="text-xs font-bold text-muted uppercase mb-1 block">Malam ({filters.crowdEvening})</label>
+                        <input type="range" min="1" max="5" value={filters.crowdEvening} onChange={e => handleFilterChange('crowdEvening', parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand"/>
                     </div>
                 </div>
             </details>
@@ -192,13 +195,13 @@ const FilterPanelContent: React.FC<{
             {/* Tags */}
             {currentUser && (
                 <div className="py-2 border-t border-border">
-                    <label className="font-semibold block text-primary dark:text-white">Tag Komunitas</label>
+                    <label className="font-bold block text-sm text-primary dark:text-gray-200 mb-1.5">Tag Komunitas</label>
                     <div className="mt-2 flex flex-wrap gap-2">
                         {allTags.map(tag => (
                             <button 
                                 key={tag.id} 
                                 onClick={() => toggleMultiSelect('tags', tag.id)} 
-                                className={`px-3 py-1.5 text-xs rounded-full border-2 font-bold transition-all ${filters.tags.includes(tag.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700 dark:text-gray-200'}`}
+                                className={`px-3 py-1 text-[10px] uppercase tracking-wider rounded-full border font-bold transition-all ${filters.tags.includes(tag.id) ? 'bg-brand text-white border-brand' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-muted hover:border-brand/50 dark:text-gray-300'}`}
                             >
                                #{tag.name}
                             </button>
@@ -276,10 +279,15 @@ const ExplorePage: React.FC = () => {
     setFilters(prev => ({ ...prev, openingStatus: status }));
   };
 
+  // FIX: Ensure "Trending" overrides "Distance" sort when the URL param changes
+  useEffect(() => {
+      if (sortParam === 'trending') {
+          setSortBy('default');
+      }
+  }, [sortParam]);
+
   const handleSortByDistance = () => {
     if (sortBy === 'distance' && !locationError) {
-        // Already sorted or trying to reset? 
-        // If explicit param exists, we probably want to force it unless toggled off manually
         if (sortParam !== 'distance') {
              setSortBy('default');
              setUserLocation(null);
@@ -297,7 +305,6 @@ const ExplorePage: React.FC = () => {
             const userLoc = { lat: latitude, lng: longitude };
             setUserLocation(userLoc);
 
-            // Filter cafes first to avoid unnecessary calculations
             const baseCafes = cafes.filter(c => c.status === 'approved');
             const processedCafes = baseCafes.filter(cafe => {
                  if (filters.city !== 'all' && cafe.city !== filters.city) return false;
@@ -306,14 +313,12 @@ const ExplorePage: React.FC = () => {
 
             const newDistances = new Map<string, number>();
 
-            // Calculate driving distances in parallel (batching could be improved for large sets)
             await Promise.all(processedCafes.map(async (cafe) => {
                 if (cafe.coords) {
                     const dist = await getDrivingDistance(userLoc, cafe.coords);
                     if (dist !== null) {
                         newDistances.set(cafe.id, dist);
                     } else {
-                        // Fallback to straight line if API fails
                         const straightDist = calculateDistance(userLoc.lat, userLoc.lng, cafe.coords.lat, cafe.coords.lng);
                         newDistances.set(cafe.id, straightDist);
                     }
@@ -333,7 +338,6 @@ const ExplorePage: React.FC = () => {
     );
   };
 
-  // Auto-trigger sort by distance if URL param is present
   useEffect(() => {
       if (sortParam === 'distance' && sortBy !== 'distance' && !isLocating && !userLocation) {
           handleSortByDistance();
@@ -341,7 +345,6 @@ const ExplorePage: React.FC = () => {
   }, [sortParam]);
 
   useEffect(() => {
-    // Jangan update URL jika sedang dalam mode 'favorites' atau 'sort' khusus
     if (isFavoritesView || sortParam) return;
 
     const newParams = new URLSearchParams();
@@ -357,7 +360,7 @@ const ExplorePage: React.FC = () => {
     setSearchParams(newParams, { replace: true });
   }, [filters, setSearchParams, isFavoritesView, sortParam]);
 
-  // Filtering Logic (Applies to all loaded cafes from React Query)
+  // Filtering Logic
   const sortedCafes: CafeWithDistance[] = useMemo(() => {
     let baseCafes = cafes.filter(c => c.status === 'approved');
     let processedCafes: Cafe[];
@@ -367,7 +370,6 @@ const ExplorePage: React.FC = () => {
         processedCafes = baseCafes.filter(cafe => favoriteSet.has(cafe.id));
     } else {
         processedCafes = baseCafes.filter(cafe => {
-            // Smart Search Logic
             if (filters.search) {
                 const term = filters.search.toLowerCase();
                 const matchesSearch = 
@@ -400,7 +402,6 @@ const ExplorePage: React.FC = () => {
     if (sortBy === 'distance' && userLocation) {
         return processedCafes
             .map(cafe => {
-                // Use calculated driving distance if available, otherwise fallback to straight line on the fly
                 const dist = drivingDistances.has(cafe.id) 
                     ? drivingDistances.get(cafe.id) 
                     : calculateDistance(userLocation.lat, userLocation.lng, cafe.coords.lat, cafe.coords.lng);
@@ -410,10 +411,19 @@ const ExplorePage: React.FC = () => {
     }
     
     if (sortParam === 'trending') {
-        return [...processedCafes].sort((a, b) => b.avgAestheticScore - a.avgAestheticScore);
+        // FIX: Better sorting algorithm. Use Average of Aesthetic + Work score for general rating.
+        return [...processedCafes].sort((a, b) => {
+            const scoreA = (a.avgAestheticScore + a.avgWorkScore) / 2;
+            const scoreB = (b.avgAestheticScore + b.avgWorkScore) / 2;
+            
+            if (scoreB !== scoreA) return scoreB - scoreA;
+            // Tie breaker: Review count
+            const reviewsA = a.reviews?.filter(r => r.status === 'approved').length || 0;
+            const reviewsB = b.reviews?.filter(r => r.status === 'approved').length || 0;
+            return reviewsB - reviewsA;
+        });
     }
     
-    // Default Sort: Sponsored first, then Rating, then Review Count
     return [...processedCafes].sort((a, b) => {
         if (a.isSponsored && !b.isSponsored) return -1;
         if (!a.isSponsored && b.isSponsored) return 1;
@@ -426,7 +436,6 @@ const ExplorePage: React.FC = () => {
     });
   }, [cafes, filters, sortBy, userLocation, isFavoritesView, favoriteIds, sortParam, drivingDistances]);
 
-  // Infinite Scroll Trigger
   useEffect(() => {
     const observer = new IntersectionObserver(
         (entries) => {
@@ -471,25 +480,26 @@ const ExplorePage: React.FC = () => {
               className={`bg-card dark:bg-gray-800 p-6 h-full w-4/5 max-w-sm overflow-y-auto shadow-2xl transform transition-transform duration-300 ${isFiltersOpen ? 'translate-x-0' : '-translate-x-full'}`}
               onClick={e => e.stopPropagation()}
           >
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
                   <h3 className="text-2xl font-bold font-jakarta text-primary dark:text-white">Filters</h3>
-                  <button onClick={() => setIsFiltersOpen(false)} className="p-2 rounded-full hover:bg-soft dark:hover:bg-gray-700">
+                  <button onClick={() => setIsFiltersOpen(false)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                       <XMarkIcon className="h-6 w-6 text-primary dark:text-white" />
                   </button>
               </div>
-              <FilterPanelContent {...filterPanelProps} />
+              <div className="space-y-4">
+                <FilterPanelContent {...filterPanelProps} />
+              </div>
           </div>
       </div>
 
       {/* Filters Sidebar for Desktop - Fluid width */}
-      {/* INCREASED TOP OFFSET: Changed lg:top-24 to lg:top-32 */}
       <aside className={`hidden lg:block lg:w-1/4 xl:w-1/5 min-w-[250px] bg-card dark:bg-gray-800 p-6 rounded-3xl shadow-sm self-start border border-border lg:sticky lg:top-32 transition-opacity ${isSpecialView ? 'opacity-50 pointer-events-none' : ''}`}>
         <FilterPanelContent {...filterPanelProps} />
       </aside>
 
       {/* Main Content - Fluid width */}
       <div className="flex-1 w-full min-w-0 pb-20">
-        {/* Mobile Filter Floating Button - Moved up to bottom-28 to avoid floating dock overlap */}
+        {/* Mobile Filter Floating Button */}
         <button 
             onClick={() => setIsFiltersOpen(true)}
             className="lg:hidden fixed bottom-28 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2.5 px-6 py-3.5 bg-gray-900/80 dark:bg-white/80 backdrop-blur-xl border border-white/10 dark:border-black/5 text-white dark:text-gray-900 rounded-full shadow-2xl shadow-brand/25 hover:scale-105 active:scale-95 transition-all duration-300 ring-1 ring-white/20 dark:ring-black/10 disabled:opacity-50"
