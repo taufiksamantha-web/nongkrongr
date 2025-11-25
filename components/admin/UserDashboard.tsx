@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -43,7 +42,8 @@ const EmptyState: React.FC<{ title: string; message: string; ctaLink: string; ct
 
 // Helper to calculate scores client-side for fetching direct favorites
 const calculateCafeScores = (cafeData: any): Cafe => {
-    const reviews = cafeData.reviews || [];
+    // Defensive check: Ensure reviews is an array
+    const reviews = Array.isArray(cafeData.reviews) ? cafeData.reviews : [];
     const approvedReviews = reviews.filter((r: any) => r.status === 'approved');
     
     let avgAestheticScore = 0;
@@ -51,9 +51,9 @@ const calculateCafeScores = (cafeData: any): Cafe => {
     let avgCrowdEvening = 0;
 
     if (approvedReviews.length > 0) {
-        const totalAesthetic = approvedReviews.reduce((acc: number, r: any) => acc + r.ratingAesthetic, 0);
-        const totalWork = approvedReviews.reduce((acc: number, r: any) => acc + r.ratingWork, 0);
-        const totalCrowd = approvedReviews.reduce((acc: number, r: any) => acc + r.crowdEvening, 0);
+        const totalAesthetic = approvedReviews.reduce((acc: number, r: any) => acc + (r.ratingAesthetic || 0), 0);
+        const totalWork = approvedReviews.reduce((acc: number, r: any) => acc + (r.ratingWork || 0), 0);
+        const totalCrowd = approvedReviews.reduce((acc: number, r: any) => acc + (r.crowdEvening || 0), 0);
         
         avgAestheticScore = parseFloat((totalAesthetic / approvedReviews.length).toFixed(1));
         avgWorkScore = parseFloat((totalWork / approvedReviews.length).toFixed(1));
@@ -63,19 +63,20 @@ const calculateCafeScores = (cafeData: any): Cafe => {
     // Map raw DB data to Cafe type
     return {
         ...cafeData,
-        coords: { lat: cafeData.lat, lng: cafeData.lng },
+        coords: { lat: cafeData.lat || 0, lng: cafeData.lng || 0 },
         vibes: cafeData.vibes?.map((v: any) => v.vibes).filter(Boolean) || [],
-        amenities: [], // Not needed for card view usually, save bandwidth
-        tags: [],
-        spots: [],
-        reviews: reviews, // Keep reviews for other logic if needed
-        events: [],
+        amenities: cafeData.amenities?.map((a: any) => a.amenities).filter(Boolean) || [],
+        tags: cafeData.tags || [],
+        spots: cafeData.spots || [],
+        reviews: reviews, 
+        events: cafeData.events || [],
         avgAestheticScore,
         avgWorkScore,
         avgCrowdEvening,
-        // Mock remaining
+        // Mock remaining for safe typing
         avgCrowdMorning: 0,
-        avgCrowdAfternoon: 0
+        avgCrowdAfternoon: 0,
+        avgCrowd: avgCrowdEvening // Fallback alias
     } as Cafe;
 };
 
@@ -94,13 +95,13 @@ const UserDashboard: React.FC = () => {
             setLoading(true);
             try {
                 // 1. Fetch Favorites Directly
-                // Join user_favorites -> cafes -> vibes (nested) & reviews (nested for scoring)
                 const { data: favData, error: favError } = await supabase
                     .from('user_favorites')
                     .select(`
                         cafe:cafes (
                             *,
                             vibes:cafe_vibes(vibes(id, name)),
+                            amenities:cafe_amenities(amenities(id, name, icon)),
                             reviews(ratingAesthetic, ratingWork, crowdEvening, status)
                         )
                     `)
@@ -110,7 +111,7 @@ const UserDashboard: React.FC = () => {
 
                 const processedFavs = (favData || [])
                     .map((item: any) => item.cafe)
-                    .filter(Boolean)
+                    .filter((cafe: any) => cafe !== null) // Filter out deleted cafes (orphaned favorites)
                     .map(calculateCafeScores);
                 
                 setFavoriteCafes(processedFavs);
@@ -132,7 +133,7 @@ const UserDashboard: React.FC = () => {
                     ...r,
                     cafeName: r.cafes?.name || 'Unknown Cafe',
                     cafeSlug: r.cafes?.slug || '',
-                    photos: r.photos || [], // Handle null photos
+                    photos: r.photos || [], 
                     helpful_count: r.helpful_count || 0
                 }));
 
