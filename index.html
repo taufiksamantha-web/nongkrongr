@@ -208,26 +208,21 @@
         will-change: opacity;
       }
 
-      /* OPTIMIZATION: Removed content-visibility: auto which was clipping shadows */
+      /* OPTIMIZATION: Improve scrolling performance on long lists */
       .content-visibility-auto {
-        /* Removed content-visibility to fix shadow clipping issues */
-        /* content-visibility: auto; */
-        /* contain-intrinsic-size: 1000px; */
+        content-visibility: auto;
+        contain-intrinsic-size: 1000px; /* Approximate height of a grid section */
       }
       
       .cafe-card-optimized {
-        /* Removed content-visibility to fix shadow clipping issues */
-        /* content-visibility: auto; */
-        /* contain-intrinsic-size: 350px; */
-        
-        /* Keep GPU acceleration for smooth scrolling */
+        content-visibility: auto;
+        contain-intrinsic-size: 350px; /* Approximate height of a CafeCard */
+        /* Force GPU for cards too */
         transform: translateZ(0); 
-        backface-visibility: hidden;
-        will-change: transform, opacity;
       }
       .review-card-optimized {
-        /* content-visibility: auto; */
-        contain-intrinsic-size: 280px; 
+        content-visibility: auto;
+        contain-intrinsic-size: 280px; /* Approximate height of a ReviewCard */
       }
       
       /* Ensure placeholder text has good contrast if system overrides it */

@@ -147,10 +147,12 @@ const MobileBottomNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         setShowProfileMenu(false);
     };
 
-    // Helper for proportional spacing styles
+    // Helper for proportional spacing styles with Dark Mode Fix
     const navItemClass = ({ isActive }: { isActive: boolean }) => `
         flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all duration-300
-        ${isActive ? 'text-brand bg-brand/10' : 'text-muted hover:text-primary dark:hover:text-white'}
+        ${isActive 
+            ? 'text-brand dark:text-brand-light bg-brand/10 dark:bg-brand/20' 
+            : 'text-muted hover:text-primary dark:hover:text-white'}
     `;
 
     return (
@@ -158,21 +160,21 @@ const MobileBottomNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
             
             {/* Explore Popover Menu */}
             <div className={`absolute bottom-24 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-bottom ${showExploreMenu ? 'scale-100 opacity-100 translate-y-0 pointer-events-auto' : 'scale-75 opacity-0 translate-y-10 pointer-events-none'}`}>
-                <div className="bg-card dark:bg-gray-800 border border-border shadow-2xl rounded-3xl p-3 flex flex-col gap-2 w-48">
-                    <button onClick={() => navigate('/explore?sort=distance')} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-brand/10 dark:hover:bg-white/10 transition-colors text-left group">
-                        <div className="p-2 bg-blue-100 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
+                <div className="bg-card dark:bg-gray-900 border border-border shadow-2xl rounded-3xl p-3 flex flex-col gap-2 w-48 ring-1 ring-black/5">
+                    <button onClick={() => navigate('/explore?sort=distance')} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-brand/10 dark:hover:bg-white/5 transition-colors text-left group">
+                        <div className="p-2 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 rounded-xl group-hover:scale-110 transition-transform">
                             <MapIcon className="h-5 w-5" />
                         </div>
                         <span className="font-bold text-sm text-primary dark:text-white">Terdekat</span>
                     </button>
-                    <button onClick={() => navigate('/explore?sort=trending')} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-brand/10 dark:hover:bg-white/10 transition-colors text-left group">
-                        <div className="p-2 bg-orange-100 text-orange-600 rounded-xl group-hover:scale-110 transition-transform">
+                    <button onClick={() => navigate('/explore?sort=trending')} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-brand/10 dark:hover:bg-white/5 transition-colors text-left group">
+                        <div className="p-2 bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300 rounded-xl group-hover:scale-110 transition-transform">
                             <FireIcon className="h-5 w-5" />
                         </div>
                         <span className="font-bold text-sm text-primary dark:text-white">Lagi Hits</span>
                     </button>
-                    <button onClick={() => navigate('/explore')} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-brand/10 dark:hover:bg-white/10 transition-colors text-left group">
-                        <div className="p-2 bg-purple-100 text-purple-600 rounded-xl group-hover:scale-110 transition-transform">
+                    <button onClick={() => navigate('/explore')} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-brand/10 dark:hover:bg-white/5 transition-colors text-left group">
+                        <div className="p-2 bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300 rounded-xl group-hover:scale-110 transition-transform">
                             <RocketLaunchIcon className="h-5 w-5" />
                         </div>
                         <span className="font-bold text-sm text-primary dark:text-white">Explore</span>
@@ -187,7 +189,7 @@ const MobileBottomNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                         {/* Dashboard Button */}
                         <button 
                             onClick={() => handleMenuAction(() => navigate(getDashboardPath(currentUser?.role)))} 
-                            className="w-14 h-14 rounded-full bg-brand/10 text-brand hover:bg-brand hover:text-white transition-all active:scale-90 flex items-center justify-center shadow-sm"
+                            className="w-14 h-14 rounded-full bg-brand/10 text-brand dark:bg-brand/20 dark:text-brand-light hover:bg-brand hover:text-white transition-all active:scale-90 flex items-center justify-center shadow-sm"
                             title="Dashboard"
                         >
                             <ChartBarSquareIcon className="h-7 w-7" />
@@ -230,8 +232,11 @@ const MobileBottomNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                     <button
                         onClick={handleExploreClick}
                         className={`
-                            w-14 h-14 rounded-full bg-brand text-white shadow-lg shadow-brand/40 flex items-center justify-center transform transition-all duration-300 hover:scale-105 border-4 border-white dark:border-gray-900
-                            ${showExploreMenu ? 'rotate-45 bg-primary scale-95' : ''}
+                            w-14 h-14 rounded-full flex items-center justify-center transform transition-all duration-300 hover:scale-105 border-4 border-white dark:border-gray-900
+                            ${showExploreMenu 
+                                ? 'bg-primary rotate-45 scale-95 text-white dark:text-gray-900' // Dark mode fix: Icon becomes dark when bg is white(primary)
+                                : 'bg-brand text-white shadow-lg shadow-brand/40'
+                            }
                         `}
                     >
                         <Squares2X2Icon className="h-6 w-6" />
@@ -253,7 +258,7 @@ const MobileBottomNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                         <img src={currentUser.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
                         currentUser ? (
-                            <div className="w-full h-full bg-brand/10 flex items-center justify-center text-brand font-bold text-sm">
+                            <div className="w-full h-full bg-brand/10 flex items-center justify-center text-brand font-bold text-sm dark:bg-brand/20 dark:text-brand-light">
                                 {currentUser.username.charAt(0).toUpperCase()}
                             </div>
                         ) : (
@@ -270,22 +275,23 @@ const MobileBottomNav: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, isLoggingOut } = useAuth();
   const { unreadCount } = useNotifications();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
-    setIsLoggingOut(true);
-    const { error } = await logout();
     setIsLogoutModalOpen(false);
-    setIsLoggingOut(false);
-
+    // Rely on AuthContext global loading state for UI feedback
+    const { error } = await logout();
     if (error) {
         console.error("Logout failed:", error.message);
         alert(`Gagal untuk logout: ${error.message}`);
+    } else {
+        // Force navigation to Homepage
+        navigate('/', { replace: true });
     }
   };
 

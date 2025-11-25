@@ -19,6 +19,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { FavoriteProvider } from './context/FavoriteContext';
 import { NotificationProvider } from './context/NotificationContext';
 
+// Icons for Overlay
+import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/solid';
+
 // Lazy Loaded Pages
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
@@ -48,8 +51,42 @@ const LoadingFallback = () => (
   </div>
 );
 
+// --- Logout Animation Component ---
+const LogoutOverlay: React.FC = () => {
+    const { isLoggingOut } = useAuth();
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        if (isLoggingOut) setIsVisible(true);
+        else setTimeout(() => setIsVisible(false), 500); // Fade out delay
+    }, [isLoggingOut]);
+
+    if (!isVisible) return null;
+
+    return (
+        <div className={`fixed inset-0 z-[9999] bg-soft flex flex-col items-center justify-center transition-opacity duration-500 ${isLoggingOut ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className="relative p-8 text-center">
+                <div className="w-20 h-20 bg-brand/10 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                    <ArrowRightOnRectangleIcon className="h-10 w-10 text-brand" />
+                </div>
+                <h2 className="text-2xl font-bold font-jakarta text-primary dark:text-white mb-2">Sampai Jumpa!</h2>
+                <p className="text-muted mb-6">Sedang membersihkan sesi Anda...</p>
+                <div className="w-48 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mx-auto">
+                    <div className="h-full bg-brand animate-[width_1.5s_ease-in-out_infinite] rounded-full w-1/2 mx-auto"></div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { currentUser } = useAuth();
+    const { currentUser, isLoggingOut } = useAuth();
+    
+    // If we are currently logging out, do NOT redirect to login.
+    // Just return null or a loader while the LogoutOverlay handles the visual transition
+    // and the logout function handles the redirection to Home.
+    if (isLoggingOut) return null;
+
     if (!currentUser) {
         return <Navigate to="/login" replace />;
     }
@@ -87,6 +124,8 @@ const MainLayout: React.FC = () => {
     return (
         <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col transition-colors duration-300 w-full">
             <InstallPrompt /> {/* Add PWA Install Prompt here */}
+            <LogoutOverlay /> {/* Global Logout Animation */}
+            
             {showWelcome && isHomePage && (
                 <Suspense fallback={null}>
                     <WelcomeModal onClose={handleCloseWelcome} />

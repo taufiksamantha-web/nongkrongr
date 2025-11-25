@@ -45,7 +45,7 @@ const FilterPanelContent: React.FC<{
             <div className="py-2">
                 <label className="font-semibold block text-primary dark:text-white">Kota/Kabupaten</label>
                 <div className="mt-2">
-                    <select value={filters.city} onChange={e => handleFilterChange('city', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 text-primary dark:text-white focus:ring-2 focus:ring-brand">
+                    <select value={filters.city} onChange={e => handleFilterChange('city', e.target.value)} className="w-full p-2 border border-border rounded-xl bg-soft dark:bg-gray-700 dark:text-white text-primary focus:ring-2 focus:ring-brand">
                         <option value="all">Semua Kota/Kabupaten</option>
                         {SOUTH_SUMATRA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
@@ -115,7 +115,7 @@ const FilterPanelContent: React.FC<{
                             className={`py-2 text-sm rounded-lg border-2 font-bold transition-all ${
                                 filters.priceTier === tier
                                     ? 'bg-brand text-white border-brand'
-                                    : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'
+                                    : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700 dark:text-gray-200'
                             }`}
                         >
                             {'$'.repeat(tier)}
@@ -138,7 +138,7 @@ const FilterPanelContent: React.FC<{
                             className={`px-3 py-1.5 text-sm rounded-full border-2 font-bold transition-all ${
                                 filters.vibes.includes(vibe.id)
                                     ? 'bg-brand text-white border-brand'
-                                    : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'
+                                    : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700 dark:text-gray-200'
                             }`}
                         >
                             {vibe.name}
@@ -159,7 +159,7 @@ const FilterPanelContent: React.FC<{
                             key={amenity.id} 
                             onClick={() => toggleMultiSelect('amenities', amenity.id)} 
                             title={amenity.name}
-                            className={`p-3 text-2xl rounded-lg border-2 transition-all flex items-center justify-center ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}
+                            className={`p-3 text-2xl rounded-lg border-2 transition-all flex items-center justify-center ${filters.amenities.includes(amenity.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700 dark:text-gray-200'}`}
                         >
                             {amenity.icon}
                         </button>
@@ -198,7 +198,7 @@ const FilterPanelContent: React.FC<{
                             <button 
                                 key={tag.id} 
                                 onClick={() => toggleMultiSelect('tags', tag.id)} 
-                                className={`px-3 py-1.5 text-xs rounded-full border-2 font-bold transition-all ${filters.tags.includes(tag.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700'}`}
+                                className={`px-3 py-1.5 text-xs rounded-full border-2 font-bold transition-all ${filters.tags.includes(tag.id) ? 'bg-brand text-white border-brand' : 'bg-soft border-border text-muted hover:border-brand/50 dark:bg-gray-700 dark:text-gray-200'}`}
                             >
                                #{tag.name}
                             </button>
@@ -277,11 +277,15 @@ const ExplorePage: React.FC = () => {
   };
 
   const handleSortByDistance = () => {
-    if (sortBy === 'distance') {
-      setSortBy('default');
-      setUserLocation(null);
-      setDrivingDistances(new Map());
-      return;
+    if (sortBy === 'distance' && !locationError) {
+        // Already sorted or trying to reset? 
+        // If explicit param exists, we probably want to force it unless toggled off manually
+        if (sortParam !== 'distance') {
+             setSortBy('default');
+             setUserLocation(null);
+             setDrivingDistances(new Map());
+             return;
+        }
     }
 
     setIsLocating(true);
@@ -328,6 +332,13 @@ const ExplorePage: React.FC = () => {
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
+
+  // Auto-trigger sort by distance if URL param is present
+  useEffect(() => {
+      if (sortParam === 'distance' && sortBy !== 'distance' && !isLocating && !userLocation) {
+          handleSortByDistance();
+      }
+  }, [sortParam]);
 
   useEffect(() => {
     // Jangan update URL jika sedang dalam mode 'favorites' atau 'sort' khusus

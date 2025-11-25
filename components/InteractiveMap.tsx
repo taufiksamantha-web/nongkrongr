@@ -64,6 +64,13 @@ const decodePolyline = (str: string, precision: number = 5) => {
   return coordinates;
 };
 
+const formatDuration = (seconds: number): string => {
+    const mins = Math.round(seconds / 60);
+    if (mins < 60) return `${mins} mnt`;
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return `${hours}j ${remainingMins}m`;
+};
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'light', showUserLocation = false, showHeatmap = false, showDistanceControl = false }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -84,6 +91,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
       if (data.routes && data.routes.length > 0) {
         return {
             distance: (data.routes[0].distance / 1000).toFixed(1), // km
+            duration: data.routes[0].duration, // seconds
             geometry: data.routes[0].geometry // encoded polyline string
         };
       }
@@ -113,7 +121,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
             const routeData = await fetchRoadData(userLatLngRef.current, { lat: cafeLat, lng: cafeLng });
             
             if (routeData) {
-                distanceEl.innerHTML = `<strong>${routeData.distance} km</strong> (Rute Jalan)`;
+                distanceEl.innerHTML = `<strong>${routeData.distance} km</strong> (${formatDuration(routeData.duration)})`;
             } else {
                 // Fallback to straight line if API fails
                 const straightDist = calculateDistance(userLatLngRef.current.lat, userLatLngRef.current.lng, cafeLat, cafeLng);
@@ -163,7 +171,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ cafe, cafes, theme = 'l
                       const routeData = await fetchRoadData({lat, lng}, {lat: cafe.coords.lat, lng: cafe.coords.lng});
                       
                       if (routeData) {
-                          if(label) label.innerText = `${routeData.distance} km (Via Jalan)`;
+                          if(label) label.innerText = `${routeData.distance} km (${formatDuration(routeData.duration)})`;
                           
                           // Draw Route Line
                           const coordinates = decodePolyline(routeData.geometry);

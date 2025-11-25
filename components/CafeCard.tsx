@@ -2,8 +2,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Cafe } from '../types';
-import { StarIcon, UsersIcon, HeartIcon, MapPinIcon, PhoneIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
-import { HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline';
+import { StarIcon, MapPinIcon } from '@heroicons/react/24/solid';
+import { HeartIcon, HeartIcon as HeartIconOutline } from '@heroicons/react/24/outline'; // Import both
+import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid'; // Specific solid import
 import ImageWithFallback from './common/ImageWithFallback';
 import { useFavorites } from '../context/FavoriteContext';
 import { DEFAULT_COVER_URL } from '../constants';
@@ -14,20 +15,13 @@ interface CafeCardProps {
   distance?: number;
 }
 
-const ScoreBadge: React.FC<{ icon: React.ReactNode, score: number, color: string }> = ({ icon, score, color }) => (
-    <div className={`flex items-center space-x-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-lg text-xs sm:text-sm font-bold text-white shadow-sm ${color}`}>
-        <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center">{icon}</span>
-        <span>{score > 0 ? score.toFixed(1) : '-'}</span>
-    </div>
-);
-
 const getPriceColor = (tier: number) => {
     switch (tier) {
-        case 1: return 'text-green-500 dark:text-green-400'; // Murah
-        case 2: return 'text-blue-500 dark:text-blue-400';   // Standar
-        case 3: return 'text-amber-500 dark:text-amber-400'; // Premium
-        case 4: return 'text-red-500 dark:text-red-400';     // Mewah
-        default: return 'text-brand';
+        case 1: return 'text-green-500';
+        case 2: return 'text-blue-500';
+        case 3: return 'text-amber-500';
+        case 4: return 'text-red-500';
+        default: return 'text-gray-400';
     }
 };
 
@@ -44,89 +38,99 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) =
       addFavorite(cafe.id);
     }
   };
-  
-  const handleLinkClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
-  };
 
   return (
     <Link 
       to={`/cafe/${cafe.slug}`} 
-      className="block bg-card dark:bg-gray-800 rounded-2xl sm:rounded-3xl shadow-lg hover:shadow-2xl hover:shadow-brand/25 dark:shadow-black/40 dark:hover:shadow-brand/20 transition-all duration-300 overflow-hidden group transform hover:-translate-y-2 border border-transparent hover:border-brand/30 animate-fade-in-up cafe-card-optimized w-full flex flex-col h-full"
+      // OUTER SHELL: Mengurus Layout, Margin, dan Hover Lift.
+      // PENTING: Tidak boleh ada overflow-hidden disini agar shadow tidak terpotong.
+      // UPDATE: Effect hover hanya aktif di md (desktop) ke atas.
+      className="group relative block h-full w-full transition-transform duration-300 ease-out md:hover:-translate-y-2 md:hover:z-10 p-2"
       style={{ animationDelay }}
     >
-      {/* Image Section - Fluid Aspect Ratio */}
-      <div className="relative aspect-[4/3] sm:aspect-[16/10] md:aspect-[4/3] lg:aspect-[16/10] xl:aspect-[4/3] w-full flex-shrink-0 overflow-hidden">
-        <ImageWithFallback 
-            src={cafe.coverUrl} 
-            defaultSrc={DEFAULT_COVER_URL}
-            alt={cafe.name} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            width={400}
-            height={300}
-        />
-        {cafe.isSponsored && (
-          <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-accent-amber text-yellow-900 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold shadow-md z-10">
-            SPONSORED
-          </div>
-        )}
-        <button 
-          onClick={handleFavoriteClick}
-          className="absolute top-2 left-2 sm:top-3 sm:left-3 p-2.5 bg-gray-900/60 backdrop-blur-sm rounded-full text-white hover:bg-black/80 hover:text-accent-pink transition-all duration-200 touch-manipulation z-10"
-          aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
-        >
-          {favorited ? <HeartIcon className="h-5 w-5 text-accent-pink"/> : <HeartIconOutline className="h-5 w-5" />}
-        </button>
-        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-          <h3 className="text-white text-lg sm:text-xl md:text-2xl font-bold font-jakarta truncate leading-tight">{cafe.name}</h3>
-          <p className="text-gray-300 text-xs sm:text-sm truncate mt-1 flex items-center gap-1">
-             <MapPinIcon className="h-4 w-4 flex-shrink-0"/> <span className="truncate">{cafe.city}</span>
-          </p>
-        </div>
-      </div>
+      {/* SHADOW LAYER: Div terpisah di belakang untuk shadow yang bebas */}
+      <div className="absolute inset-2 rounded-3xl bg-card shadow-md transition-all duration-300 md:group-hover:shadow-[0_20px_40px_-15px_rgba(124,77,255,0.4)] dark:md:group-hover:shadow-[0_20px_40px_-15px_rgba(124,77,255,0.2)] dark:bg-gray-800" />
 
-      {/* Content Section */}
-      <div className="p-4 sm:p-5 flex flex-col flex-grow justify-between gap-3">
+      {/* CONTENT CONTAINER: Ini yang punya overflow-hidden untuk radius gambar */}
+      <div className="relative h-full w-full rounded-3xl overflow-hidden bg-card dark:bg-gray-800 border-2 border-transparent md:group-hover:border-brand transition-colors duration-300 flex flex-col">
         
-        {/* Top Row: Badges, Distance, Actions */}
-        <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2 flex-wrap">
-                <ScoreBadge icon={<StarIcon className="h-full w-full" />} score={cafe.avgAestheticScore} color="bg-accent-pink" />
-                <ScoreBadge icon={<UsersIcon className="h-full w-full" />} score={cafe.avgCrowdEvening} color="bg-brand" />
-                 {distance !== undefined && (
-                    <div className="flex items-center space-x-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold bg-gray-100 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300 whitespace-nowrap border border-gray-200 dark:border-gray-600">
-                        <MapPinIcon className="h-3.5 w-3.5" />
-                        <span>{distance.toFixed(1)} km</span>
-                    </div>
-                )}
-            </div>
+        {/* Image Section */}
+        <div className="relative aspect-[4/3] w-full overflow-hidden">
+            <ImageWithFallback 
+                src={cafe.coverUrl} 
+                defaultSrc={DEFAULT_COVER_URL}
+                alt={cafe.name} 
+                className="w-full h-full object-cover transition-transform duration-700 ease-out md:group-hover:scale-110"
+                width={400}
+                height={300}
+            />
             
-             <div className="flex gap-1.5 ml-1">
-                 {cafe.phoneNumber && (
-                    <a href={`tel:${cafe.phoneNumber}`} onClick={handleLinkClick} className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors" title="Telepon">
-                        <PhoneIcon className="h-4 w-4" />
-                    </a>
-                )}
-                {cafe.websiteUrl && (
-                    <a href={cafe.websiteUrl} target="_blank" rel="noopener noreferrer" onClick={handleLinkClick} className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors" title="Website">
-                        <GlobeAltIcon className="h-4 w-4" />
-                    </a>
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 md:group-hover:opacity-80 transition-opacity duration-300" />
+
+            {/* Top Badges */}
+            <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10">
+                {/* Favorite Button */}
+                <button 
+                onClick={handleFavoriteClick}
+                className={`p-2 rounded-full backdrop-blur-md transition-all duration-300 shadow-lg active:scale-90 ${favorited ? 'bg-white text-accent-pink' : 'bg-black/40 text-white hover:bg-white hover:text-accent-pink'}`}
+                >
+                {favorited ? <HeartIconSolid className="h-4 w-4"/> : <HeartIconOutline className="h-4 w-4" />}
+                </button>
+
+                {/* Sponsored Badge */}
+                {cafe.isSponsored && (
+                <span className="px-2 py-1 rounded-lg bg-white/90 backdrop-blur-sm text-[10px] font-extrabold text-amber-600 tracking-wider uppercase shadow-sm border border-amber-500/20">
+                    Featured
+                </span>
                 )}
             </div>
+
+            {/* Distance Badge */}
+            {distance !== undefined && (
+                <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white text-[10px] font-bold flex items-center gap-1 border border-white/10">
+                    <MapPinIcon className="h-3 w-3 text-brand-light" />
+                    {distance.toFixed(1)} km
+                </div>
+            )}
         </div>
 
-        {/* Bottom Row: Vibes & Price */}
-        <div className="flex items-center pt-3 mt-1 border-t border-gray-100 dark:border-gray-700">
-            <div className="flex-1 flex flex-wrap gap-1.5 overflow-hidden content-center">
-              {cafe.vibes.slice(0, 3).map(vibe => (
-                <span key={vibe.id} className="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold truncate max-w-[100px]">
-                  {vibe.name}
-                </span>
-              ))}
+        {/* Content Details */}
+        <div className="p-4 flex flex-col gap-2 flex-grow">
+            {/* Title & Rating */}
+            <div className="flex justify-between items-start gap-2">
+                <h3 className="text-lg font-bold font-jakarta text-primary dark:text-white leading-tight line-clamp-1 md:group-hover:text-brand transition-colors">
+                    {cafe.name}
+                </h3>
+                <div className="flex items-center gap-1 flex-shrink-0 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-md border border-orange-100 dark:border-orange-500/20">
+                    <StarIcon className="h-3 w-3 text-orange-500" />
+                    <span className="text-xs font-bold text-orange-600 dark:text-orange-400">{cafe.avgAestheticScore.toFixed(1)}</span>
+                </div>
             </div>
-             <div className="flex-shrink-0 text-right ml-2">
-                 <span className={`text-base sm:text-lg font-bold tracking-widest ${getPriceColor(cafe.priceTier)}`}>{'$'.repeat(cafe.priceTier)}</span>
-                 <span className="text-muted/30 text-base sm:text-lg tracking-widest">{'$'.repeat(4 - cafe.priceTier)}</span>
+
+            {/* Location */}
+            <div className="flex items-center gap-1 text-xs text-muted">
+                <MapPinIcon className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">{cafe.district}, {cafe.city}</span>
+            </div>
+
+            {/* Footer: Vibes & Price (Pushed to bottom) */}
+            <div className="mt-auto pt-3 border-t border-dashed border-border/50 flex items-center justify-between">
+                <div className="flex gap-1 overflow-hidden">
+                    {cafe.vibes.slice(0, 2).map(vibe => (
+                        <span key={vibe.id} className="text-[10px] px-2 py-0.5 rounded-md bg-soft dark:bg-gray-700 text-muted font-medium whitespace-nowrap">
+                            {vibe.name}
+                        </span>
+                    ))}
+                    {cafe.vibes.length > 2 && (
+                        <span className="text-[10px] px-1.5 py-0.5 text-muted font-medium">+{cafe.vibes.length - 2}</span>
+                    )}
+                </div>
+
+                <div className="flex text-xs font-bold tracking-widest">
+                    <span className={getPriceColor(cafe.priceTier)}>{'$'.repeat(cafe.priceTier)}</span>
+                    <span className="text-gray-200 dark:text-gray-700">{'$'.repeat(4 - cafe.priceTier)}</span>
+                </div>
             </div>
         </div>
       </div>

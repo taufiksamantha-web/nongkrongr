@@ -3,10 +3,12 @@ import React, { createContext, useState, ReactNode, useContext, useEffect, useCa
 import { User } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { AuthError, Session } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface AuthContextType {
     currentUser: User | null;
     loading: boolean;
+    isLoggingOut: boolean; // State global untuk animasi logout
     login: (identifier: string, password: string) => Promise<{ error: AuthError | null }>;
     signup: (username: string, email: string, password: string, isCafeAdmin?: boolean) => Promise<{ error: AuthError | null }>;
     logout: () => Promise<{ error: AuthError | null }>;
@@ -28,6 +30,8 @@ const FullScreenLoader: React.FC = () => (
 );
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const queryClient = useQueryClient(); // Akses ke React Query Cache
+
     // 1. INITIALIZE STATE FROM CACHE (Instant Load - Optimistic UI)
     const [currentUser, setCurrentUser] = useState<User | null>(() => {
         if (typeof window !== 'undefined') {
@@ -47,9 +51,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Ref to prevent auto-login redirect loop during signup
     const isSigningUpRef = useRef(false);
 
-    // 2. Loading Strategy:
-    // Only show full screen loader if we have NO cached user.
-    // If we have a cached user, we treat it as "Soft Refresh" (background validation).
+    // 2. Loading Strategy
     const [loading, setLoading] = useState<boolean>(() => {
         if (typeof window !== 'undefined') {
             return !localStorage.getItem(USER_STORAGE_KEY);
@@ -57,19 +59,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return true;
     });
 
+    // 3. Global Logout State
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
     const fetchUserAndSetState = useCallback(async (session: Session | null): Promise<void> => {
         if (!session?.user) {
             if (currentUserRef.current !== null) {
-                // Session is explicitly null/invalid, clear everything
                 setCurrentUser(null);
                 localStorage.removeItem(USER_STORAGE_KEY);
             }
             setLoading(false);
             return;
         }
-
-        // Optimization: If we have a cached user and the ID matches, we can prioritize UI responsiveness
-        // However, we still MUST fetch the profile to check for 'status' (banned/archived)
         
         const { data: profile, error } = await supabase
             .from('profiles')
@@ -78,9 +79,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .single();
 
         if (error || !profile) {
-            // If profile fetch fails but session exists (e.g. network error), usually implies sync error.
-            // Keep cached user for now if exists to prevent UI flash, or clear if critical.
-            // We do NOT log out immediately on network error to allow offline usage.
             console.error("Error fetching profile:", error);
         } else if (profile.status === 'rejected') {
              await supabase.auth.signOut();
@@ -95,7 +93,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const currentStr = JSON.stringify(currentUserRef.current);
             const newStr = JSON.stringify(userData);
             
-            // Only update state if data actually changed to prevent re-renders
             if (currentStr !== newStr) {
                 setCurrentUser(userData);
                 localStorage.setItem(USER_STORAGE_KEY, newStr);
@@ -105,12 +102,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     useEffect(() => {
-        // Check Initial Session
         supabase.auth.getSession().then(({ data: { session } }) => {
             fetchUserAndSetState(session);
         });
 
-        // Listen for Auth Changes
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 if (isSigningUpRef.current && event === 'SIGNED_IN') {
@@ -120,9 +115,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'PASSWORD_RECOVERY') {
                     fetchUserAndSetState(session);
                 } else if (event === 'SIGNED_OUT') {
-                    setCurrentUser(null);
-                    localStorage.removeItem(USER_STORAGE_KEY);
-                    setLoading(false);
+                    // Note: We handle state clearing in the logout() function for better UX
+                    // ensuring animation plays before state is nuked.
+                    if (!isLoggingOut) {
+                         // Case: Token expired or remote logout
+                         setCurrentUser(null);
+                         localStorage.removeItem(USER_STORAGE_KEY);
+                         setLoading(false);
+                    }
                 }
             }
         );
@@ -130,23 +130,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return () => {
             authListener.subscription.unsubscribe();
         };
-    }, [fetchUserAndSetState]);
+    }, [fetchUserAndSetState, isLoggingOut]);
 
-    // --- PWA SOFT REFRESH LOGIC ---
-    // When the app comes from background to foreground (Android Resume),
-    // silently validate the session without blocking the UI.
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                // Validasi sesi secara 'silent' (background check).
-                // Jika cache ada, UI tidak akan loading blocking.
                 supabase.auth.getSession().then(({ data }) => {
-                    // Jika sesi ada, validasi ulang profil untuk memastikan status tidak berubah (misal: banned)
                     if (data.session) {
                         fetchUserAndSetState(data.session);
                     } else {
-                        // Jika sesi hilang saat resume (jarang terjadi kecuali token expired/revoked)
-                        // Sign out hanya jika sebelumnya user login
                         if (currentUserRef.current) {
                             setCurrentUser(null);
                             localStorage.removeItem(USER_STORAGE_KEY);
@@ -269,15 +261,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { error: null };
     };
 
+    // --- POWERFUL LOGOUT ---
     const logout = async () => {
-        setCurrentUser(null);
-        localStorage.removeItem(USER_STORAGE_KEY);
-        localStorage.removeItem('nongkrongr_guest_read_notifications');
-        localStorage.removeItem('nongkrongr_guest_deleted_notifications');
-        localStorage.removeItem('nongkrongr_favorites'); 
+        setIsLoggingOut(true); // Trigger UI animation
 
-        const { error } = await supabase.auth.signOut();
-        return { error };
+        // Artificial delay to let the animation play smoothly
+        await new Promise(resolve => setTimeout(resolve, 1200));
+
+        try {
+            // 1. Clear React Query Cache (Removes sensitive/stale data from memory)
+            queryClient.clear();
+
+            // 2. Clear Local Storage (Except Theme & Welcome Status)
+            const theme = localStorage.getItem('theme'); // Preserve theme preference
+            const installDismissed = localStorage.getItem('nongkrongr_install_dismissed'); // Preserve install prompt state
+            
+            localStorage.clear(); // Wipe everything
+            sessionStorage.clear(); // Wipe session
+
+            // Restore non-auth preferences
+            if (theme) localStorage.setItem('theme', theme);
+            if (installDismissed) localStorage.setItem('nongkrongr_install_dismissed', installDismissed);
+            
+            // PENTING: Set welcome seen ke true.
+            // User yang logout pasti sudah pernah lihat welcome screen, jadi jangan tampilkan lagi.
+            localStorage.setItem('nongkrongr_welcome_seen', 'true');
+
+            // 3. Supabase Signout (Revoke Token)
+            const { error } = await supabase.auth.signOut();
+            
+            // 4. Reset Internal State
+            setCurrentUser(null);
+            
+            return { error };
+        } catch (e: any) {
+            console.error("Logout cleanup failed", e);
+            return { error: e };
+        } finally {
+            setIsLoggingOut(false);
+        }
     };
 
     const resetPasswordForEmail = async (email: string) => {
@@ -296,6 +318,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const value = {
         currentUser,
         loading,
+        isLoggingOut,
         login,
         signup,
         logout,
@@ -304,7 +327,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updatePassword,
     };
 
-    // Only block if we really don't have any data yet
     if (loading) {
         return <FullScreenLoader />;
     }

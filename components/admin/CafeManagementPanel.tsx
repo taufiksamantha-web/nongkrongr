@@ -15,7 +15,7 @@ import ImageWithFallback from '../common/ImageWithFallback';
 import { DEFAULT_COVER_URL } from '../../constants';
 import { CheckCircleIcon, XCircleIcon, ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, InboxIcon, ArrowUpIcon, ArrowDownIcon, TrophyIcon, ClockIcon, ChartBarSquareIcon, TrashIcon, PencilSquareIcon, ArchiveBoxArrowDownIcon, MapPinIcon, PlusIcon, FunnelIcon } from '@heroicons/react/24/solid';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 type SortableKeys = 'name' | 'district' | 'created_at' | 'status' | 'manager_id';
 
 const SponsorToggle: React.FC<{ cafe: Cafe, onToggle: (cafe: Cafe) => void, disabled: boolean }> = ({ cafe, onToggle, disabled }) => {
