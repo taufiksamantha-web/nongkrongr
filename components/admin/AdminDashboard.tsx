@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { BuildingStorefrontIcon, CheckBadgeIcon, ClockIcon, ArchiveBoxArrowDownIcon } from '@heroicons/react/24/outline';
+import { BuildingStorefrontIcon, CheckBadgeIcon, ClockIcon, ArchiveBoxArrowDownIcon, HomeIcon, Square3Stack3DIcon, UserGroupIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import CafeManagementPanel from './CafeManagementPanel';
 import ReviewManagement from './PendingReviews';
 import UserManagementPanel from './UserManagementPanel';
@@ -13,7 +13,11 @@ import StatChart from './StatChart';
 import AdminWelcomeHint from './AdminWelcomeHint';
 import ApprovalHub from './ApprovalHub';
 
+type AdminTab = 'overview' | 'content' | 'users' | 'system';
+
 const AdminDashboard: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+    
     // State for accurate counts direct from DB
     const [stats, setStats] = useState({
         total: 0,
@@ -78,87 +82,111 @@ const AdminDashboard: React.FC = () => {
         };
     }, []);
 
+    const TabButton: React.FC<{ id: AdminTab, label: string, icon: React.ReactNode }> = ({ id, label, icon }) => (
+        <button
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-2 px-4 py-3 rounded-xl font-bold transition-all duration-300 border-2 ${
+                activeTab === id
+                    ? 'bg-brand text-white border-brand shadow-lg shadow-brand/20 transform scale-105'
+                    : 'bg-card dark:bg-gray-800 text-muted border-transparent hover:border-brand/30 hover:text-primary dark:hover:text-white'
+            }`}
+        >
+            {icon}
+            <span className="hidden sm:inline">{label}</span>
+        </button>
+    );
+
     return (
         <div className="w-full max-w-full">
             <AdminWelcomeHint />
             
-            <div className="mb-8 text-center">
+            <div className="mb-8">
                 <h1 className="text-3xl sm:text-4xl font-extrabold font-jakarta bg-gradient-to-r from-brand to-purple-600 bg-clip-text text-transparent inline-block">
-                    Dashboard Overview
+                    Admin Dashboard
                 </h1>
-                <div className="h-1.5 w-24 bg-gradient-to-r from-brand to-purple-600 rounded-full mx-auto mt-3 opacity-80"></div>
+                <p className="text-muted mt-2">Kelola semua aspek aplikasi Nongkrongr dari sini.</p>
             </div>
 
-            {/* Cafe Summary Section - Fluid Grid with Highlighted Total */}
-            <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border space-y-6 mt-6 sm:mt-8 w-full">
-                <div>
-                    <h3 className="text-xl font-bold font-jakarta mb-6 text-center text-primary dark:text-white">Ringkasan Kafe (Real-time)</h3>
-                    
-                    {/* 
-                        Grid Layout Strategy:
-                        - Mobile (Default): 2 Columns. Total Cafe takes 2 cols (full width). Others take 1 col.
-                        - Large Screens (lg): 6 Columns. Total Cafe takes 2 cols. Others take 1 col each. (2 + 1 + 1 + 1 + 1 = 6)
-                    */}
-                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
-                        
-                        {/* Highlighted Total Cafe Card */}
-                        <div className="col-span-2 bg-gradient-to-br from-brand/10 to-purple-500/5 dark:from-brand/20 dark:to-purple-900/20 p-5 rounded-2xl border border-brand/20 flex flex-col justify-between min-h-[120px] relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-brand/10 rounded-full blur-2xl group-hover:bg-brand/20 transition-colors"></div>
-                            <div className="flex justify-between items-start relative z-10">
-                                <p className="text-sm sm:text-base text-brand font-bold uppercase tracking-wide">Total Cafe</p>
-                                <BuildingStorefrontIcon className="h-8 w-8 text-brand" />
+            {/* Tab Navigation */}
+            <div className="flex flex-wrap gap-3 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+                <TabButton id="overview" label="Overview & Approval" icon={<HomeIcon className="h-5 w-5" />} />
+                <TabButton id="content" label="Kafe & Konten" icon={<Square3Stack3DIcon className="h-5 w-5" />} />
+                <TabButton id="users" label="Pengguna" icon={<UserGroupIcon className="h-5 w-5" />} />
+                <TabButton id="system" label="Sistem & Arsip" icon={<Cog6ToothIcon className="h-5 w-5" />} />
+            </div>
+
+            {/* CONTENT AREA */}
+            <div className="animate-fade-in-up">
+                
+                {/* TAB 1: OVERVIEW */}
+                {activeTab === 'overview' && (
+                    <div className="space-y-8">
+                        {/* Stats Section */}
+                        <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border space-y-6">
+                            <div>
+                                <h3 className="text-xl font-bold font-jakarta mb-6 text-center text-primary dark:text-white">Ringkasan Real-time</h3>
+                                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
+                                    <div className="col-span-2 bg-gradient-to-br from-brand/10 to-purple-500/5 dark:from-brand/20 dark:to-purple-900/20 p-5 rounded-2xl border border-brand/20 flex flex-col justify-between min-h-[120px] relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-brand/10 rounded-full blur-2xl group-hover:bg-brand/20 transition-colors"></div>
+                                        <div className="flex justify-between items-start relative z-10">
+                                            <p className="text-sm sm:text-base text-brand font-bold uppercase tracking-wide">Total Cafe</p>
+                                            <BuildingStorefrontIcon className="h-8 w-8 text-brand" />
+                                        </div>
+                                        <p className="text-4xl sm:text-5xl font-extrabold font-jakarta text-brand mt-2 relative z-10">
+                                            {isLoading ? <span className="animate-pulse">...</span> : stats.total}
+                                        </p>
+                                        <p className="text-xs text-muted mt-1 relative z-10">Database Uptodate</p>
+                                    </div>
+                                    <StatCard title="Disetujui" value={stats.approved} icon={<CheckBadgeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />} color="green" />
+                                    <StatCard title="Tertunda" value={stats.pending} icon={<ClockIcon className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500" />} color="yellow" />
+                                    <StatCard title="Sponsored" value={stats.sponsored} icon={<CheckBadgeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />} color="purple" />
+                                    <StatCard title="Diarsipkan" value={stats.archived} icon={<ArchiveBoxArrowDownIcon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-500" />} color="gray" />
+                                </div>
                             </div>
-                            <p className="text-4xl sm:text-5xl font-extrabold font-jakarta text-brand mt-2 relative z-10">
-                                {isLoading ? <span className="animate-pulse">...</span> : stats.total}
-                            </p>
-                            <p className="text-xs text-muted mt-1 relative z-10">Database Uptodate</p>
+                            {!isLoading && <StatChart sponsored={stats.sponsored} regular={stats.regular} total={stats.approved} />}
                         </div>
 
-                        {/* Standard Cards */}
-                        <StatCard 
-                            title="Disetujui" 
-                            value={stats.approved} 
-                            icon={<CheckBadgeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />} 
-                            color="green" 
-                        />
-                        <StatCard 
-                            title="Tertunda" 
-                            value={stats.pending} 
-                            icon={<ClockIcon className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500" />} 
-                            color="yellow" 
-                        />
-                         <StatCard 
-                            title="Sponsored" 
-                            value={stats.sponsored} 
-                            icon={<CheckBadgeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />} 
-                            color="purple" 
-                        />
-                        <StatCard 
-                            title="Diarsipkan" 
-                            value={stats.archived} 
-                            icon={<ArchiveBoxArrowDownIcon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-500" />} 
-                            color="gray" 
-                        />
+                        {/* Approval Hub */}
+                        <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden">
+                            <ApprovalHub />
+                        </div>
                     </div>
-                </div>
-                {!isLoading && <StatChart sponsored={stats.sponsored} regular={stats.regular} total={stats.approved} />}
-            </div>
-            
-            {/* Main Content Grid - Fluid Breakpoints */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 mt-6 sm:mt-8 items-start w-full">
-              
-              <div className="xl:col-span-2 space-y-6 sm:space-y-8 w-full min-w-0">
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><ApprovalHub /></div>
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><CafeManagementPanel /></div>
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><ReviewManagement /></div>
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><UserManagementPanel /></div>
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><FeedbackPanel /></div>
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><ArchivePanel /></div>
-              </div>
+                )}
 
-              <div className="xl:col-span-1 space-y-6 sm:space-y-8 w-full min-w-0">
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><WebsiteSettingsPanel /></div>
-              </div>
+                {/* TAB 2: CONTENT MANAGEMENT */}
+                {activeTab === 'content' && (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8 items-start">
+                        <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden xl:col-span-2">
+                            <CafeManagementPanel />
+                        </div>
+                        <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden">
+                            <ReviewManagement />
+                        </div>
+                        <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden">
+                            <FeedbackPanel />
+                        </div>
+                    </div>
+                )}
+
+                {/* TAB 3: USER MANAGEMENT */}
+                {activeTab === 'users' && (
+                    <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden">
+                        <UserManagementPanel />
+                    </div>
+                )}
+
+                {/* TAB 4: SYSTEM & ARCHIVE */}
+                {activeTab === 'system' && (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8 items-start">
+                        <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden">
+                            <WebsiteSettingsPanel />
+                        </div>
+                        <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden">
+                            <ArchivePanel />
+                        </div>
+                    </div>
+                )}
+
             </div>
         </div>
     );
