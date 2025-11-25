@@ -52,7 +52,7 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) =
   return (
     <Link 
       to={`/cafe/${cafe.slug}`} 
-      className="block bg-card dark:bg-gray-800 rounded-2xl sm:rounded-3xl shadow-md hover:shadow-xl dark:hover:shadow-brand/20 transition-all duration-300 overflow-hidden group transform hover:-translate-y-1 border border-transparent hover:border-brand/30 animate-fade-in-up cafe-card-optimized w-full flex flex-col h-full"
+      className="block bg-card dark:bg-gray-800 rounded-2xl sm:rounded-3xl shadow-lg hover:shadow-2xl hover:shadow-brand/25 dark:shadow-black/40 dark:hover:shadow-brand/20 transition-all duration-300 overflow-hidden group transform hover:-translate-y-2 border border-transparent hover:border-brand/30 animate-fade-in-up cafe-card-optimized w-full flex flex-col h-full"
       style={{ animationDelay }}
     >
       {/* Image Section - Fluid Aspect Ratio */}
@@ -72,7 +72,7 @@ const CafeCard: React.FC<CafeCardProps> = ({ cafe, animationDelay, distance }) =
         )}
         <button 
           onClick={handleFavoriteClick}
-          className="absolute top-2 left-2 sm:top-3 sm:left-3 p-2.5 bg-black/20 backdrop-blur-sm rounded-full text-white hover:bg-black/40 hover:text-accent-pink transition-all duration-200 touch-manipulation z-10"
+          className="absolute top-2 left-2 sm:top-3 sm:left-3 p-2.5 bg-gray-900/60 backdrop-blur-sm rounded-full text-white hover:bg-black/80 hover:text-accent-pink transition-all duration-200 touch-manipulation z-10"
           aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
         >
           {favorited ? <HeartIcon className="h-5 w-5 text-accent-pink"/> : <HeartIconOutline className="h-5 w-5" />}

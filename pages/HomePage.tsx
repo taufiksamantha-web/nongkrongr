@@ -345,7 +345,7 @@ const HomePage: React.FC = () => {
                     value={searchQuery} 
                     onChange={(e) => setSearchQuery(e.target.value)} 
                     onFocus={() => searchQuery.trim().length > 1 && setIsResultsVisible(true)} 
-                    className="w-full py-3 sm:py-4 pl-12 sm:pl-14 pr-24 sm:pr-32 text-base sm:text-lg rounded-2xl border-2 border-white/20 bg-white/10 backdrop-blur-md focus:ring-4 focus:ring-brand/20 focus:border-brand focus:bg-white/20 transition-all duration-300 shadow-lg text-white placeholder-gray-200" 
+                    className="w-full py-3 sm:py-4 pl-12 sm:pl-14 pr-24 sm:pr-32 text-base sm:text-lg rounded-2xl border-2 border-white/20 bg-black/30 backdrop-blur-md focus:ring-4 focus:ring-brand/20 focus:border-brand focus:bg-black/40 transition-all duration-300 shadow-lg text-white placeholder-gray-200" 
                 />
                 <button type="submit" className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 bg-brand text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl font-bold hover:bg-brand/90 transition-all duration-300 text-sm sm:text-base shadow-lg">Cari</button>
               </form>
@@ -361,7 +361,7 @@ const HomePage: React.FC = () => {
             </div>
           </div>
           <div className="mt-10 sm:mt-16 flex flex-wrap justify-center gap-2 sm:gap-3 px-2">
-            {VIBES.slice(0, 4).map(vibe => (<Link to={`/explore?vibe=${vibe.id}`} key={vibe.id} className="bg-black/60 border-transparent sm:bg-white/10 sm:backdrop-blur-md sm:border sm:border-white/20 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl text-white hover:bg-white/20 transition-all duration-300 font-semibold text-sm sm:text-base shadow-lg">{vibe.name}</Link>))}
+            {VIBES.slice(0, 4).map(vibe => (<Link to={`/explore?vibe=${vibe.id}`} key={vibe.id} className="bg-black/30 border-transparent md:bg-white/10 md:backdrop-blur-md md:border md:border-white/20 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl text-white hover:bg-white/20 transition-all duration-300 font-semibold text-sm sm:text-base shadow-lg">{vibe.name}</Link>))}
           </div>
         </div>
       </div>
@@ -455,8 +455,8 @@ const HomePage: React.FC = () => {
         <div className="py-10 bg-gradient-to-b from-transparent to-gray-50 dark:to-white/5">
             <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
                 <SectionHeader center icon={<MapPinIcon className="h-6 w-6 sm:h-8 sm:w-8" />} title="Terdekat Denganmu" subtitle="Kafe-kafe paling dekat dari lokasimu saat ini." />
-                {/* PERFORMANCE: Added 'content-visibility-auto' class for list optimization */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 content-visibility-auto">
+                {/* PERFORMANCE: Removed content-visibility-auto to prevent shadow clipping */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                     {nearestCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} distance={cafe.distance} animationDelay={`${i * 75}ms`} />))}
                 </div>
             </div>
@@ -468,8 +468,8 @@ const HomePage: React.FC = () => {
           <SectionHeader center icon={<RocketLaunchIcon className="h-6 w-6 sm:h-8 sm:w-8" />} title="Pendatang Baru" subtitle="Kafe-kafe paling fresh yang baru aja gabung." />
             {loading ? (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">{[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}</div>
             ) : newcomerCafes.length > 0 ? (
-                // PERFORMANCE: Added 'content-visibility-auto' class
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 content-visibility-auto">
+                // PERFORMANCE: Removed content-visibility-auto
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                     {newcomerCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}
                 </div>
             ) : ( <EmptyState title="Belum Ada Cafe Baru" message="Saat ini belum ada data cafe baru. Cek lagi nanti ya!" />)}
@@ -480,7 +480,7 @@ const HomePage: React.FC = () => {
         <div className="py-10">
           <div className="container mx-auto px-4 sm:px-6 max-w-6xl">
             <SectionHeader center icon={<HeartIcon className="h-6 w-6 sm:h-8 sm:w-8"/>} title="Kafe Favoritmu" subtitle="Tempat-tempat spesial yang sudah kamu tandai." link="/explore?favorites=true" />
-            {favoriteCafes.length > 0 ? (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 content-visibility-auto">{favoriteCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}</div>) : (<div className="text-center py-10 text-muted"><p>Kafe favoritmu akan muncul di sini setelah kamu menambahkannya.</p></div>)}
+            {favoriteCafes.length > 0 ? (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">{favoriteCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}</div>) : (<div className="text-center py-10 text-muted"><p>Kafe favoritmu akan muncul di sini setelah kamu menambahkannya.</p></div>)}
           </div>
         </div>
       )}
@@ -490,7 +490,7 @@ const HomePage: React.FC = () => {
           <SectionHeader center icon={<FireIcon className="h-6 w-6 sm:h-8 sm:w-8"/>} title="Lagi Trending Nih!" subtitle="Cafe dengan skor aesthetic tertinggi." link="/explore?sort=trending" />
             {loading ? (<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">{[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}</div>
             ) : trendingCafes.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 content-visibility-auto">{trendingCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">{trendingCafes.map((cafe, i) => (<CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />))}
                 </div>
             ) : (<EmptyState title="Belum Ada Cafe" message="Saat ini belum ada data cafe yang bisa ditampilkan. Cek lagi nanti ya!" />)}
         </div>

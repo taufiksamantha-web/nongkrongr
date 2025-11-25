@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -17,7 +18,7 @@ const welcomeMessages = [
 ];
 
 const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
-    <div className="bg-card p-6 rounded-3xl shadow-sm border border-border animate-fade-in-up">
+    <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
         <div className="flex items-center gap-3 mb-4">
             {icon}
             <h2 className="text-2xl font-bold font-jakarta">{title}</h2>
@@ -42,8 +43,7 @@ const EmptyState: React.FC<{ title: string; message: string; ctaLink: string; ct
 
 // Helper to calculate scores client-side for fetching direct favorites
 const calculateCafeScores = (cafeData: any): Cafe => {
-    // Defensive: ensure reviews exists
-    const reviews = Array.isArray(cafeData.reviews) ? cafeData.reviews : [];
+    const reviews = cafeData.reviews || [];
     const approvedReviews = reviews.filter((r: any) => r.status === 'approved');
     
     let avgAestheticScore = 0;
@@ -51,32 +51,31 @@ const calculateCafeScores = (cafeData: any): Cafe => {
     let avgCrowdEvening = 0;
 
     if (approvedReviews.length > 0) {
-        const totalAesthetic = approvedReviews.reduce((acc: number, r: any) => acc + (r.ratingAesthetic || 0), 0);
-        const totalWork = approvedReviews.reduce((acc: number, r: any) => acc + (r.ratingWork || 0), 0);
-        const totalCrowd = approvedReviews.reduce((acc: number, r: any) => acc + (r.crowdEvening || 0), 0);
+        const totalAesthetic = approvedReviews.reduce((acc: number, r: any) => acc + r.ratingAesthetic, 0);
+        const totalWork = approvedReviews.reduce((acc: number, r: any) => acc + r.ratingWork, 0);
+        const totalCrowd = approvedReviews.reduce((acc: number, r: any) => acc + r.crowdEvening, 0);
         
         avgAestheticScore = parseFloat((totalAesthetic / approvedReviews.length).toFixed(1));
         avgWorkScore = parseFloat((totalWork / approvedReviews.length).toFixed(1));
         avgCrowdEvening = parseFloat((totalCrowd / approvedReviews.length).toFixed(1));
     }
 
-    // Map raw DB data to Cafe type safe structure
+    // Map raw DB data to Cafe type
     return {
         ...cafeData,
-        coords: { lat: cafeData.lat || 0, lng: cafeData.lng || 0 },
-        vibes: Array.isArray(cafeData.vibes) ? cafeData.vibes.map((v: any) => v.vibes).filter(Boolean) : [],
-        amenities: Array.isArray(cafeData.amenities) ? cafeData.amenities.map((a: any) => a.amenities).filter(Boolean) : [],
-        tags: cafeData.tags || [],
-        spots: cafeData.spots || [],
-        reviews: reviews, 
-        events: cafeData.events || [],
+        coords: { lat: cafeData.lat, lng: cafeData.lng },
+        vibes: cafeData.vibes?.map((v: any) => v.vibes).filter(Boolean) || [],
+        amenities: [], // Not needed for card view usually, save bandwidth
+        tags: [],
+        spots: [],
+        reviews: reviews, // Keep reviews for other logic if needed
+        events: [],
         avgAestheticScore,
         avgWorkScore,
         avgCrowdEvening,
-        // Mock remaining for safe typing
+        // Mock remaining
         avgCrowdMorning: 0,
-        avgCrowdAfternoon: 0,
-        avgCrowd: avgCrowdEvening // Fallback alias
+        avgCrowdAfternoon: 0
     } as Cafe;
 };
 
@@ -95,13 +94,13 @@ const UserDashboard: React.FC = () => {
             setLoading(true);
             try {
                 // 1. Fetch Favorites Directly
+                // Join user_favorites -> cafes -> vibes (nested) & reviews (nested for scoring)
                 const { data: favData, error: favError } = await supabase
                     .from('user_favorites')
                     .select(`
                         cafe:cafes (
                             *,
                             vibes:cafe_vibes(vibes(id, name)),
-                            amenities:cafe_amenities(amenities(id, name, icon)),
                             reviews(ratingAesthetic, ratingWork, crowdEvening, status)
                         )
                     `)
@@ -111,7 +110,7 @@ const UserDashboard: React.FC = () => {
 
                 const processedFavs = (favData || [])
                     .map((item: any) => item.cafe)
-                    .filter((cafe: any) => cafe !== null) // Filter out deleted cafes
+                    .filter(Boolean)
                     .map(calculateCafeScores);
                 
                 setFavoriteCafes(processedFavs);
@@ -129,25 +128,13 @@ const UserDashboard: React.FC = () => {
 
                 if (reviewError) throw reviewError;
 
-                const processedReviews = (reviewData || []).map((r: any) => {
-                    // Safe photo parsing
-                    let photos = [];
-                    if (Array.isArray(r.photos)) photos = r.photos;
-                    else if (typeof r.photos === 'string') {
-                        try { photos = JSON.parse(r.photos); } catch { photos = [r.photos]; }
-                    }
-
-                    return {
-                        ...r,
-                        // Inject current user info as author since we are fetching THEIR reviews
-                        author: currentUser.username,
-                        author_avatar_url: currentUser.avatar_url,
-                        cafeName: r.cafes?.name || 'Unknown Cafe',
-                        cafeSlug: r.cafes?.slug || '',
-                        photos: photos,
-                        helpful_count: r.helpful_count || 0
-                    };
-                });
+                const processedReviews = (reviewData || []).map((r: any) => ({
+                    ...r,
+                    cafeName: r.cafes?.name || 'Unknown Cafe',
+                    cafeSlug: r.cafes?.slug || '',
+                    photos: r.photos || [], // Handle null photos
+                    helpful_count: r.helpful_count || 0
+                }));
 
                 setUserReviews(processedReviews);
 
