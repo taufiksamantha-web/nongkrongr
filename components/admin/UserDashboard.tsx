@@ -17,7 +17,7 @@ const welcomeMessages = [
 ];
 
 const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
-    <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
+    <div className="bg-card p-6 rounded-3xl shadow-sm border border-border animate-fade-in-up">
         <div className="flex items-center gap-3 mb-4">
             {icon}
             <h2 className="text-2xl font-bold font-jakarta">{title}</h2>
@@ -42,7 +42,7 @@ const EmptyState: React.FC<{ title: string; message: string; ctaLink: string; ct
 
 // Helper to calculate scores client-side for fetching direct favorites
 const calculateCafeScores = (cafeData: any): Cafe => {
-    // Defensive check: Ensure reviews is an array
+    // Defensive: ensure reviews exists
     const reviews = Array.isArray(cafeData.reviews) ? cafeData.reviews : [];
     const approvedReviews = reviews.filter((r: any) => r.status === 'approved');
     
@@ -60,12 +60,12 @@ const calculateCafeScores = (cafeData: any): Cafe => {
         avgCrowdEvening = parseFloat((totalCrowd / approvedReviews.length).toFixed(1));
     }
 
-    // Map raw DB data to Cafe type
+    // Map raw DB data to Cafe type safe structure
     return {
         ...cafeData,
         coords: { lat: cafeData.lat || 0, lng: cafeData.lng || 0 },
-        vibes: cafeData.vibes?.map((v: any) => v.vibes).filter(Boolean) || [],
-        amenities: cafeData.amenities?.map((a: any) => a.amenities).filter(Boolean) || [],
+        vibes: Array.isArray(cafeData.vibes) ? cafeData.vibes.map((v: any) => v.vibes).filter(Boolean) : [],
+        amenities: Array.isArray(cafeData.amenities) ? cafeData.amenities.map((a: any) => a.amenities).filter(Boolean) : [],
         tags: cafeData.tags || [],
         spots: cafeData.spots || [],
         reviews: reviews, 
@@ -111,7 +111,7 @@ const UserDashboard: React.FC = () => {
 
                 const processedFavs = (favData || [])
                     .map((item: any) => item.cafe)
-                    .filter((cafe: any) => cafe !== null) // Filter out deleted cafes (orphaned favorites)
+                    .filter((cafe: any) => cafe !== null) // Filter out deleted cafes
                     .map(calculateCafeScores);
                 
                 setFavoriteCafes(processedFavs);
@@ -129,13 +129,25 @@ const UserDashboard: React.FC = () => {
 
                 if (reviewError) throw reviewError;
 
-                const processedReviews = (reviewData || []).map((r: any) => ({
-                    ...r,
-                    cafeName: r.cafes?.name || 'Unknown Cafe',
-                    cafeSlug: r.cafes?.slug || '',
-                    photos: r.photos || [], 
-                    helpful_count: r.helpful_count || 0
-                }));
+                const processedReviews = (reviewData || []).map((r: any) => {
+                    // Safe photo parsing
+                    let photos = [];
+                    if (Array.isArray(r.photos)) photos = r.photos;
+                    else if (typeof r.photos === 'string') {
+                        try { photos = JSON.parse(r.photos); } catch { photos = [r.photos]; }
+                    }
+
+                    return {
+                        ...r,
+                        // Inject current user info as author since we are fetching THEIR reviews
+                        author: currentUser.username,
+                        author_avatar_url: currentUser.avatar_url,
+                        cafeName: r.cafes?.name || 'Unknown Cafe',
+                        cafeSlug: r.cafes?.slug || '',
+                        photos: photos,
+                        helpful_count: r.helpful_count || 0
+                    };
+                });
 
                 setUserReviews(processedReviews);
 
