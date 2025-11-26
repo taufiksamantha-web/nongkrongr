@@ -13,8 +13,11 @@ import StatChart from './StatChart';
 import AdminWelcomeHint from './AdminWelcomeHint';
 import ApprovalHub from './ApprovalHub';
 
-const AdminDashboard: React.FC = () => {
-    // State for accurate counts direct from DB
+interface AdminDashboardProps {
+    activeView: string;
+}
+
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeView }) => {
     const [stats, setStats] = useState({
         total: 0,
         approved: 0,
@@ -25,143 +28,96 @@ const AdminDashboard: React.FC = () => {
     });
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchRealtimeStats = async () => {
-        setIsLoading(true);
-        try {
-            // We use Promise.all to fetch counts in parallel for "Power Mode" speed
-            const [
-                { count: totalCount },
-                { count: approvedCount },
-                { count: pendingCount },
-                { count: archivedCount },
-                { count: sponsoredCount }
-            ] = await Promise.all([
-                supabase.from('cafes').select('*', { count: 'exact', head: true }),
-                supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
-                supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-                supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('status', 'archived'),
-                supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('isSponsored', true).neq('status', 'archived')
-            ]);
-
-            const safeTotal = totalCount || 0;
-            const safeSponsored = sponsoredCount || 0;
-            // Regular active cafes (Approved - Sponsored)
-            const safeRegular = (approvedCount || 0) - safeSponsored;
-
-            setStats({
-                total: safeTotal,
-                approved: approvedCount || 0,
-                pending: pendingCount || 0,
-                archived: archivedCount || 0,
-                sponsored: safeSponsored,
-                regular: safeRegular
-            });
-        } catch (error) {
-            console.error("Error fetching admin stats:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     useEffect(() => {
+        if (activeView !== 'overview') return; // Only fetch stats if on overview
+
+        const fetchRealtimeStats = async () => {
+            setIsLoading(true);
+            try {
+                const [
+                    { count: totalCount },
+                    { count: approvedCount },
+                    { count: pendingCount },
+                    { count: archivedCount },
+                    { count: sponsoredCount }
+                ] = await Promise.all([
+                    supabase.from('cafes').select('*', { count: 'exact', head: true }),
+                    supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+                    supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+                    supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('status', 'archived'),
+                    supabase.from('cafes').select('*', { count: 'exact', head: true }).eq('isSponsored', true).neq('status', 'archived')
+                ]);
+
+                setStats({
+                    total: totalCount || 0,
+                    approved: approvedCount || 0,
+                    pending: pendingCount || 0,
+                    archived: archivedCount || 0,
+                    sponsored: sponsoredCount || 0,
+                    regular: (approvedCount || 0) - (sponsoredCount || 0)
+                });
+            } catch (error) {
+                console.error("Error fetching admin stats:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
         fetchRealtimeStats();
         
-        // Subscribe to realtime changes for the dashboard counters
         const channel = supabase.channel('admin-dashboard-stats')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'cafes' }, () => {
-                fetchRealtimeStats();
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'cafes' }, fetchRealtimeStats)
             .subscribe();
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, []);
+        return () => { supabase.removeChannel(channel); };
+    }, [activeView]);
 
-    return (
-        <div className="w-full max-w-full">
-            <AdminWelcomeHint />
-            
-            <div className="mb-8 text-center">
-                <h1 className="text-3xl sm:text-4xl font-extrabold font-jakarta bg-gradient-to-r from-brand to-purple-600 bg-clip-text text-transparent inline-block">
-                    Dashboard Overview
-                </h1>
-                <div className="h-1.5 w-24 bg-gradient-to-r from-brand to-purple-600 rounded-full mx-auto mt-3 opacity-80"></div>
-            </div>
-
-            {/* Cafe Summary Section - Fluid Grid with Highlighted Total */}
-            <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border space-y-6 mt-6 sm:mt-8 w-full">
-                <div>
-                    <h3 className="text-xl font-bold font-jakarta mb-6 text-center text-primary dark:text-white">Ringkasan Kafe (Real-time)</h3>
+    // Render based on Active View
+    switch (activeView) {
+        case 'approval':
+            return <ApprovalHub />;
+        case 'cafes':
+            return <CafeManagementPanel />;
+        case 'reviews':
+            return <ReviewManagement />;
+        case 'users':
+            return <UserManagementPanel />;
+        case 'feedback':
+            return <FeedbackPanel />;
+        case 'archive':
+            return <ArchivePanel />;
+        case 'settings':
+            return <WebsiteSettingsPanel />;
+        case 'overview':
+        default:
+            return (
+                <div className="w-full max-w-full space-y-8">
+                    <AdminWelcomeHint />
                     
-                    {/* 
-                        Grid Layout Strategy:
-                        - Mobile (Default): 2 Columns. Total Cafe takes 2 cols (full width). Others take 1 col.
-                        - Large Screens (lg): 6 Columns. Total Cafe takes 2 cols. Others take 1 col each. (2 + 1 + 1 + 1 + 1 = 6)
-                    */}
-                    <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
-                        
-                        {/* Highlighted Total Cafe Card */}
-                        <div className="col-span-2 bg-gradient-to-br from-brand/10 to-purple-500/5 dark:from-brand/20 dark:to-purple-900/20 p-5 rounded-2xl border border-brand/20 flex flex-col justify-between min-h-[120px] relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-brand/10 rounded-full blur-2xl group-hover:bg-brand/20 transition-colors"></div>
-                            <div className="flex justify-between items-start relative z-10">
-                                <p className="text-sm sm:text-base text-brand font-bold uppercase tracking-wide">Total Cafe</p>
-                                <BuildingStorefrontIcon className="h-8 w-8 text-brand" />
+                    {/* Stats Grid */}
+                    <div className="bg-card p-6 rounded-3xl shadow-sm border border-border w-full">
+                        <h3 className="text-xl font-bold font-jakarta mb-6 text-primary dark:text-white">Ringkasan Real-time</h3>
+                        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                            <div className="col-span-2 bg-gradient-to-br from-brand/10 to-purple-500/5 dark:from-brand/20 dark:to-purple-900/20 p-5 rounded-2xl border border-brand/20 flex flex-col justify-between min-h-[120px] relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-brand/10 rounded-full blur-2xl group-hover:bg-brand/20 transition-colors"></div>
+                                <div className="flex justify-between items-start relative z-10">
+                                    <p className="text-sm font-bold uppercase tracking-wide text-brand">Total Cafe</p>
+                                    <BuildingStorefrontIcon className="h-8 w-8 text-brand" />
+                                </div>
+                                <p className="text-5xl font-extrabold font-jakarta text-brand mt-2 relative z-10">
+                                    {isLoading ? '...' : stats.total}
+                                </p>
                             </div>
-                            <p className="text-4xl sm:text-5xl font-extrabold font-jakarta text-brand mt-2 relative z-10">
-                                {isLoading ? <span className="animate-pulse">...</span> : stats.total}
-                            </p>
-                            <p className="text-xs text-muted mt-1 relative z-10">Database Uptodate</p>
+                            <StatCard title="Disetujui" value={stats.approved} icon={<CheckBadgeIcon className="h-8 w-8 text-green-500" />} color="green" />
+                            <StatCard title="Tertunda" value={stats.pending} icon={<ClockIcon className="h-8 w-8 text-yellow-500" />} color="yellow" />
+                            <StatCard title="Sponsored" value={stats.sponsored} icon={<CheckBadgeIcon className="h-8 w-8 text-purple-500" />} color="purple" />
+                            <StatCard title="Diarsipkan" value={stats.archived} icon={<ArchiveBoxArrowDownIcon className="h-8 w-8 text-gray-500" />} color="gray" />
                         </div>
-
-                        {/* Standard Cards */}
-                        <StatCard 
-                            title="Disetujui" 
-                            value={stats.approved} 
-                            icon={<CheckBadgeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />} 
-                            color="green" 
-                        />
-                        <StatCard 
-                            title="Tertunda" 
-                            value={stats.pending} 
-                            icon={<ClockIcon className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500" />} 
-                            color="yellow" 
-                        />
-                         <StatCard 
-                            title="Sponsored" 
-                            value={stats.sponsored} 
-                            icon={<CheckBadgeIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />} 
-                            color="purple" 
-                        />
-                        <StatCard 
-                            title="Diarsipkan" 
-                            value={stats.archived} 
-                            icon={<ArchiveBoxArrowDownIcon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-500" />} 
-                            color="gray" 
-                        />
+                        {!isLoading && <div className="mt-8 pt-6 border-t border-border"><StatChart sponsored={stats.sponsored} regular={stats.regular} total={stats.approved} /></div>}
                     </div>
                 </div>
-                {!isLoading && <StatChart sponsored={stats.sponsored} regular={stats.regular} total={stats.approved} />}
-            </div>
-            
-            {/* Main Content Grid - Fluid Breakpoints */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 mt-6 sm:mt-8 items-start w-full">
-              
-              <div className="xl:col-span-2 space-y-6 sm:space-y-8 w-full min-w-0">
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><ApprovalHub /></div>
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><CafeManagementPanel /></div>
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><ReviewManagement /></div>
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><UserManagementPanel /></div>
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><FeedbackPanel /></div>
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><ArchivePanel /></div>
-              </div>
-
-              <div className="xl:col-span-1 space-y-6 sm:space-y-8 w-full min-w-0">
-                <div className="bg-card p-4 sm:p-6 rounded-3xl shadow-sm border border-border w-full overflow-hidden"><WebsiteSettingsPanel /></div>
-              </div>
-            </div>
-        </div>
-    );
+            );
+    }
 };
 
 export default AdminDashboard;

@@ -10,40 +10,12 @@ import { HeartIcon, ChatBubbleBottomCenterTextIcon, MagnifyingGlassIcon } from '
 import SkeletonCard from '../SkeletonCard';
 import SkeletonReviewCard from '../SkeletonReviewCard';
 
-const welcomeMessages = [
-    "Selamat datang kembali! Mari kita temukan spot nongkrong baru hari ini.",
-    "Hey, penjelajah kafe! Kafe favoritmu sudah menanti.",
-    "Waktunya ngopi! Lihat review terakhirmu atau jelajahi kafe baru.",
-    "Selamat datang! Siap untuk petualangan rasa berikutnya?",
-];
+interface UserDashboardProps {
+    activeView: string;
+}
 
-const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
-    <div className="bg-card p-6 rounded-3xl shadow-sm border border-border animate-fade-in-up">
-        <div className="flex items-center gap-3 mb-4">
-            {icon}
-            <h2 className="text-2xl font-bold font-jakarta">{title}</h2>
-        </div>
-        {children}
-    </div>
-);
-
-const EmptyState: React.FC<{ title: string; message: string; ctaLink: string; ctaText: string; }> = ({ title, message, ctaLink, ctaText }) => (
-    <div className="text-center py-8">
-        <p className="text-xl font-bold font-jakarta mb-2">{title}</p>
-        <p className="text-muted mb-6">{message}</p>
-        <Link 
-            to={ctaLink}
-            className="inline-flex items-center gap-2 bg-brand text-white font-bold py-2 px-5 rounded-xl hover:bg-brand/90 transition-all"
-        >
-            <MagnifyingGlassIcon className="h-5 w-5" />
-            {ctaText}
-        </Link>
-    </div>
-);
-
-// Helper to calculate scores client-side for fetching direct favorites
+// Reuse logic for calculating scores
 const calculateCafeScores = (cafeData: any): Cafe => {
-    // Defensive: ensure reviews exists
     const reviews = Array.isArray(cafeData.reviews) ? cafeData.reviews : [];
     const approvedReviews = reviews.filter((r: any) => r.status === 'approved');
     
@@ -61,7 +33,6 @@ const calculateCafeScores = (cafeData: any): Cafe => {
         avgCrowdEvening = parseFloat((totalCrowd / approvedReviews.length).toFixed(1));
     }
 
-    // Map raw DB data to Cafe type safe structure
     return {
         ...cafeData,
         coords: { lat: cafeData.lat || 0, lng: cafeData.lng || 0 },
@@ -71,155 +42,103 @@ const calculateCafeScores = (cafeData: any): Cafe => {
         spots: cafeData.spots || [],
         reviews: reviews, 
         events: cafeData.events || [],
-        avgAestheticScore,
-        avgWorkScore,
-        avgCrowdEvening,
-        // Mock remaining for safe typing
-        avgCrowdMorning: 0,
-        avgCrowdAfternoon: 0,
-        avgCrowd: avgCrowdEvening // Fallback alias
+        avgAestheticScore, avgWorkScore, avgCrowdEvening,
+        avgCrowdMorning: 0, avgCrowdAfternoon: 0, avgCrowd: avgCrowdEvening
     } as Cafe;
 };
 
-const UserDashboard: React.FC = () => {
+const EmptyState: React.FC<{ title: string; message: string; ctaLink: string; ctaText: string; }> = ({ title, message, ctaLink, ctaText }) => (
+    <div className="text-center py-12 bg-card border border-border rounded-3xl">
+        <p className="text-xl font-bold font-jakarta mb-2 text-primary dark:text-white">{title}</p>
+        <p className="text-muted mb-6 max-w-xs mx-auto">{message}</p>
+        <Link to={ctaLink} className="inline-flex items-center gap-2 bg-brand text-white font-bold py-3 px-6 rounded-2xl hover:bg-brand/90 transition-all">
+            <MagnifyingGlassIcon className="h-5 w-5" />
+            {ctaText}
+        </Link>
+    </div>
+);
+
+const UserDashboard: React.FC<UserDashboardProps> = ({ activeView }) => {
     const { currentUser } = useAuth();
-    
     const [favoriteCafes, setFavoriteCafes] = useState<Cafe[]>([]);
     const [userReviews, setUserReviews] = useState<(Review & { cafeName: string, cafeSlug: string })[]>([]);
     const [loading, setLoading] = useState(true);
-    const [welcomeMessage] = useState(() => welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)]);
 
     useEffect(() => {
         if (!currentUser) return;
 
-        const fetchUserData = async () => {
+        const fetchData = async () => {
             setLoading(true);
             try {
-                // 1. Fetch Favorites Directly
-                const { data: favData, error: favError } = await supabase
-                    .from('user_favorites')
-                    .select(`
-                        cafe:cafes (
-                            *,
-                            vibes:cafe_vibes(vibes(id, name)),
-                            amenities:cafe_amenities(amenities(id, name, icon)),
-                            reviews(ratingAesthetic, ratingWork, crowdEvening, status)
-                        )
-                    `)
-                    .eq('user_id', currentUser.id);
+                if (activeView === 'favorites' || activeView === 'overview') {
+                    const { data: favData } = await supabase.from('user_favorites').select(`cafe:cafes (*, vibes:cafe_vibes(vibes(id, name)), amenities:cafe_amenities(amenities(id, name, icon)), reviews(ratingAesthetic, ratingWork, crowdEvening, status))`).eq('user_id', currentUser.id);
+                    const processedFavs = (favData || []).map((item: any) => item.cafe).filter(Boolean).map(calculateCafeScores);
+                    setFavoriteCafes(processedFavs);
+                }
 
-                if (favError) throw favError;
-
-                const processedFavs = (favData || [])
-                    .map((item: any) => item.cafe)
-                    .filter((cafe: any) => cafe !== null) // Filter out deleted cafes
-                    .map(calculateCafeScores);
-                
-                setFavoriteCafes(processedFavs);
-
-                // 2. Fetch User Reviews Directly
-                const { data: reviewData, error: reviewError } = await supabase
-                    .from('reviews')
-                    .select(`
-                        *,
-                        cafes (name, slug)
-                    `)
-                    .eq('author_id', currentUser.id)
-                    .order('createdAt', { ascending: false })
-                    .limit(5);
-
-                if (reviewError) throw reviewError;
-
-                const processedReviews = (reviewData || []).map((r: any) => {
-                    // Robust photo parsing to prevent crashes
-                    let photos = [];
-                    try {
-                        if (Array.isArray(r.photos)) {
-                            photos = r.photos;
-                        } else if (typeof r.photos === 'string') {
-                            // Handle Postgres array string format "{url1,url2}"
-                            if (r.photos.startsWith('{')) {
-                                photos = r.photos.slice(1, -1).split(',').map((s: string) => s.replace(/^"|"$/g, ''));
-                            } else {
-                                // Handle JSON string format "[\"url1\"]"
-                                photos = JSON.parse(r.photos);
-                            }
-                        }
-                    } catch (e) {
-                        console.warn("Failed to parse review photos", e);
-                        photos = [];
-                    }
-
-                    return {
+                if (activeView === 'my-reviews' || activeView === 'overview') {
+                    const { data: reviewData } = await supabase.from('reviews').select(`*, cafes (name, slug)`).eq('author_id', currentUser.id).order('createdAt', { ascending: false });
+                    const processedReviews = (reviewData || []).map((r: any) => ({
                         ...r,
-                        // Inject current user info as author since we are fetching THEIR reviews
                         author: currentUser.username,
                         author_avatar_url: currentUser.avatar_url,
-                        cafeName: r.cafes?.name || 'Unknown Cafe',
+                        cafeName: r.cafes?.name || 'Unknown',
                         cafeSlug: r.cafes?.slug || '',
-                        photos: Array.isArray(photos) ? photos : [],
+                        photos: typeof r.photos === 'string' ? JSON.parse(r.photos.replace(/{/g, '[').replace(/}/g, ']')) : (r.photos || []),
                         helpful_count: r.helpful_count || 0
-                    };
-                });
-
-                setUserReviews(processedReviews);
-
+                    }));
+                    setUserReviews(processedReviews);
+                }
             } catch (err) {
-                console.error("Error fetching user dashboard data:", err);
+                console.error(err);
             } finally {
                 setLoading(false);
             }
         };
-
-        fetchUserData();
-    }, [currentUser]);
+        fetchData();
+    }, [currentUser, activeView]);
 
     if (!currentUser) return null;
 
+    if (activeView === 'favorites') {
+        return (
+            <div className="space-y-6">
+                <h2 className="text-2xl font-bold font-jakarta flex items-center gap-2"><HeartIcon className="h-6 w-6 text-accent-pink"/> Kafe Favoritmu</h2>
+                {loading ? <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{[...Array(3)].map((_,i) => <SkeletonCard key={i}/>)}</div> : 
+                 favoriteCafes.length > 0 ? <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{favoriteCafes.map((c,i) => <CafeCard key={c.id} cafe={c} animationDelay={`${i*50}ms`}/>)}</div> : 
+                 <EmptyState title="Belum Ada Favorit" message="Simpan kafe yang kamu suka di sini." ctaLink="/explore" ctaText="Cari Kafe"/>}
+            </div>
+        );
+    }
+
+    if (activeView === 'my-reviews') {
+        return (
+            <div className="space-y-6">
+                <h2 className="text-2xl font-bold font-jakarta flex items-center gap-2"><ChatBubbleBottomCenterTextIcon className="h-6 w-6 text-brand"/> Riwayat Review</h2>
+                {loading ? <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{[...Array(3)].map((_,i) => <SkeletonReviewCard key={i}/>)}</div> : 
+                 userReviews.length > 0 ? <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">{userReviews.map((r,i) => <ReviewCard key={r.id} review={r} animationDelay={`${i*50}ms`}/>)}</div> : 
+                 <EmptyState title="Belum Ada Review" message="Bagikan pengalamanmu untuk membantu yang lain." ctaLink="/explore" ctaText="Mulai Review"/>}
+            </div>
+        );
+    }
+
+    // Overview
     return (
         <div className="space-y-8">
-             <div className="bg-brand/10 dark:bg-brand/20 border-l-4 border-brand p-6 rounded-2xl animate-fade-in-up">
-                <h3 className="font-bold font-jakarta text-xl text-primary dark:text-white">Halo, {currentUser.username}!</h3>
-                <p className="mt-1 text-muted">{welcomeMessage}</p>
+            <div className="bg-brand/10 dark:bg-brand/20 border-l-4 border-brand p-6 rounded-2xl">
+                <h3 className="font-bold text-xl text-primary dark:text-white">Selamat datang, {currentUser.username}!</h3>
+                <p className="text-muted mt-1">Siap menjelajah hari ini?</p>
             </div>
-            
-            <Section icon={<HeartIcon className="h-8 w-8 text-accent-pink" />} title="Kafe Favoritmu">
-                {loading ? (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
-                    </div>
-                ) : favoriteCafes.length > 0 ? (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {favoriteCafes.map((cafe, i) => <CafeCard key={cafe.id} cafe={cafe} animationDelay={`${i * 75}ms`} />)}
-                    </div>
-                ) : (
-                    <EmptyState 
-                        title="Kamu Belum Punya Favorit"
-                        message="Tandai kafe yang kamu suka dengan ikon hati untuk menyimpannya di sini."
-                        ctaLink="/explore"
-                        ctaText="Jelajahi Kafe"
-                    />
-                )}
-            </Section>
-            
-            <Section icon={<ChatBubbleBottomCenterTextIcon className="h-8 w-8 text-brand" />} title="Review Terakhirmu">
-                {loading ? (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {[...Array(3)].map((_, i) => <SkeletonReviewCard key={i} />)}
-                    </div>
-                ) : userReviews.length > 0 ? (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {userReviews.map((review, i) => <ReviewCard key={review.id} review={review} animationDelay={`${i * 75}ms`} />)}
-                    </div>
-                ) : (
-                     <EmptyState 
-                        title="Kamu Belum Memberi Review"
-                        message="Bagikan pengalamanmu di kafe favorit untuk membantu komunitas."
-                        ctaLink="/explore"
-                        ctaText="Cari Kafe untuk Direview"
-                    />
-                )}
-            </Section>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-card p-4 rounded-2xl border border-border text-center">
+                    <p className="text-3xl font-bold text-accent-pink">{favoriteCafes.length}</p>
+                    <p className="text-xs font-bold text-muted uppercase mt-1">Favorit</p>
+                </div>
+                <div className="bg-card p-4 rounded-2xl border border-border text-center">
+                    <p className="text-3xl font-bold text-brand">{userReviews.length}</p>
+                    <p className="text-xs font-bold text-muted uppercase mt-1">Review</p>
+                </div>
+            </div>
         </div>
     );
 };

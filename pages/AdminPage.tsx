@@ -1,146 +1,69 @@
 
-import React, { useState, useEffect, useContext, useRef, Suspense, lazy } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext, Suspense, lazy } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import FloatingNotification from '../components/common/FloatingNotification';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import ProfileUpdateModal from '../components/admin/ProfileUpdateModal';
 import NotificationPanel from '../components/NotificationPanel';
+import AdminSidebar from '../components/admin/AdminSidebar';
 import { ThemeContext } from '../App';
-import { ArrowRightOnRectangleIcon, PencilSquareIcon, HomeIcon, SunIcon, MoonIcon, BellIcon } from '@heroicons/react/24/solid';
+import { SunIcon, MoonIcon, BellIcon, Bars3Icon } from '@heroicons/react/24/outline';
 
-// Lazy Load Dashboard Components to optimize initial bundle
+// Lazy Load Dashboard Components
 const AdminDashboard = lazy(() => import('../components/admin/AdminDashboard'));
 const UserDashboard = lazy(() => import('../components/admin/UserDashboard'));
 const AdminCafeDashboard = lazy(() => import('../components/admin/AdminCafeDashboard'));
 
-// Fallback for lazy loaded dashboards
 const DashboardSkeleton = () => (
-    <div className="space-y-4 p-4 animate-pulse">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
-            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
-            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+    <div className="space-y-4 p-6 animate-pulse">
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-6"></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-3xl"></div>
+            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-3xl"></div>
+            <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-3xl"></div>
         </div>
-        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-3xl mt-6"></div>
+        <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded-3xl mt-8"></div>
     </div>
 );
 
 const PendingApprovalScreen: React.FC = () => (
-    <div className="bg-card p-8 rounded-3xl shadow-sm border border-border text-center mt-8 animate-fade-in-up">
-        <div className="mx-auto w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center mb-4">
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-brand">
+    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <div className="w-20 h-20 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mb-6 animate-pulse">
+             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
         </div>
-        <h1 className="text-3xl font-bold font-jakarta mb-2">Akun Anda Sedang Ditinjau</h1>
-        <p className="text-muted max-w-md mx-auto">
-            Terima kasih telah mendaftar sebagai Pengelola Kafe. Akun Anda akan aktif setelah disetujui oleh Administrator.
-            Silakan cek kembali nanti.
+        <h1 className="text-3xl font-bold font-jakarta mb-3 text-primary dark:text-white">Akun Sedang Ditinjau</h1>
+        <p className="text-muted max-w-md text-lg leading-relaxed">
+            Terima kasih telah mendaftar. Akun Anda akan aktif setelah disetujui oleh Administrator. Silakan cek kembali nanti ya!
         </p>
     </div>
 );
 
-const AdminMobileDock: React.FC<{ 
-    user: any, 
-    onLogout: () => void, 
-    onProfileClick: () => void,
-    toggleTheme: () => void,
-    theme: string
-}> = ({ user, onLogout, onProfileClick, toggleTheme, theme }) => {
-    const { unreadCount } = useNotifications();
-    const [showNotif, setShowNotif] = useState(false);
-    const notifRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
-                setShowNotif(false);
-            }
-        };
-        document.addEventListener("click", handleClickOutside);
-        return () => document.removeEventListener("click", handleClickOutside);
-    }, []);
-
-    return (
-        <div className="fixed bottom-6 left-0 right-0 z-[100] lg:hidden flex justify-center px-4 pointer-events-none">
-            {/* Notification Panel - Centered on Screen via bottom-center logic */}
-            <NotificationPanel isOpen={showNotif} onClose={() => setShowNotif(false)} origin="bottom-center" />
-
-            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl shadow-brand/10 rounded-full px-2 h-16 flex items-center justify-around gap-2 pointer-events-auto w-full max-w-[340px] transition-all duration-300 ring-1 ring-black/5 dark:ring-white/5">
-                
-                {/* Left Group: Home & Theme */}
-                <div className="flex items-center gap-1">
-                    <Link to="/" className="p-2.5 rounded-full text-muted hover:text-brand hover:bg-brand/10 transition-all active:scale-90 flex flex-col items-center justify-center">
-                        <HomeIcon className="h-6 w-6" />
-                    </Link>
-                    <button onClick={toggleTheme} className="p-2.5 rounded-full text-muted hover:text-yellow-500 hover:bg-yellow-100 dark:hover:bg-gray-700 transition-all active:scale-90 flex flex-col items-center justify-center">
-                        {theme === 'light' ? <MoonIcon className="h-6 w-6" /> : <SunIcon className="h-6 w-6" />}
-                    </button>
-                </div>
-
-                {/* Center Profile (Elevated & Highlighted) */}
-                <div className="relative -top-6 flex-shrink-0">
-                    <button 
-                        onClick={onProfileClick}
-                        className="w-16 h-16 rounded-full p-1 bg-white dark:bg-gray-800 shadow-lg shadow-brand/20 border-4 border-white dark:border-gray-900 hover:scale-105 transition-transform overflow-hidden relative group active:scale-95 flex items-center justify-center ring-1 ring-brand/20"
-                    >
-                        {user.avatar_url ? (
-                            <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover rounded-full" />
-                        ) : (
-                            <div className="w-full h-full bg-brand text-white flex items-center justify-center rounded-full text-xl font-bold">
-                                {user.username.charAt(0).toUpperCase()}
-                            </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full backdrop-blur-[1px]">
-                            <PencilSquareIcon className="h-6 w-6 text-white" />
-                        </div>
-                    </button>
-                </div>
-
-                {/* Right Group: Notif & Logout */}
-                <div className="flex items-center gap-1">
-                    <div className="relative" ref={notifRef}>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); setShowNotif(!showNotif); }} 
-                            className={`p-2.5 rounded-full transition-all active:scale-90 flex flex-col items-center justify-center ${showNotif ? 'text-brand bg-brand/10' : 'text-muted hover:text-brand hover:bg-brand/10'}`}
-                        >
-                            <BellIcon className="h-6 w-6" />
-                            {unreadCount > 0 && <span className="absolute top-2 right-2 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-900 animate-pulse"></span>}
-                        </button>
-                    </div>
-                    <button onClick={onLogout} className="p-2.5 rounded-full text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all active:scale-90 flex flex-col items-center justify-center">
-                        <ArrowRightOnRectangleIcon className="h-6 w-6" />
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 const AdminPage: React.FC = () => {
-    const { currentUser, logout } = useAuth();
+    const { currentUser, logout, isLoggingOut } = useAuth();
     const { theme, toggleTheme } = useContext(ThemeContext);
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const { unreadCount } = useNotifications();
+    
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [activeView, setActiveView] = useState('overview');
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
+    
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Enforce correct URL for role
     useEffect(() => {
         if (!currentUser) return;
-
         const path = location.pathname;
-        const role = currentUser.role;
-        
         let correctPath = '/dashboard-profile';
-        if (role === 'admin') correctPath = '/dashboard-admin';
-        if (role === 'admin_cafe') correctPath = '/dashboard-pengelola';
+        if (currentUser.role === 'admin') correctPath = '/dashboard-admin';
+        if (currentUser.role === 'admin_cafe') correctPath = '/dashboard-pengelola';
         
         if (path !== correctPath) {
             navigate(correctPath, { replace: true });
@@ -148,45 +71,37 @@ const AdminPage: React.FC = () => {
     }, [currentUser, location.pathname, navigate]);
 
     const handleLogout = async () => {
-        setIsLoggingOut(true);
+        setIsLogoutModalOpen(false);
         const { error } = await logout();
         if (error) {
-            console.error('Logout error:', error.message);
-            setNotification({ message: `Gagal menyelesaikan logout di server: ${error.message}.`, type: 'error' });
-            setIsLoggingOut(false);
+            setNotification({ message: `Gagal logout: ${error.message}`, type: 'error' });
+        } else {
+            navigate('/', { replace: true });
         }
     };
 
-    if (!currentUser) {
-        return null;
-    }
+    if (!currentUser) return null;
 
-    const renderDashboardByRole = () => {
-        return (
-            <Suspense fallback={<DashboardSkeleton />}>
-                {(() => {
-                    switch (currentUser.role) {
-                        case 'admin':
-                            return <AdminDashboard />;
-                        case 'admin_cafe':
-                            return <AdminCafeDashboard />;
-                        case 'user':
-                            return <UserDashboard />;
-                        default:
-                            return <UserDashboard />;
-                    }
-                })()}
-            </Suspense>
-        );
+    const getTitle = () => {
+        if (activeView === 'overview') return 'Dashboard Overview';
+        if (activeView === 'approval') return 'Pusat Persetujuan';
+        if (activeView === 'cafes' || activeView === 'my-cafes') return 'Manajemen Kafe';
+        if (activeView === 'reviews' || activeView === 'my-reviews') return 'Ulasan & Review';
+        if (activeView === 'users') return 'Manajemen Pengguna';
+        if (activeView === 'feedback') return 'Saran & Masukan';
+        if (activeView === 'archive') return 'Arsip Data';
+        if (activeView === 'settings') return 'Pengaturan Website';
+        if (activeView === 'favorites') return 'Favorit Saya';
+        return 'Dashboard';
     };
 
     return (
-        <div className="bg-soft min-h-screen text-primary dark:text-gray-200 pb-32">
+        <div className="flex h-screen bg-soft overflow-hidden">
             {isLogoutModalOpen && (
                 <ConfirmationModal
                     title="Konfirmasi Logout"
-                    message="Apakah Anda yakin ingin keluar dari sesi ini?"
-                    confirmText="Ya, Logout"
+                    message="Yakin ingin keluar sesi?"
+                    confirmText="Logout"
                     cancelText="Batal"
                     onConfirm={handleLogout}
                     onCancel={() => setIsLogoutModalOpen(false)}
@@ -200,85 +115,86 @@ const AdminPage: React.FC = () => {
                     setNotification={setNotification}
                 />
             )}
-            
-            <div className="container mx-auto px-4 pt-safe-top max-w-6xl">
-                {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
-                
-                {/* Dashboard Header - Desktop Only - Sticky & Floating */}
-                <header className="hidden md:flex sticky top-4 z-40 bg-card/80 dark:bg-gray-800/80 backdrop-blur-md border border-border rounded-3xl p-3 px-4 mb-8 items-center justify-between shadow-sm transition-all duration-300 min-h-[72px]">
-                    
-                    {/* Profile Section (Left) */}
-                    <button 
-                        onClick={() => setIsProfileModalOpen(true)}
-                        className="flex items-center gap-3 px-2 group hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-xl transition-all py-1.5 cursor-pointer relative z-10"
-                        title="Ganti foto profil"
-                    >
-                        <div className="relative">
-                            {currentUser.avatar_url ? (
-                                <img src={currentUser.avatar_url} alt="Profile" className="h-10 w-10 rounded-full object-cover border-2 border-brand/30 group-hover:border-brand transition-colors" />
-                            ) : (
-                                <div className="h-10 w-10 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold border-2 border-brand/30 group-hover:border-brand transition-colors text-base">
-                                    {currentUser.username.charAt(0).toUpperCase()}
-                                </div>
-                            )}
-                            <div className="absolute -bottom-1 -right-1 bg-card rounded-full p-0.5 border border-border opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                                <PencilSquareIcon className="h-3 w-3 text-brand" />
-                            </div>
-                        </div>
-                        <div className="text-left">
-                            <h2 className="text-base font-bold font-jakarta text-primary dark:text-white leading-tight group-hover:text-brand transition-colors">
-                                {currentUser.username}
-                            </h2>
-                            <p className="text-xs text-muted font-semibold uppercase tracking-wider">
-                                {(currentUser.role || '').replace('_', ' ')}
-                            </p>
-                        </div>
-                    </button>
 
-                    {/* Actions Section (Right): Home, Theme, Logout */}
-                    <div className="flex items-center gap-2">
-                        <Link 
-                            to="/" 
-                            className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 text-muted hover:text-brand hover:bg-brand/10 transition-all"
-                            title="Ke Homepage"
+            {/* Sidebar */}
+            <AdminSidebar 
+                isOpen={isSidebarOpen} 
+                onClose={() => setIsSidebarOpen(false)} 
+                activeView={activeView}
+                setActiveView={setActiveView}
+                user={currentUser}
+                onLogout={() => setIsLogoutModalOpen(true)}
+            />
+
+            {/* Main Layout */}
+            <div className="flex-1 flex flex-col min-w-0">
+                {/* Header */}
+                <header className="h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-border flex items-center justify-between px-4 lg:px-8 sticky top-0 z-30">
+                    <div className="flex items-center gap-4">
+                        <button 
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="p-2 -ml-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 lg:hidden transition-colors"
                         >
-                            <HomeIcon className="h-5 w-5" />
-                        </Link>
-                        
+                            <Bars3Icon className="h-6 w-6 text-primary dark:text-white" />
+                        </button>
+                        <h1 className="text-lg lg:text-xl font-bold font-jakarta text-primary dark:text-white truncate">
+                            {getTitle()}
+                        </h1>
+                    </div>
+
+                    <div className="flex items-center gap-2 lg:gap-4">
                         <button 
                             onClick={toggleTheme} 
-                            className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 text-muted hover:text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 transition-all"
-                            title={theme === 'light' ? 'Mode Gelap' : 'Mode Terang'}
+                            className="p-2 rounded-full text-muted hover:text-brand hover:bg-brand/5 transition-all"
+                            title="Ganti Tema"
                         >
                             {theme === 'light' ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
                         </button>
 
-                        <div className="h-6 w-px bg-border mx-1"></div>
-
+                        <div className="relative">
+                            <button 
+                                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                                className="p-2 rounded-full text-muted hover:text-brand hover:bg-brand/5 transition-all relative"
+                            >
+                                <BellIcon className="h-5 w-5" />
+                                {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full ring-2 ring-white dark:ring-gray-900"></span>}
+                            </button>
+                            <NotificationPanel isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} origin="top" />
+                        </div>
+                        
+                        <div className="hidden sm:block h-6 w-px bg-border mx-2"></div>
+                        
                         <button 
-                            onClick={() => setIsLogoutModalOpen(true)} 
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-red-500 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-all"
-                            title="Logout"
+                            onClick={() => setIsProfileModalOpen(true)}
+                            className="hidden sm:flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 py-1.5 px-2 rounded-lg transition-colors"
                         >
-                            <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                            <span className="hidden lg:inline">Keluar</span>
+                            <img 
+                                src={currentUser.avatar_url || `https://ui-avatars.com/api/?name=${currentUser.username}&background=random`} 
+                                alt="Avatar" 
+                                className="h-7 w-7 rounded-full object-cover border border-border"
+                            />
+                            <span className="text-sm font-semibold max-w-[100px] truncate">{currentUser.username}</span>
                         </button>
                     </div>
                 </header>
-                
-                <div className="px-2">
-                    {currentUser.status === 'pending_approval' ? <PendingApprovalScreen /> : renderDashboardByRole()}
-                </div>
-            </div>
 
-            {/* Mobile Dashboard Dock */}
-            <AdminMobileDock 
-                user={currentUser}
-                onLogout={() => setIsLogoutModalOpen(true)}
-                onProfileClick={() => setIsProfileModalOpen(true)}
-                toggleTheme={toggleTheme}
-                theme={theme}
-            />
+                {/* Main Content Area - Scrollable */}
+                <main className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth">
+                    {notification && <FloatingNotification {...notification} onClose={() => setNotification(null)} />}
+                    
+                    {currentUser.status === 'pending_approval' ? (
+                        <PendingApprovalScreen />
+                    ) : (
+                        <Suspense fallback={<DashboardSkeleton />}>
+                            <div className="max-w-7xl mx-auto animate-fade-in-up">
+                                {currentUser.role === 'admin' && <AdminDashboard activeView={activeView} />}
+                                {currentUser.role === 'admin_cafe' && <AdminCafeDashboard activeView={activeView} />}
+                                {currentUser.role === 'user' && <UserDashboard activeView={activeView} />}
+                            </div>
+                        </Suspense>
+                    )}
+                </main>
+            </div>
         </div>
     );
 };

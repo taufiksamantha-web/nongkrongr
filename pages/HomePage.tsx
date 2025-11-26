@@ -24,23 +24,23 @@ type CafeWithDistance = Cafe & { distance: number };
 
 
 const SectionHeader: React.FC<{ icon?: React.ReactNode; title: string; subtitle?: string; link?: string; className?: string; center?: boolean }> = ({ icon, title, subtitle, link, className, center = true }) => (
-  <div className={`mb-8 relative z-10 ${center ? 'text-center flex flex-col items-center' : ''} ${className}`}>
-    <div className={`flex items-center gap-2 mb-2 ${center ? 'justify-center' : ''}`}>
+  <div className={`mb-5 sm:mb-6 relative z-10 ${center ? 'text-center flex flex-col items-center' : ''} ${className}`}>
+    <div className={`flex items-center gap-2 mb-1.5 ${center ? 'justify-center' : ''}`}>
       {icon && <div className="text-brand animate-pulse">{icon}</div>}
-      <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold font-jakarta text-primary dark:text-white tracking-tight">
+      <h2 className="text-2xl sm:text-3xl font-extrabold font-jakarta text-primary dark:text-white tracking-tight">
         {title}
       </h2>
     </div>
-    {center && <div className="h-1.5 w-24 bg-gradient-to-r from-brand to-accent-pink rounded-full mb-3 shadow-sm"></div>}
-    {subtitle && <p className="text-muted text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
+    {center && <div className="h-1.5 w-20 bg-gradient-to-r from-brand to-accent-pink rounded-full mb-2 shadow-sm"></div>}
+    {subtitle && <p className="text-muted text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed">{subtitle}</p>}
     {link && (
-      <div className="mt-3">
+      <div className="mt-2">
         <Link 
           to={link} 
-          className="inline-flex items-center gap-1 text-brand font-bold hover:underline text-sm transition-all hover:translate-x-1"
+          className="inline-flex items-center gap-1 text-brand font-bold hover:underline text-xs sm:text-sm transition-all hover:translate-x-1"
         >
           Lihat Semua
-          <ArrowRightIcon className="h-4 w-4" />
+          <ArrowRightIcon className="h-3 w-3 sm:h-4 sm:w-4" />
         </Link>
       </div>
     )}
@@ -440,7 +440,7 @@ const HomePage: React.FC = () => {
 
       {/* Featured & COTW Split Section - Conditionally Rendered */}
       {hasFeaturedSection && (
-        <div className="py-8 sm:py-12 relative -mt-10 sm:-mt-16 z-30">
+        <div className="py-6 sm:py-8 relative -mt-10 sm:-mt-16 z-30">
             {/* Contextual Decorations */}
             {activeDecoration}
 
@@ -502,17 +502,18 @@ const HomePage: React.FC = () => {
 
       {/* Center Content Header & Sections - Render conditionally based on featured presence */}
       {hasFeaturedSection && (
-          <div className="text-center my-16 px-4 max-w-3xl mx-auto relative z-10">
+          <div className="text-center my-8 sm:my-10 px-4 max-w-3xl mx-auto relative z-10">
              <h2 className="text-3xl sm:text-4xl font-bold font-jakarta">Eksplorasi Lebih Jauh</h2>
-             <div className="h-1.5 w-20 bg-brand rounded-full mx-auto my-4"></div>
-             <p className="text-muted text-lg">Temukan lebih banyak tempat seru di sekitarmu berdasarkan lokasi dan preferensi komunitas.</p>
+             <div className="h-1.5 w-20 bg-brand rounded-full mx-auto my-3"></div>
+             <p className="text-muted text-base sm:text-lg">Temukan lebih banyak tempat seru di sekitarmu berdasarkan lokasi dan preferensi komunitas.</p>
           </div>
       )}
       
-      <div className={!hasFeaturedSection ? "mt-24" : ""}></div>
+      {/* Compact spacer if no featured section */}
+      <div className={!hasFeaturedSection ? "mt-8" : ""}></div>
 
       {!isLocating && userLocation && nearestCafes.length > 0 && (
-        <div className="py-10 bg-gradient-to-b from-transparent to-gray-50 dark:to-white/5 relative overflow-hidden">
+        <div className="py-6 sm:py-8 bg-gradient-to-b from-transparent to-gray-50 dark:to-white/5 relative overflow-hidden">
             {/* DECORATION: Map Watermark */}
             <div className="absolute -left-10 top-10 text-gray-100 dark:text-gray-800 opacity-60 transform rotate-12 pointer-events-none">
                 <GlobeAltIcon className="w-64 h-64" />
@@ -527,7 +528,7 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
-      <div className="py-10 bg-brand/5 dark:bg-brand/10 relative overflow-hidden">
+      <div className="py-6 sm:py-8 bg-brand/5 dark:bg-brand/10 relative overflow-hidden">
         {/* DECORATION: Sparkles & Dots */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px] opacity-30 pointer-events-none"></div>
         <div className="absolute bottom-10 left-10 text-brand/10 pointer-events-none animate-pulse">
@@ -546,7 +547,7 @@ const HomePage: React.FC = () => {
       </div>
 
       {favoriteIds.length > 0 && !loading && (
-        <div className="py-10 relative overflow-hidden">
+        <div className="py-6 sm:py-8 relative overflow-hidden">
           {/* DECORATION: Subtle Heart Pattern */}
           <div className="absolute right-0 top-1/2 -translate-y-1/2 text-accent-pink/5 pointer-events-none">
               <HeartIcon className="w-64 h-64 transform rotate-12" />
@@ -559,7 +560,7 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
-      <div className="py-10 bg-gradient-to-b from-transparent to-yellow-50 dark:to-yellow-900/5 relative overflow-hidden">
+      <div className="py-6 sm:py-8 bg-gradient-to-b from-transparent to-yellow-50 dark:to-yellow-900/5 relative overflow-hidden">
         {/* DECORATION: Warm Glow Blobs */}
         <div className="absolute left-1/4 top-10 w-64 h-64 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute right-1/4 bottom-10 w-64 h-64 bg-orange-400/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -575,7 +576,7 @@ const HomePage: React.FC = () => {
       </div>
 
       {/* Reviews Section */}
-      <div className="py-10 border-t border-border/50 bg-gradient-to-b from-soft to-transparent relative overflow-hidden">
+      <div className="py-6 sm:py-8 border-t border-border/50 bg-gradient-to-b from-soft to-transparent relative overflow-hidden">
         {/* DECORATION: Giant Quote Mark */}
         <div className="absolute top-0 left-4 font-serif text-9xl text-brand/5 pointer-events-none leading-none select-none">“</div>
         <div className="absolute bottom-0 right-4 font-serif text-9xl text-brand/5 pointer-events-none leading-none select-none transform rotate-180">“</div>
