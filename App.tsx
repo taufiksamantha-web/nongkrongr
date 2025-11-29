@@ -1,238 +1,397 @@
 
-import React, { useState, useEffect, createContext, Suspense, lazy } from 'react';
-import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { ViewState, UserRole, Cafe, User, Notification, HeroConfig } from './types';
+import { Navigation } from './components/Navigation';
+import { HomeView } from './views/HomeView';
+import { MapView } from './views/MapView';
+import { ExploreView } from './views/ExploreView';
+import { CafeDetail } from './components/CafeDetail';
+import { fetchCafes, getUserProfile, createCafe, updateCafe, deleteCafe, toggleFavoriteDB, signOutUser, createFallbackUser, fetchNotifications, createCafeSlug, getIdFromSlug } from './services/dataService';
+import { AuthModal } from './components/AuthModal';
+import { ScrollToTopButton, ToastContainer, ToastMessage, ErrorBoundary } from './components/UI';
+import { supabase } from './lib/supabase';
+import { ShieldAlert, Lock, LogOut, CheckCircle } from 'lucide-react';
+import { SEO } from './components/SEO';
+import { ThirdPartyIntegrations } from './components/ThirdPartyIntegrations';
 
-// Components
-import Header from './components/Header';
-// WelcomeModal sekarang di-lazy load karena tidak selalu dibutuhkan
-const WelcomeModal = lazy(() => import('./components/WelcomeModal'));
-import Footer from './components/Footer';
-import ErrorBoundary from './components/ErrorBoundary';
-import ScrollToTopOnNavigate from './components/ScrollToTopOnNavigate';
-import ScrollToTopButton from './components/ScrollToTopButton';
-import InstallPrompt from './components/InstallPrompt'; // Import Install Prompt
+// --- LAZY LOADED COMPONENTS ---
+const AdminDashboard = React.lazy(() => import('./views/Dashboards').then(module => ({ default: module.AdminDashboard })));
+const CafeManagerDashboard = React.lazy(() => import('./views/Dashboards').then(module => ({ default: module.CafeManagerDashboard })));
+const UserDashboard = React.lazy(() => import('./views/Dashboards').then(module => ({ default: module.UserDashboard })));
 
-// Contexts
-import { CafeProvider } from './context/CafeContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { FavoriteProvider } from './context/FavoriteContext';
-import { NotificationProvider } from './context/NotificationContext';
-
-// Icons for Overlay
-import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/solid';
-
-// Lazy Loaded Pages
-const HomePage = lazy(() => import('./pages/HomePage'));
-const ExplorePage = lazy(() => import('./pages/ExplorePage'));
-const DetailPage = lazy(() => import('./pages/DetailPage'));
-const AdminPage = lazy(() => import('./pages/AdminPage'));
-const AboutPage = lazy(() => import('./pages/AboutPage'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
-const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
-const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
-
-type Theme = 'light' | 'dark';
-
-interface ThemeContextType {
-  theme: Theme;
-  toggleTheme: () => void;
-}
-
-export const ThemeContext = createContext<ThemeContextType>({
-  theme: 'light',
-  toggleTheme: () => {},
-});
-
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen bg-soft">
-      <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin"></div>
-  </div>
+const DashboardLoading = () => (
+    <div className="w-full h-screen flex flex-col items-center justify-center p-8 bg-gray-50 dark:bg-[#020617]">
+        <div className="w-16 h-16 border-4 border-gray-200 dark:border-slate-800 border-t-primary rounded-full animate-spin mb-4"></div>
+        <p className="text-gray-500 font-bold">Memuat Dashboard...</p>
+    </div>
 );
 
-// --- Logout Animation Component ---
-const LogoutOverlay: React.FC = () => {
-    const { isLoggingOut } = useAuth();
-    const [isVisible, setIsVisible] = useState(false);
+const AppLoading = () => (
+    <div className="fixed inset-0 z-[9999] bg-white dark:bg-[#020617] flex flex-col items-center justify-center">
+        <div className="w-12 h-12 bg-[#8243F0] rounded-xl animate-pulse mb-4 shadow-lg shadow-purple-500/30"></div>
+        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 font-display">Nongkrongr</h2>
+        <p className="text-xs text-gray-500 mt-2">Menyiapkan Sesi...</p>
+    </div>
+);
 
-    useEffect(() => {
-        if (isLoggingOut) setIsVisible(true);
-        else setTimeout(() => setIsVisible(false), 500); // Fade out delay
-    }, [isLoggingOut]);
-
-    if (!isVisible) return null;
-
-    return (
-        <div className={`fixed inset-0 z-[9999] bg-soft flex flex-col items-center justify-center transition-opacity duration-500 ${isLoggingOut ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            <div className="relative p-8 text-center">
-                <div className="w-20 h-20 bg-brand/10 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-                    <ArrowRightOnRectangleIcon className="h-10 w-10 text-brand" />
-                </div>
-                <h2 className="text-2xl font-bold font-jakarta text-primary dark:text-white mb-2">Sampai Jumpa!</h2>
-                <p className="text-muted mb-6">Sedang membersihkan sesi Anda...</p>
-                <div className="w-48 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mx-auto">
-                    <div className="h-full bg-brand animate-[width_1.5s_ease-in-out_infinite] rounded-full w-1/2 mx-auto"></div>
-                </div>
-            </div>
+// --- SPLASH SCREEN COMPONENT ---
+const SplashScreen = ({ type }: { type: 'LOGIN' | 'LOGOUT' }) => (
+    <div className="fixed inset-0 z-[99999] bg-[#8243F0] flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
+        <div className="p-6 bg-white/10 rounded-full mb-6 animate-bounce">
+            {type === 'LOGIN' ? <CheckCircle size={48} className="text-white" /> : <LogOut size={48} className="text-white" />}
         </div>
-    );
-};
+        <h2 className="text-3xl font-display font-bold mb-2">
+            {type === 'LOGIN' ? 'Selamat Datang!' : 'Sampai Jumpa!'}
+        </h2>
+        <p className="text-white/80">
+            {type === 'LOGIN' ? 'Menyiapkan notifikasi & data Anda...' : 'Membersihkan sesi Anda...'}
+        </p>
+    </div>
+);
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { currentUser, isLoggingOut } = useAuth();
-    
-    // If we are currently logging out, do NOT redirect to login.
-    // Just return null or a loader while the LogoutOverlay handles the visual transition
-    // and the logout function handles the redirection to Home.
-    if (isLoggingOut) return null;
-
-    if (!currentUser) {
-        return <Navigate to="/login" replace />;
-    }
-    return <>{children}</>;
-};
-
-const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { currentUser } = useAuth();
-    if (currentUser) {
-        return <Navigate to="/" replace />;
-    }
-    return <>{children}</>;
-};
-
-const MainLayout: React.FC = () => {
-    const location = useLocation();
-    const isHomePage = location.pathname === '/';
-    const { currentUser, loading: authLoading } = useAuth();
-    const [showWelcome, setShowWelcome] = useState(false);
-
-    useEffect(() => {
-      if (!authLoading) {
-        const welcomeSeen = localStorage.getItem('nongkrongr_welcome_seen');
-        if (!welcomeSeen && !currentUser) {
-          setShowWelcome(true);
-        }
-      }
-    }, [authLoading, currentUser]);
-
-    const handleCloseWelcome = () => {
-        localStorage.setItem('nongkrongr_welcome_seen', 'true');
-        setShowWelcome(false);
-    };
-
-    return (
-        <div className="bg-soft min-h-screen font-sans text-primary dark:text-gray-200 flex flex-col transition-colors duration-300 w-full">
-            <InstallPrompt /> {/* Add PWA Install Prompt here */}
-            <LogoutOverlay /> {/* Global Logout Animation */}
-            
-            {showWelcome && isHomePage && (
-                <Suspense fallback={null}>
-                    <WelcomeModal onClose={handleCloseWelcome} />
-                </Suspense>
-            )}
-            <Header />
-            <main className="flex-grow pt-4 w-full">
-                <Suspense fallback={<LoadingFallback />}>
-                    <Outlet />
-                </Suspense>
-            </main>
-            
-            <Footer />
-            <ScrollToTopButton />
-        </div>
-    );
-};
-
-const App: React.FC = () => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const storedTheme = localStorage.getItem('theme') as Theme | null;
-    if (storedTheme) {
-      return storedTheme;
-    }
-    return 'light';
-  });
+export default function App() {
+  const [view, setView] = useState<ViewState>('HOME');
+  const [splashState, setSplashState] = useState<'IDLE' | 'LOGIN' | 'LOGOUT'>('IDLE');
   
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.style.backgroundColor = '#0c0c0d';
-    } else {
-      root.classList.remove('dark');
-      root.style.backgroundColor = '#fbfaff';
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+  // --- AUTH STATE (Optimistic) ---
+  const [user, setUser] = useState<User | null>(null); 
+  const [isAuthInitialized, setIsAuthInitialized] = useState(false);
+  
+  // --- DATA STATE ---
+  const [cafes, setCafes] = useState<Cafe[]>([]);
+  const [selectedCafeId, setSelectedCafeId] = useState<string | null>(null); 
+  
+  // --- UI STATE ---
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const toggleTheme = () => {
-    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  const [heroConfig, setHeroConfig] = useState<HeroConfig>({
+    title: "Temukan Spot Nongkrong Paling Asik.",
+    description: "Jelajahi ratusan kafe unik, workspace nyaman, dan hidden gems kopi lokal dengan panduan komunitas.",
+    backgroundImage: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=2047&auto=format&fit=crop"
+  });
+
+  const addToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, type, message }]);
+  }, []);
+  const removeToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
+
+  // ======================================================================
+  // 1. DATA & CONFIG
+  // ======================================================================
+  useEffect(() => {
+    fetchCafes().then(data => setCafes(data)).catch(() => {});
+
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        setIsDarkMode(true);
+        document.documentElement.classList.add('dark');
+    }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => {}
+        );
+    }
+  }, []);
+
+  // ======================================================================
+  // 2. AUTHENTICATION & DATA SYNC
+  // ======================================================================
+  
+  const refreshUserNotifications = useCallback(async (userId: string) => {
+      const notifs = await fetchNotifications(userId);
+      setNotifications(notifs);
+  }, []);
+
+  const refreshUserProfile = useCallback(async (userId: string) => {
+      try {
+          const profile = await getUserProfile(userId);
+          if (profile) {
+              setUser(profile);
+              refreshUserNotifications(userId);
+          }
+      } catch (error: any) {
+          if (error.message === 'AUTH_INVALID') {
+              await signOutUser();
+              setUser(null);
+              // Instead of resetting view blindly, check if we are on a public route
+              if (window.location.hash.includes('dashboard')) {
+                  navigate('HOME');
+              }
+              addToast('error', 'Sesi Anda telah berakhir.');
+          }
+      }
+  }, [addToast, refreshUserNotifications]);
+
+  useEffect(() => {
+      const initAuth = async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session && session.user) {
+              setUser(createFallbackUser(session.user));
+              refreshUserProfile(session.user.id);
+          }
+          
+          setIsAuthInitialized(true);
+      };
+
+      initAuth();
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+              if (session?.user) {
+                  setUser(prev => prev ? prev : createFallbackUser(session.user));
+                  refreshUserProfile(session.user.id);
+              }
+          } else if (event === 'SIGNED_OUT') {
+              setUser(null);
+              setNotifications([]);
+              if (window.location.hash.includes('dashboard')) {
+                  navigate('HOME');
+              }
+          }
+      });
+
+      return () => subscription.unsubscribe();
+  }, [refreshUserProfile]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        refreshUserProfile(user.id);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [user, refreshUserProfile]);
+
+
+  // ======================================================================
+  // 3. ROUTING & NAVIGATION (Hash Router)
+  // ======================================================================
+  // Switched to Hash Router to prevent 404 errors on refresh/back/forward
+
+  const navigate = (targetView: ViewState, cafeId?: string) => {
+      let hash = '';
+
+      if (targetView === 'HOME') hash = '/';
+      else if (targetView === 'MAP') hash = '/map';
+      else if (targetView === 'EXPLORE') hash = '/explore';
+      else if (targetView === 'DASHBOARD') {
+          if (user?.role === UserRole.ADMIN) hash = '/admin';
+          else if (user?.role === UserRole.CAFE_MANAGER) hash = '/owner';
+          else hash = '/dashboard';
+      }
+      else if (targetView === 'DETAIL' && cafeId) {
+          const cafe = cafes.find(c => c.id === cafeId);
+          if (cafe) {
+              hash = `/cafe/${createCafeSlug(cafe)}`;
+          }
+      }
+      
+      // Force update hash
+      window.location.hash = hash;
+  };
+
+  // Handle Hash Change
+  useEffect(() => {
+      const handleHashChange = () => {
+          const hash = window.location.hash.substring(1); // Remove #
+
+          if (hash === '' || hash === '/') { setView('HOME'); }
+          else if (hash === '/map') { setView('MAP'); }
+          else if (hash === '/explore') { setView('EXPLORE'); }
+          else if (hash.startsWith('/dashboard') || hash.startsWith('/admin') || hash.startsWith('/owner')) { setView('DASHBOARD'); }
+          else if (hash.startsWith('/cafe/')) {
+              const slug = hash.split('/cafe/')[1];
+              const id = getIdFromSlug(slug);
+              if (id) {
+                  setSelectedCafeId(id);
+                  setView('DETAIL');
+              }
+          }
+      };
+
+      window.addEventListener('hashchange', handleHashChange);
+      
+      // Initial Load Route Handling
+      handleHashChange();
+
+      return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [cafes]); 
+
+  // --- ACTIONS WITH ANIMATION ---
+  
+  const handleLoginSuccess = async () => {
+      setShowLoginModal(false);
+      setSplashState('LOGIN');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+           await refreshUserNotifications(session.user.id);
+           await refreshUserProfile(session.user.id);
+      }
+
+      setTimeout(() => {
+          setSplashState('IDLE');
+      }, 2000);
+  };
+
+  const handleLogout = async () => {
+      setSplashState('LOGOUT');
+      setTimeout(async () => {
+          await signOutUser();
+          setSplashState('IDLE');
+          navigate('HOME');
+      }, 2000);
+  };
+
+  const activeCafe = cafes.find(c => c.id === selectedCafeId) || null;
+
+  const handleCafeClick = (cafe: Cafe) => {
+    navigate('DETAIL', cafe.id);
+  };
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+    if (!isDarkMode) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  };
+
+  const handleCafeUpdate = async (updatedCafe: Cafe) => {
+      try {
+        if (updatedCafe.id.startsWith('c') && updatedCafe.id.length < 20) {
+             const { id, ...cafeData } = updatedCafe;
+             await createCafe(cafeData, user?.id);
+        } else {
+             await updateCafe(updatedCafe.id, updatedCafe);
+        }
+        const data = await fetchCafes();
+        setCafes(data);
+        addToast('success', 'Data tersimpan!');
+      } catch (error: any) {
+          addToast('error', 'Gagal menyimpan data.');
+      }
+  };
+
+  const handleDeleteCafe = async (cafeId: string) => {
+      try {
+          await deleteCafe(cafeId);
+          if (selectedCafeId === cafeId) { navigate('HOME'); setSelectedCafeId(null); }
+          const data = await fetchCafes();
+          setCafes(data);
+          addToast('success', 'Kafe dihapus.');
+      } catch (error: any) {
+           addToast('error', 'Gagal menghapus kafe.');
+      }
+  };
+
+  const handleToggleFavorite = async (cafeId: string) => {
+      if (!user) { setShowLoginModal(true); return; }
+      const isSaved = user.savedCafeIds?.includes(cafeId) || false;
+      const newUser = { ...user, savedCafeIds: isSaved ? user.savedCafeIds?.filter(id => id !== cafeId) : [...(user.savedCafeIds || []), cafeId] };
+      setUser(newUser);
+      try { await toggleFavoriteDB(user.id, cafeId, isSaved); } 
+      catch (error) { setUser(user); addToast('error', 'Gagal update favorit'); } 
+  };
+
+  const renderView = () => {
+      if (!isAuthInitialized) return <AppLoading />;
+
+      if (user && user.status !== 'active') {
+        return (
+            <div className="min-h-[80vh] flex flex-col items-center justify-center p-8 text-center animate-in fade-in">
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 ${user.status === 'pending' ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'}`}>
+                    {user.status === 'pending' ? <Lock size={40} /> : <ShieldAlert size={40} />}
+                </div>
+                <h2 className="text-2xl font-bold mb-3 text-gray-800 dark:text-gray-100">
+                    {user.status === 'pending' ? 'Menunggu Persetujuan' : 'Akun Ditolak'}
+                </h2>
+                <button onClick={handleLogout} className="px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-full font-bold shadow-lg">Keluar Akun</button>
+            </div>
+        );
+      }
+
+      if (view === 'DETAIL' && activeCafe) {
+        return <CafeDetail cafe={activeCafe} allCafes={cafes} userLocation={userLocation} onBack={() => window.history.back()} isSaved={user?.savedCafeIds?.includes(activeCafe.id) || false} onToggleFavorite={() => handleToggleFavorite(activeCafe.id)} user={user} onLoginReq={() => setShowLoginModal(true)} onCafeClick={handleCafeClick} />;
+      }
+      
+      if (view === 'EXPLORE') return <ExploreView cafes={cafes} onCafeClick={handleCafeClick} />;
+      
+      if (view === 'DASHBOARD') {
+        if (!user) { navigate('HOME'); return null; }
+        
+        const props = { user, onLogout: handleLogout, onHome: () => navigate('HOME'), cafes, onCafeUpdate: handleCafeUpdate, onCafeDelete: handleDeleteCafe, onCafeSelect: handleCafeClick };
+        return (
+            <Suspense fallback={<DashboardLoading />}>
+                <ErrorBoundary>
+                    <SEO title="Dashboard User" description="Kelola profil dan aktivitas Nongkrongr Anda." />
+                    {user.role === UserRole.ADMIN ? <AdminDashboard {...props} heroConfig={heroConfig} onUpdateHeroConfig={setHeroConfig} /> :
+                     user.role === UserRole.CAFE_MANAGER ? <CafeManagerDashboard {...props} /> : <UserDashboard {...props} />}
+                </ErrorBoundary>
+            </Suspense>
+        );
+      }
+      
+      if (view === 'MAP') {
+          return null; // Handled outside to keep state
+      }
+
+      return (
+        <>
+            <SEO title="Home" />
+            <HomeView cafes={cafes} onCafeClick={handleCafeClick} onGoToMap={() => navigate('MAP')} onReviewClick={(id) => { const c = cafes.find(x => x.id === id); if(c) handleCafeClick(c); }} heroConfig={heroConfig} userLocation={userLocation} />
+        </>
+      );
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      <AuthProvider>
-        <FavoriteProvider>
-          <CafeProvider>
-            <NotificationProvider>
+    <div className={`font-sans text-gray-800 dark:text-gray-100 min-h-screen relative transition-colors duration-300 overflow-x-hidden`}>
+      <ThirdPartyIntegrations />
+      {splashState !== 'IDLE' && <SplashScreen type={splashState === 'LOGIN' ? 'LOGIN' : 'LOGOUT'} />}
+
+      {view !== 'DASHBOARD' && (
+          <Navigation 
+            currentView={view} 
+            setView={(v) => navigate(v)} 
+            userRole={user?.role || UserRole.GUEST}
+            isLoggedIn={!!user}
+            onLoginClick={() => setShowLoginModal(true)}
+            isDarkMode={isDarkMode}
+            toggleDarkMode={toggleDarkMode}
+            user={user}
+            onLogout={handleLogout}
+            notifications={notifications}
+            onNotificationClick={(n) => {
+                // Logic handled inside nav or here if needed
+            }}
+          />
+      )}
+      
+      <main className="min-h-screen w-full">
+        {/* MAP VIEW KEPT IN DOM FOR PERFORMANCE */}
+        <div style={{ display: view === 'MAP' ? 'block' : 'none', height: '100vh', width: '100%' }}>
+             <SEO title="Peta Kafe" description="Jelajahi lokasi kafe di peta interaktif." />
+             <MapView cafes={cafes} onCafeClick={handleCafeClick} isVisible={view === 'MAP'} />
+        </div>
+        
+        {view !== 'MAP' && (
+            <div key={view} className="page-enter">
                 <ErrorBoundary>
-                  <HashRouter>
-                      <ScrollToTopOnNavigate />
-                      <Routes>
-                        <Route element={<MainLayout />}>
-                            <Route path="/" element={<HomePage />} />
-                            <Route path="/explore" element={<ExplorePage />} />
-                            <Route path="/cafe/:slug" element={<DetailPage />} />
-                            <Route path="/about" element={<AboutPage />} />
-                            <Route path="/leaderboard" element={<LeaderboardPage />} />
-                            <Route path="/feedback" element={<FeedbackPage />} />
-                        </Route>
-                        
-                        <Route path="/login" element={
-                            <Suspense fallback={<LoadingFallback />}>
-                                <GuestRoute>
-                                    <LoginPage />
-                                </GuestRoute>
-                            </Suspense>
-                        } />
-
-                        <Route path="/reset-password" element={
-                            <Suspense fallback={<LoadingFallback />}>
-                                <ResetPasswordPage />
-                            </Suspense>
-                        } />
-                        
-                        {/* Role-based routes mapping to AdminPage */}
-                        <Route path="/dashboard-admin" element={
-                            <Suspense fallback={<LoadingFallback />}>
-                                <ProtectedRoute>
-                                    <AdminPage />
-                                </ProtectedRoute>
-                            </Suspense>
-                        } />
-                         <Route path="/dashboard-pengelola" element={
-                            <Suspense fallback={<LoadingFallback />}>
-                                <ProtectedRoute>
-                                    <AdminPage />
-                                </ProtectedRoute>
-                            </Suspense>
-                        } />
-                         <Route path="/dashboard-profile" element={
-                            <Suspense fallback={<LoadingFallback />}>
-                                <ProtectedRoute>
-                                    <AdminPage />
-                                </ProtectedRoute>
-                            </Suspense>
-                        } />
-                      </Routes>
-                  </HashRouter>
+                    {renderView()} 
                 </ErrorBoundary>
-            </NotificationProvider>
-          </CafeProvider>
-        </FavoriteProvider>
-      </AuthProvider>
-    </ThemeContext.Provider>
-  );
-};
+            </div>
+        )}
+      </main>
 
-export default App;
+      {showLoginModal && <AuthModal onClose={() => setShowLoginModal(false)} onSuccess={handleLoginSuccess} />}
+      <ScrollToTopButton />
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+    </div>
+  );
+}

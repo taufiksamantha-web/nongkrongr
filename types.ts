@@ -1,142 +1,94 @@
 
-// Fix: Shim for JSX.IntrinsicElements to resolve missing HTML tag types in this environment
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      [elemName: string]: any;
-    }
-  }
-  
-  interface WindowEventMap {
-    'beforeinstallprompt': BeforeInstallPromptEvent;
-  }
+
+export enum UserRole {
+  GUEST = 'GUEST',
+  USER = 'USER',
+  CAFE_MANAGER = 'CAFE_MANAGER',
+  ADMIN = 'ADMIN'
 }
 
-export interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: string[];
-  readonly userChoice: Promise<{
-    outcome: 'accepted' | 'dismissed';
-    platform: string;
-  }>;
-  prompt(): Promise<void>;
-  preventDefault(): void;
-}
-
-export enum PriceTier {
-  BUDGET = 1,
-  STANDARD = 2,
-  PREMIUM = 3,
-  LUXURY = 4,
-}
-
-export interface Amenity {
+export interface User {
   id: string;
   name: string;
-  icon: string; // Emoji or SVG string
-  created_at?: string;
+  username: string; // Wajib ada sesuai schema baru
+  avatar: string;
+  role: string; // Disimpan sebagai string di DB ('USER', 'CAFE_MANAGER', 'ADMIN')
+  email: string;
+  savedCafeIds?: string[];
+  status?: 'active' | 'pending' | 'rejected' | 'banned';
 }
 
-export interface Vibe {
-  id:string;
-  name: string;
-  created_at?: string;
-}
-
-export interface Tag {
+export interface Notification {
   id: string;
-  name: string;
-  created_by?: string;
-}
-
-export interface Spot {
-  id: string;
-  cafe_id?: string;
   title: string;
-  tip: string;
-  photoUrl: string;
-  created_at?: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'like' | 'review';
+  isRead: boolean;
+  time: string;
+  targetId?: string;
 }
 
-export interface Event {
-  id: string;
-  cafe_id?: string;
-  name: string;
+export interface HeroConfig {
+  title: string;
   description: string;
-  start_date: string | Date;
-  end_date: string | Date;
-  imageUrl?: string;
-  created_at?: string;
+  backgroundImage: string;
 }
 
 export interface Review {
   id: string;
-  cafe_id?: string;
-  author_id?: string; // ID of the user (UUID)
-  author: string; // Username (display name)
-  ratingAesthetic: number; // 1-10
-  ratingWork: number; // 1-10
-  crowdMorning: number; // 1-5
-  crowdAfternoon: number; // 1-5
-  crowdEvening: number; // 1-5
-  priceSpent: number;
-  text: string;
-  photos: string[];
-  createdAt: string | Date;
-  status: 'pending' | 'approved' | 'rejected';
-  helpful_count: number;
-  author_avatar_url?: string | null;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  rating: number;
+  comment: string;
+  date: string;
+  reply?: string;
+  cafeId?: string;
+  cafeName?: string;
+}
+
+export interface OpeningHours {
+  start: string;
+  end: string;
+  is24Hours: boolean;
+}
+
+export interface PhotoSpot {
+  title: string;
+  image: string;
 }
 
 export interface Cafe {
   id: string;
-  slug: string;
   name: string;
   description: string;
+  rating: number;
+  reviewsCount: number;
   address: string;
-  city: string;
-  district: string;
-  openingHours: string;
-  priceTier: PriceTier;
-  coords: {
-    lat: number;
-    lng: number;
-  };
-  isSponsored: boolean;
-  sponsoredUntil: Date | string | null;
-  sponsoredRank: number; // for ordering sponsored results
-  logoUrl?: string; // Optional: URL for the cafe's logo
-  coverUrl: string;
-  vibes: Vibe[];
-  amenities: Amenity[];
-  tags: Tag[];
-  spots: Spot[];
-  reviews: Review[];
-  events: Event[];
-  manager_id?: string; // ID of the user who manages this cafe
-  created_by?: string; // ID of the user who created this cafe entry
-  created_at?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'archived';
-  // Aggregated scores
-  avgAestheticScore: number;
-  avgWorkScore: number;
-  avgCrowdMorning: number;
-  avgCrowdAfternoon: number;
-  avgCrowdEvening: number;
-  // Contact Info
-  phoneNumber?: string;
-  websiteUrl?: string;
+  coordinates: { lat: number; lng: number };
+  image: string;
+  images: string[];
+  tags: string[];
+  facilities: string[];
+  priceRange: string;
+  isOpen: boolean;
+  distance?: string;
+  isVerified?: boolean;
+  status?: 'active' | 'pending' | 'rejected';
+  openingHours?: OpeningHours;
+  photoSpots?: PhotoSpot[];
+  owner_id?: string;
 }
 
-// For Supabase 'profiles' table
-export interface Profile {
+export interface Post {
   id: string;
-  username: string;
-  email: string;
-  role: 'admin' | 'user' | 'admin_cafe';
-  status: 'active' | 'pending_approval' | 'rejected' | 'archived';
-  updated_at?: string;
-  avatar_url?: string;
+  cafeId: string;
+  cafeName: string;
+  cafeAvatar: string;
+  content: string;
+  image?: string;
+  likes: number;
+  timestamp: string;
 }
 
-// Combined user object for the app
-export interface User extends Profile {}
+export type ViewState = 'HOME' | 'MAP' | 'EXPLORE' | 'DETAIL' | 'DASHBOARD' | 'LOGIN';
