@@ -1,23 +1,25 @@
 {
-  "name": "Nongkrongr: Cafe Finder",
   "short_name": "Nongkrongr",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#fbfaff",
-  "theme_color": "#7C4DFF",
-  "orientation": "portrait",
+  "name": "Nongkrongr - Cari Tempat Nongkrong",
   "icons": [
     {
-      "src": "https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png",
-      "sizes": "192x192",
+      "src": "https://res.cloudinary.com/dovouihq8/image/upload/w_192,h_192,c_fill,q_auto,f_auto/v1764664004/hrj8boazgvct4cuaqdgg.png",
       "type": "image/png",
+      "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "https://res.cloudinary.com/dovouihq8/image/upload/web-icon.png",
-      "sizes": "512x512",
+      "src": "https://res.cloudinary.com/dovouihq8/image/upload/w_512,h_512,c_fill,q_auto,f_auto/v1764664004/hrj8boazgvct4cuaqdgg.png",
       "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#F97316",
+  "background_color": "#ffffff",
+  "orientation": "portrait"
 }
