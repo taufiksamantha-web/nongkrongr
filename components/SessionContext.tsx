@@ -34,6 +34,7 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const USER_DATA_KEY = 'nongkrongr_user_data';
     const CART_DATA_KEY = 'nongkrongr_global_cart';
+    const THEME_KEY = 'nongkrongr_theme';
     const mounted = useRef(true);
     const initialCheckDone = useRef(false);
 
@@ -56,9 +57,43 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [isSessionLoading, setIsSessionLoading] = useState(!initialCheckDone.current);
     const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]); 
-    const [isDarkMode] = useState(false);
+    
+    // Fungsionalitas Dark Mode yang mendeteksi sistem secara otomatis
+    const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+        const cachedTheme = SafeStorage.getItem(THEME_KEY);
+        if (cachedTheme) return cachedTheme === 'dark';
+        // Fallback ke preferensi sistem browser/OS
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    });
 
-    // Save cart to storage whenever it changes
+    // Sinkronisasi class dark ke root HTML dan dengarkan perubahan sistem
+    useEffect(() => {
+        const root = window.document.documentElement;
+        if (isDarkMode) {
+            root.classList.add('dark');
+        } else {
+            root.classList.remove('dark');
+        }
+
+        // Listener untuk perubahan tema sistem secara real-time
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleChange = (e: MediaQueryListEvent) => {
+            // Hanya ikuti sistem jika user belum pernah set manual
+            if (!SafeStorage.getItem(THEME_KEY)) {
+                setIsDarkMode(e.matches);
+            }
+        };
+
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, [isDarkMode]);
+
+    const toggleDarkMode = () => {
+        const newMode = !isDarkMode;
+        setIsDarkMode(newMode);
+        SafeStorage.setItem(THEME_KEY, newMode ? 'dark' : 'light');
+    };
+
     useEffect(() => {
         SafeStorage.setItem(CART_DATA_KEY, JSON.stringify(cart));
     }, [cart]);
@@ -106,7 +141,6 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
                 newCart[cafeId].items = newCart[cafeId].items.filter(i => i.menu_item_id !== itemId);
             }
 
-            // Cleanup empty cafe group
             if (newCart[cafeId].items.length === 0) {
                 delete newCart[cafeId];
             }
@@ -251,7 +285,6 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
         };
     }, []); 
 
-    const toggleDarkMode = () => { };
     const refreshUserProfile = async (userId: string) => {
         await syncProfileBackground(userId);
         return user;

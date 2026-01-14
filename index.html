@@ -73,7 +73,7 @@
         overscroll-behavior-y: none;
         height: 100%;
         scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch; /* Smoother momentum scroll on iOS */
+        -webkit-overflow-scrolling: touch;
       }
       body {
         background-color: #FAFAFA; 
@@ -105,7 +105,18 @@
         -webkit-user-select: text;
         user-select: text;
       }
-      /* SUPER TURBO SCROLL OPTIMIZATION */
+
+      /* PAGE TRANSITIONS - ONLY FOR BACKWARD */
+      @keyframes pageSlideInFromLeft {
+        from { transform: translateX(-100%); opacity: 0.8; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      
+      .view-animate-backward {
+        animation: pageSlideInFromLeft 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        will-change: transform, opacity;
+      }
+
       .gpu-accelerated {
         transform: translateZ(0);
         backface-visibility: hidden;
@@ -114,18 +125,16 @@
       }
       .optimize-scrolling {
         content-visibility: auto;
-        contain-intrinsic-size: 1px 320px; /* Estimasi tinggi kartu di mobile */
+        contain-intrinsic-size: 1px 320px;
         contain: layout style paint;
       }
       @media (max-width: 768px) {
-        /* Reduce shadow complexity on mobile to save GPU cycles */
         .shadow-xl, .shadow-2xl, .shadow-lg {
           box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
         }
         .dark .shadow-xl, .dark .shadow-2xl, .dark .shadow-lg {
           box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
         }
-        /* FIXED: Removed aggressive forced white background on blur classes */
         .backdrop-blur-md, .backdrop-blur-sm, .backdrop-blur-xl {
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
@@ -144,10 +153,6 @@
       .dark .glass {
         background: rgba(30, 41, 59, 0.8);
         border: 1px solid rgba(255, 255, 255, 0.05);
-      }
-      @keyframes placeholderShimmer {
-        0% { background-position: -468px 0; }
-        100% { background-position: 468px 0; }
       }
     </style>
   <script type="importmap">

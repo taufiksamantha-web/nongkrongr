@@ -25,8 +25,8 @@ export const MENU_ITEMS_USER = [
 export const DashboardHeader: React.FC<{ title: string, subtitle?: string, action?: React.ReactNode }> = ({ title, subtitle, action }) => (
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 md:mb-10 animate-in slide-in-from-top-4 fade-in duration-500">
         <div>
-            <h1 className="text-3xl md:text-5xl font-display font-black text-gray-900 tracking-tight leading-tight mt-2 md:mt-0">{title}</h1>
-            {subtitle && <p className="text-gray-500 text-sm md:text-base mt-2 font-medium max-w-xl leading-relaxed">{subtitle}</p>}
+            <h1 className="text-3xl md:text-5xl font-display font-black text-gray-900 dark:text-white tracking-tight leading-tight mt-2 md:mt-0">{title}</h1>
+            {subtitle && <p className="text-gray-500 dark:text-slate-400 text-sm md:text-base mt-2 font-medium max-w-xl leading-relaxed">{subtitle}</p>}
         </div>
         {action && <div className="shrink-0">{action}</div>}
     </div>
@@ -63,7 +63,6 @@ export const DashboardLayout: React.FC<{
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
-    // Logic to sync nav with inner container scroll
     useEffect(() => {
         const container = scrollContainerRef.current;
         if (!container) return;
@@ -84,7 +83,6 @@ export const DashboardLayout: React.FC<{
             
             lastScrollY.current = currentScrollY;
 
-            // Snapping
             clearTimeout(scrollTimeout.current);
             scrollTimeout.current = setTimeout(() => {
                 if (currentTranslateY.current > 0 && currentTranslateY.current < 150) {
@@ -127,7 +125,7 @@ export const DashboardLayout: React.FC<{
             style={{ transform: 'translate(-50%, 0%)', willChange: 'transform' }}
             className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.3rem)] left-1/2 z-[1000] w-[92%] max-w-md"
         >
-            <div className="bg-white/80 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/50 dark:border-white/10 rounded-[2.2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] p-2 flex items-center justify-between ring-1 ring-black/5">
+            <div className="bg-white/95 dark:bg-slate-900 border border-gray-100 dark:border-white/10 rounded-[2.2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] p-2 flex items-center justify-between ring-1 ring-black/5">
                 {menuItems.map((item) => {
                     const isActive = activeTab === item.id;
                     return (
@@ -160,9 +158,9 @@ export const DashboardLayout: React.FC<{
     );
 
     return (
-        <div className="min-h-screen bg-[#F8F9FA] text-gray-800 flex transition-colors duration-300 font-sans selection:bg-orange-500/30">
+        <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0B1120] text-gray-800 dark:text-slate-200 flex transition-colors duration-300 font-sans selection:bg-orange-500/30">
             {/* DESKTOP SIDEBAR */}
-            <aside className="hidden md:flex flex-col w-[280px] fixed left-6 top-6 bottom-6 bg-white/80 rounded-[3rem] shadow-2xl shadow-gray-200/50 border border-white/50 z-50 overflow-hidden backdrop-blur-2xl transition-all duration-300">
+            <aside className="hidden md:flex flex-col w-[280px] fixed left-6 top-6 bottom-6 bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl border border-gray-100 dark:border-white/5 z-50 overflow-hidden transition-all duration-300">
                 <div className="h-28 flex items-center justify-center shrink-0">
                     <div className="flex items-center gap-3 cursor-pointer" onClick={onHome}>
                         <img src={getOptimizedImageUrl(LOGO_HOME_URL, 300)} className="h-7 w-auto object-contain" alt="Nongkrongr" />
@@ -177,7 +175,7 @@ export const DashboardLayout: React.FC<{
                                 w-full flex items-center gap-4 px-6 py-4 rounded-[2rem] text-sm font-bold transition-all duration-300 relative overflow-hidden group
                                 ${activeTab === item.id 
                                     ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg shadow-orange-500/30' 
-                                    : 'text-gray-500 hover:bg-white hover:text-gray-900'
+                                    : 'text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white'
                                 }
                             `}
                         >
@@ -193,20 +191,26 @@ export const DashboardLayout: React.FC<{
                     ))}
                 </div>
                 <div className="p-4 mt-2">
-                    <div className="bg-white/50 p-4 rounded-[2.5rem] border border-gray-100 backdrop-blur-sm">
+                    <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-[2.5rem] border border-gray-100 dark:border-white/5">
                         <div className="flex items-center gap-3 mb-4 px-2">
-                            <LazyImage src={user.avatar_url} className="w-10 h-10 rounded-full bg-gray-200 ring-2 ring-white shadow-sm" alt={user.name} />
+                            <LazyImage src={user.avatar_url} className="w-10 h-10 rounded-full bg-gray-200 dark:bg-slate-700 ring-2 ring-white dark:ring-slate-900 shadow-sm" alt={user.name} />
                             <div className="min-w-0 overflow-hidden">
-                                <p className="text-sm font-bold truncate text-gray-900">{user.name.split(' ')[0]}</p>
-                                <p className="text-[9px] text-gray-500 truncate font-bold uppercase tracking-wider">{user.role}</p>
+                                <p className="text-sm font-bold truncate text-gray-900 dark:text-white">{user.name.split(' ')[0]}</p>
+                                <p className="text-[9px] text-gray-500 dark:text-slate-500 truncate font-bold uppercase tracking-wider">{user.role}</p>
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={handleBellClick} className="flex-1 h-10 rounded-full bg-gray-100 hover:bg-orange-100 hover:text-orange-600 transition-colors flex items-center justify-center text-gray-500 relative">
-                                <Bell size={18} />
-                                {unreadCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>}
+                            <button 
+                                onClick={toggleDarkMode}
+                                className="flex-1 h-10 rounded-full bg-white dark:bg-slate-700 hover:bg-orange-100 dark:hover:bg-orange-900/20 hover:text-orange-600 dark:hover:text-orange-400 transition-colors flex items-center justify-center text-gray-500 dark:text-slate-400 border border-gray-100 dark:border-white/5"
+                            >
+                                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
                             </button>
-                            <button onClick={onLogout} className="flex-1 h-10 rounded-full bg-gray-100 hover:bg-red-100 hover:text-red-600 transition-colors flex items-center justify-center text-gray-500">
+                            <button onClick={handleBellClick} className="flex-1 h-10 rounded-full bg-white dark:bg-slate-700 hover:bg-orange-100 dark:hover:bg-orange-900/20 hover:text-orange-600 dark:hover:text-orange-400 transition-colors flex items-center justify-center text-gray-500 dark:text-slate-400 relative border border-gray-100 dark:border-white/5">
+                                <Bell size={18} />
+                                {unreadCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-900"></span>}
+                            </button>
+                            <button onClick={onLogout} className="flex-1 h-10 rounded-full bg-white dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center justify-center text-gray-500 dark:text-slate-400 border border-gray-100 dark:border-white/5">
                                 <LogOut size={18} />
                             </button>
                         </div>
@@ -215,21 +219,29 @@ export const DashboardLayout: React.FC<{
             </aside>
 
             {/* MOBILE HEADER */}
-            <div className="md:hidden fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-xl z-40 flex items-center justify-between px-5 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-3 transition-all border-b border-gray-100 shadow-sm">
-                <div onClick={onHome} className="w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center active:scale-90 transition-transform">
-                    <Home size={20} />
+            <div className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 z-40 flex items-center justify-between px-5 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-3 transition-all border-b border-gray-100 dark:border-white/5 shadow-sm">
+                <div className="flex items-center gap-2">
+                    <div onClick={onHome} className="w-10 h-10 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 rounded-full flex items-center justify-center active:scale-90 transition-transform">
+                        <Home size={20} />
+                    </div>
+                    <button 
+                        onClick={toggleDarkMode}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-all ${isDarkMode ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400'}`}
+                    >
+                        {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                    </button>
                 </div>
                 
-                <span className="font-display font-black text-gray-900 tracking-tight text-lg">
+                <span className="font-display font-black text-gray-900 dark:text-white tracking-tight text-lg">
                     { menuItems.find(item => item.id === activeTab)?.label || 'Dashboard' }
                 </span>
 
                 <div className="flex items-center gap-2">
-                    <button onClick={handleBellClick} className="relative w-10 h-10 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center">
+                    <button onClick={handleBellClick} className="relative w-10 h-10 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-full flex items-center justify-center">
                         <Bell size={20} />
-                        {unreadCount > 0 && <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+                        {unreadCount > 0 && <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>}
                     </button>
-                    <button onClick={onLogout} className="w-10 h-10 bg-red-50 text-red-500 rounded-full flex items-center justify-center active:scale-90 transition-transform">
+                    <button onClick={onLogout} className="w-10 h-10 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-full flex items-center justify-center active:scale-90 transition-transform">
                         <LogOut size={20} />
                     </button>
                 </div>
@@ -246,7 +258,6 @@ export const DashboardLayout: React.FC<{
                 </div>
             </div>
 
-            {/* MOBILE FLOATING NAV */}
             <MobileDashboardNav />
 
             <NotificationDrawer 

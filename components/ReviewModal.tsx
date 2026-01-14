@@ -43,15 +43,14 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onSub
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Tulis Ulasan" className="!max-w-md w-full">
+        <Modal isOpen={isOpen} onClose={onClose} title="Tulis Ulasan" className="!max-w-md w-full dark:!bg-[#1E293B]">
             <div className="space-y-6">
                 <div className="text-center">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 font-medium">Bagaimana pengalamanmu di</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400 mb-1 font-medium">Bagaimana pengalamanmu di</p>
                     <h3 className="text-xl font-display font-black text-gray-900 dark:text-white leading-tight">{cafeName}?</h3>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Rating Selection */}
                     <div className="flex flex-col items-center">
                         <div className="flex gap-2">
                             {[1, 2, 3, 4, 5].map((star) => (
@@ -80,7 +79,6 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onSub
                         </p>
                     </div>
 
-                    {/* Comment Area */}
                     <div>
                         <label className="block text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Komentar Kamu</label>
                         <div className="relative">

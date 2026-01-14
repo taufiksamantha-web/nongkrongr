@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
     Heart, MessageSquare, Camera, Crown, Medal, Coffee, User as UserIcon, 
@@ -37,7 +38,6 @@ interface UserDashboardProps {
 const DEFAULT_CAFE_IMG = "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?q=80&w=2078&auto=format&fit=crop";
 const DEFAULT_MENU_IMG = "https://images.unsplash.com/photo-1541167760496-162955ed8a9f?q=80&w=1974&auto=format&fit=crop";
 
-// Fix: Explicitly use React.FC to clarify type usage with React namespace
 export const UserDashboard: React.FC<UserDashboardProps> = ({ 
     user, onLogout, onHome, onCafeSelect, addToast, isDarkMode, toggleDarkMode,
     notifications, onMarkRead, onMarkAllRead, onDeleteNotification, onClearAllNotifications, onSupportClick, onNotificationClick
@@ -49,7 +49,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
     const [userReviews, setUserReviews] = useState<Review[]>([]);
     const [userOrders, setUserOrders] = useState<Order[]>([]);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null); // State for order details
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null); 
     
     const [editName, setEditName] = useState(user ? user.name : '');
     const [newAvatar, setNewAvatar] = useState<File | null>(null);
@@ -130,7 +130,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         } catch(e: any) { addToast('error', 'Gagal update profil.'); } finally { setIsSavingProfile(false); }
     };
 
-    // Fix: Correctly type the MouseEvent using the React namespace
     const handleRemoveFavorite = async (cafeId: string, e: React.MouseEvent) => {
         e.stopPropagation();
         setFavorites(favorites.filter(c => c.id !== cafeId));
@@ -145,10 +144,10 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
     };
 
     const getRank = (count: number) => {
-        if (count >= 20) return { title: 'Sultan Nongkrong', color: 'from-yellow-400 to-orange-500', icon: Crown, badge: 'text-yellow-600 bg-yellow-50' };
-        if (count >= 10) return { title: 'Reviewer Handal', color: 'from-blue-400 to-indigo-500', icon: Medal, badge: 'text-blue-600 bg-blue-50' };
-        if (count >= 5) return { title: 'Hobi Ngopi', color: 'from-green-400 to-teal-500', icon: Coffee, badge: 'text-green-600 bg-green-50' };
-        return { title: 'Pencinta Kopi', color: 'from-gray-400 to-slate-500', icon: UserIcon, badge: 'text-gray-600 bg-gray-50' };
+        if (count >= 20) return { title: 'Sultan Nongkrong', color: 'from-yellow-400 to-orange-500', icon: Crown, badge: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400' };
+        if (count >= 10) return { title: 'Reviewer Handal', color: 'from-blue-400 to-indigo-500', icon: Medal, badge: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400' };
+        if (count >= 5) return { title: 'Hobi Ngopi', color: 'from-green-400 to-teal-500', icon: Coffee, badge: 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400' };
+        return { title: 'Pencinta Kopi', color: 'from-gray-400 to-slate-500', icon: UserIcon, badge: 'text-gray-600 bg-gray-50 dark:bg-slate-800 dark:text-slate-400' };
     };
 
     const rank = getRank(user.reviewsCount || 0);
@@ -169,12 +168,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
 
     const getOrderStatusStyles = (status: string) => {
         switch (status) {
-            case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-            case 'preparing': return 'bg-blue-100 text-blue-700 border-blue-200 animate-pulse';
+            case 'pending': return 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-500 dark:border-yellow-900/30';
+            case 'preparing': return 'bg-blue-100 text-blue-700 border-blue-200 animate-pulse dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/30';
             case 'ready': return 'bg-orange-600 text-white border-orange-600 ring-4 ring-orange-500/20 shadow-lg';
-            case 'completed': return 'bg-green-50 text-green-700 border-green-100';
-            case 'cancelled': return 'bg-red-50 text-red-700 border-red-100';
-            default: return 'bg-gray-100 text-gray-700';
+            case 'completed': return 'bg-green-50 text-green-700 border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30';
+            case 'cancelled': return 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/30';
+            default: return 'bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-slate-400';
         }
     };
 
@@ -203,10 +202,9 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
         >
             <SEO title="Dashboard User" />
             
-            {/* UPDATED: Centered Titles */}
             <div className="mb-8 md:mb-12 animate-in fade-in duration-700 text-center">
-                <h1 className="text-3xl md:text-5xl font-display font-black text-gray-900 tracking-tight leading-none mb-3">{title}</h1>
-                <p className="text-gray-500 text-xs md:text-sm font-medium max-w-lg mx-auto">{subtitle}</p>
+                <h1 className="text-3xl md:text-5xl font-display font-black text-gray-900 dark:text-white tracking-tight leading-none mb-3">{title}</h1>
+                <p className="text-gray-500 dark:text-slate-400 text-xs md:text-sm font-medium max-w-lg mx-auto">{subtitle}</p>
             </div>
             
             {isLoadingData ? (
@@ -218,17 +216,17 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                 <div className="animate-in slide-in-from-bottom-4 duration-700">
                     {activeTab === 'profile' && (
                         <div className="max-w-5xl mx-auto space-y-8">
-                            <div className="relative rounded-[3rem] bg-white shadow-2xl border border-gray-100 p-8 md:p-12 overflow-hidden group">
+                            <div className="relative rounded-[3rem] bg-white dark:bg-slate-900 shadow-2xl border border-gray-100 dark:border-white/5 p-8 md:p-12 overflow-hidden group">
                                 <div className={`absolute top-0 right-0 w-80 h-80 bg-gradient-to-br ${rank.color} opacity-10 rounded-full blur-[100px] -mr-20 -mt-20 transition-transform duration-1000 group-hover:scale-110`}></div>
                                 
                                 <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
                                     <div className="relative shrink-0">
                                         <div className={`w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-tr ${rank.color} p-1 shadow-2xl animate-in zoom-in duration-1000`}>
-                                            <div className="w-full h-full rounded-full bg-white p-1">
+                                            <div className="w-full h-full rounded-full bg-white dark:bg-slate-800 p-1">
                                                 <img src={newAvatar ? URL.createObjectURL(newAvatar) : user.avatar_url} className="w-full h-full rounded-full object-cover shadow-inner" alt={user.name} />
                                             </div>
                                         </div>
-                                        <label className="absolute bottom-1 right-1 p-3 bg-gray-900 text-white rounded-2xl shadow-xl cursor-pointer hover:scale-110 transition-transform active:scale-95 border-2 border-white z-20">
+                                        <label className="absolute bottom-1 right-1 p-3 bg-gray-900 dark:bg-orange-600 text-white rounded-2xl shadow-xl cursor-pointer hover:scale-110 transition-transform active:scale-95 border-2 border-white dark:border-slate-900 z-20">
                                             <Camera size={18} />
                                             <input type="file" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) { if (file.size > 5 * 1024 * 1024) { addToast('error', 'Maksimal 5MB!'); return; } setNewAvatar(file); } }} accept="image/*" />
                                         </label>
@@ -236,37 +234,37 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
 
                                     <div className="text-center md:text-left flex-1 min-w-0">
                                         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
-                                            <h2 className="text-3xl md:text-4xl font-display font-black text-gray-900 tracking-tight leading-none truncate">{user.name}</h2>
+                                            <h2 className="text-3xl md:text-4xl font-display font-black text-gray-900 dark:text-white tracking-tight leading-none truncate">{user.name}</h2>
                                             <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${rank.badge} shrink-0`}>
                                                 <rank.icon size={14} className="animate-pulse" /> {rank.title}
                                             </div>
                                         </div>
                                         
-                                        <div className="flex flex-wrap justify-center md:justify-start gap-4 text-gray-500 font-bold text-xs mb-8">
-                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-xl"><Mail size={14} className="text-orange-500" /> {user.email}</div>
-                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-xl"><Clock size={14} className="text-orange-500" /> Joined {new Date(user.created_at).getFullYear()}</div>
+                                        <div className="flex flex-wrap justify-center md:justify-start gap-4 text-gray-500 dark:text-slate-400 font-bold text-xs mb-8">
+                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-slate-800 rounded-xl border dark:border-white/5"><Mail size={14} className="text-orange-500" /> {user.email}</div>
+                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-slate-800 rounded-xl border dark:border-white/5"><Clock size={14} className="text-orange-500" /> Joined {new Date(user.created_at).getFullYear()}</div>
                                         </div>
                                         
                                         <div className="flex flex-col sm:flex-row gap-3 items-center">
                                             <div className="flex-1 w-full">
-                                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Ubah nama..." className="bg-gray-50 border-none h-12 pl-6 rounded-2xl font-bold text-sm" />
+                                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Ubah nama..." className="bg-gray-50 dark:bg-slate-800 border-none h-12 pl-6 rounded-2xl font-bold text-sm dark:text-white" />
                                             </div>
                                             <Button onClick={handleProfileUpdate} isLoading={isSavingProfile} className="h-12 px-8 rounded-2xl shadow-xl w-full sm:w-auto text-sm">Update Profil</Button>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 pt-10 border-t border-gray-50">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 pt-10 border-t border-gray-50 dark:border-white/5">
                                     {[
-                                        { label: 'Favorit', value: favorites.length, icon: Heart, color: 'text-red-500 bg-red-50' },
-                                        { label: 'Ulasan', value: user.reviewsCount || 0, icon: MessageSquare, color: 'text-blue-500 bg-blue-50' },
-                                        { label: 'Pesanan', value: userOrders.length, icon: Receipt, color: 'text-orange-500 bg-orange-50' },
-                                        { label: 'Poin', value: (user.reviewsCount || 0) * 10, icon: Sparkles, color: 'text-yellow-500 bg-yellow-50' },
+                                        { label: 'Favorit', value: favorites.length, icon: Heart, color: 'text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400' },
+                                        { label: 'Ulasan', value: user.reviewsCount || 0, icon: MessageSquare, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400' },
+                                        { label: 'Pesanan', value: userOrders.length, icon: Receipt, color: 'text-orange-500 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400' },
+                                        { label: 'Poin', value: (user.reviewsCount || 0) * 10, icon: Sparkles, color: 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400' },
                                     ].map((stat, i) => (
-                                        <div key={i} className="flex flex-col items-center p-5 rounded-[2rem] hover:bg-gray-50 transition-colors">
+                                        <div key={i} className="flex flex-col items-center p-5 rounded-[2rem] hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
                                             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-3 ${stat.color}`}><stat.icon size={20} /></div>
-                                            <span className="text-xl font-black text-gray-900">{stat.value}</span>
-                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mt-1">{stat.label}</span>
+                                            <span className="text-xl font-black text-gray-900 dark:text-white">{stat.value}</span>
+                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-slate-500 mt-1">{stat.label}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -281,7 +279,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                     {favorites.map(cafe => {
                                         const status = getCafeStatus(cafe.openingHours);
                                         return (
-                                            <div key={cafe.id} className="group relative bg-white rounded-[2.5rem] overflow-hidden shadow-xl hover:shadow-2xl border border-gray-100 transition-all duration-700 hover:-translate-y-2 cursor-pointer ring-1 ring-black/5" onClick={() => onCafeSelect(cafe)}>
+                                            <div key={cafe.id} className="group relative bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-xl hover:shadow-2xl border border-gray-100 dark:border-white/5 transition-all duration-700 hover:-translate-y-2 cursor-pointer ring-1 ring-black/5" onClick={() => onCafeSelect(cafe)}>
                                                 <div className="aspect-[4/5] relative overflow-hidden">
                                                     <LazyImage src={getOptimizedImageUrl(cafe.image, 800)} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" alt={cafe.name} />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent opacity-80 group-hover:opacity-95 transition-opacity"></div>
@@ -311,13 +309,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                     })}
                                 </div>
                             ) : (
-                                /* UPDATED: Centered & Responsive Button */
-                                <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center">
-                                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
-                                        <Heart size={40} className="text-gray-200" />
+                                <div className="text-center py-32 bg-white dark:bg-slate-900 rounded-[3rem] border-2 border-dashed border-gray-100 dark:border-white/5 flex flex-col items-center justify-center">
+                                    <div className="w-20 h-20 bg-gray-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                                        <Heart size={40} className="text-gray-200 dark:text-slate-700" />
                                     </div>
-                                    <h3 className="text-xl font-black text-gray-800">Koleksi Masih Kosong</h3>
-                                    <p className="text-gray-400 text-xs mt-2 font-medium px-10 mb-8">Simpan kafe favoritmu untuk melihatnya di galeri eksklusif ini.</p>
+                                    <h3 className="text-xl font-black text-gray-800 dark:text-white uppercase">Koleksi Kosong</h3>
+                                    <p className="text-gray-400 dark:text-slate-500 text-xs mt-2 font-medium px-10 mb-8">Simpan kafe favoritmu untuk melihatnya di galeri ini.</p>
                                     <Button onClick={onHome} className="h-14 px-12 text-sm shadow-xl shadow-orange-500/20 w-full sm:w-auto mx-auto max-w-[280px]">Mulai Jelajah</Button>
                                 </div>
                             )}
@@ -328,8 +325,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                         <div className="max-w-4xl mx-auto space-y-5 pb-20">
                             {userOrders.length > 0 ? (
                                 userOrders.map(order => (
-                                    <div key={order.id} className={`bg-white rounded-[2.2rem] p-5 md:p-7 shadow-xl border flex flex-col md:flex-row gap-6 relative overflow-hidden group transition-all duration-500 ${order.status === 'ready' ? 'border-orange-500 ring-2 ring-orange-500/10' : 'border-gray-50 hover:border-orange-100'}`}>
-                                        <div className="w-full md:w-36 h-36 rounded-3xl overflow-hidden shrink-0 bg-gray-50 shadow-inner relative">
+                                    <div key={order.id} className={`bg-white dark:bg-slate-900 rounded-[2.2rem] p-5 md:p-7 shadow-xl border flex flex-col md:flex-row gap-6 relative overflow-hidden group transition-all duration-500 ${order.status === 'ready' ? 'border-orange-500 ring-2 ring-orange-500/10' : 'border-gray-50 dark:border-white/5 hover:border-orange-100 dark:hover:border-orange-500/30'}`}>
+                                        <div className="w-full md:w-36 h-36 rounded-3xl overflow-hidden shrink-0 bg-gray-50 dark:bg-slate-800 shadow-inner relative">
                                             <LazyImage src={order.cafes?.image || DEFAULT_CAFE_IMG} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                                             <div className="absolute bottom-3 left-3 text-[9px] font-black text-white/80 tracking-widest uppercase">{new Date(order.created_at).toLocaleDateString('id-ID', {month:'short', day:'numeric'})}</div>
@@ -339,7 +336,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                             <div>
                                                 <div className="flex justify-between items-start gap-4 mb-4">
                                                     <div className="min-w-0">
-                                                        <h4 className="font-display font-black text-xl text-gray-900 mb-0.5 leading-none group-hover:text-orange-600 transition-colors truncate">{order.cafes?.name || 'Kafe'}</h4>
+                                                        <h4 className="font-display font-black text-xl text-gray-900 dark:text-white mb-0.5 leading-none group-hover:text-orange-600 transition-colors truncate uppercase">{order.cafes?.name || 'Kafe'}</h4>
                                                         <p className="text-[9px] font-black text-orange-500 uppercase tracking-[0.25em]">{order.order_number}</p>
                                                     </div>
                                                     <div className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[0.15em] border transition-all duration-500 shadow-sm shrink-0 ${getOrderStatusStyles(order.status)}`}>
@@ -350,33 +347,32 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                                 <div className="flex flex-wrap gap-4 items-center">
                                                     <div className="flex -space-x-2.5 overflow-hidden">
                                                         {order.order_items?.slice(0, 4).map((item, i) => (
-                                                            <div key={i} className="w-9 h-9 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm ring-1 ring-gray-100" title={item.menu_item?.name}>
+                                                            <div key={i} className="w-9 h-9 rounded-full border-2 border-white dark:border-slate-900 bg-gray-100 dark:bg-slate-800 overflow-hidden shadow-sm ring-1 ring-gray-100 dark:ring-white/5" title={item.menu_item?.name}>
                                                                 <LazyImage src={item.menu_item?.image_url || DEFAULT_MENU_IMG} className="w-full h-full object-cover" alt="" />
                                                             </div>
                                                         ))}
                                                         {(order.order_items?.length || 0) > 4 && (
-                                                            <div className="w-9 h-9 rounded-full border-2 border-white bg-gray-900 flex items-center justify-center text-[9px] font-black text-white shadow-sm ring-1 ring-gray-100">
+                                                            <div className="w-9 h-9 rounded-full border-2 border-white dark:border-slate-900 bg-gray-900 dark:bg-orange-600 flex items-center justify-center text-[9px] font-black text-white shadow-sm ring-1 ring-gray-100 dark:ring-white/5">
                                                                 +{(order.order_items?.length || 0) - 4}
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{order.order_items?.length || 0} Menu • {order.order_type === 'dine-in' ? `Meja ${order.table_number}` : 'Takeaway'}</span>
+                                                    <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider">{order.order_items?.length || 0} Menu • {order.order_type === 'dine-in' ? `Meja ${order.table_number}` : 'Takeaway'}</span>
                                                 </div>
                                             </div>
 
-                                            {/* UPDATED: Clickable Bill Amount Area */}
                                             <div 
-                                                className="mt-6 pt-5 border-t border-gray-50 flex items-center justify-between cursor-pointer hover:bg-orange-50/50 -mx-2 px-2 rounded-xl transition-colors group/bill"
+                                                className="mt-6 pt-5 border-t border-gray-50 dark:border-white/5 flex items-center justify-between cursor-pointer hover:bg-orange-50/50 dark:hover:bg-orange-900/10 -mx-2 px-2 rounded-xl transition-colors group/bill"
                                                 onClick={() => setSelectedOrder(order)}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 shadow-inner group-hover/bill:bg-orange-500 group-hover/bill:text-white transition-colors"><Receipt size={18} /></div>
+                                                    <div className="w-10 h-10 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center text-orange-600 shadow-inner group-hover/bill:bg-orange-500 group-hover/bill:text-white transition-colors"><Receipt size={18} /></div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-[8px] font-black text-gray-300 uppercase tracking-widest leading-none mb-1">Bill Amount</span>
-                                                        <span className="text-lg font-black text-gray-900 tracking-tight group-hover/bill:text-orange-600 transition-colors">Rp {order.total_amount.toLocaleString()}</span>
+                                                        <span className="text-[8px] font-black text-gray-300 dark:text-slate-600 uppercase tracking-widest leading-none mb-1">Bill Amount</span>
+                                                        <span className="text-lg font-black text-gray-900 dark:text-white tracking-tight group-hover/bill:text-orange-600 transition-colors">Rp {order.total_amount.toLocaleString()}</span>
                                                     </div>
                                                 </div>
-                                                <button className="w-10 h-10 rounded-2xl bg-gray-50 text-gray-400 flex items-center justify-center group-hover/bill:bg-orange-500 group-hover/bill:text-white transition-all active:scale-90">
+                                                <button className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-slate-800 text-gray-400 flex items-center justify-center group-hover/bill:bg-orange-500 group-hover/bill:text-white transition-all active:scale-90">
                                                     <ChevronRight size={20} />
                                                 </button>
                                             </div>
@@ -384,10 +380,10 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-32 bg-white rounded-[3rem] border border-gray-100">
-                                    <Receipt size={48} className="mx-auto mb-6 text-gray-200" />
-                                    <h3 className="text-lg font-black text-gray-800">Belum Ada Transaksi</h3>
-                                    <p className="text-gray-400 text-xs mt-2 font-medium">Struk digital dari pesananmu akan tersimpan rapi di sini.</p>
+                                <div className="text-center py-32 bg-white dark:bg-slate-900 rounded-[3rem] border border-gray-100 dark:border-white/5">
+                                    <Receipt size={48} className="mx-auto mb-6 text-gray-200 dark:text-slate-700" />
+                                    <h3 className="text-lg font-black text-gray-800 dark:text-white uppercase">Belum Ada Transaksi</h3>
+                                    <p className="text-gray-400 dark:text-slate-500 text-xs mt-2 font-medium">Struk digital pesananmu akan tersimpan di sini.</p>
                                 </div>
                             )}
                         </div>
@@ -397,39 +393,39 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                         <div className="max-w-4xl mx-auto pb-20">
                             {userReviews.length > 0 ? (
                                 <div className="relative space-y-10 pl-12 md:pl-0">
-                                    <div className="absolute left-6 md:left-1/2 top-4 bottom-4 w-0.5 bg-gradient-to-b from-orange-500 via-gray-100 to-transparent transform md:-translate-x-1/2 opacity-20"></div>
+                                    <div className="absolute left-6 md:left-1/2 top-4 bottom-4 w-0.5 bg-gradient-to-b from-orange-500 via-gray-100 dark:via-slate-800 to-transparent transform md:-translate-x-1/2 opacity-20"></div>
                                     
                                     {userReviews.map((review, idx) => (
                                         <div key={review.id} className={`relative flex flex-col md:flex-row items-center gap-8 ${idx % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
                                             <div className="absolute left-[-24px] md:left-1/2 top-0 transform md:-translate-x-1/2 z-10 flex flex-col items-center">
-                                                <div className="w-10 h-10 bg-white rounded-2xl border-4 border-orange-500 shadow-xl flex flex-col items-center justify-center shrink-0">
+                                                <div className="w-10 h-10 bg-white dark:bg-slate-900 rounded-2xl border-4 border-orange-500 shadow-xl flex flex-col items-center justify-center shrink-0">
                                                     <span className="text-[9px] font-black text-orange-600 leading-none">{review.date.split(' ')[0]}</span>
                                                     <span className="text-[7px] font-bold text-gray-400 uppercase leading-none mt-0.5">{review.date.split(' ')[1].slice(0,3)}</span>
                                                 </div>
                                             </div>
 
                                             <div className="w-full md:w-[46%] animate-in slide-in-from-left duration-500">
-                                                <div className="bg-white rounded-[2.2rem] p-6 shadow-xl border border-gray-50 hover:shadow-2xl transition-all duration-500 group relative">
+                                                <div className="bg-white dark:bg-slate-900 rounded-[2.2rem] p-6 shadow-xl border border-gray-50 dark:border-white/5 hover:shadow-2xl transition-all duration-500 group relative">
                                                     <div className="flex items-start gap-4 mb-4">
-                                                        <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 bg-gray-50 shadow-md">
+                                                        <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 bg-gray-50 dark:bg-slate-800 shadow-md">
                                                             <LazyImage src={getOptimizedImageUrl(review.cafeImage || '', 200)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
                                                         </div>
                                                         <div className="flex-1 min-w-0 pt-1">
-                                                            <h4 className="font-display font-black text-base text-gray-900 truncate leading-none mb-2 uppercase tracking-tight">{review.cafeName}</h4>
+                                                            <h4 className="font-display font-black text-base text-gray-900 dark:text-white truncate leading-none mb-2 uppercase tracking-tight">{review.cafeName}</h4>
                                                             <div className="flex items-center gap-1">
-                                                                {[1,2,3,4,5].map(s => <Star key={s} size={10} className={s <= review.rating ? "text-orange-500 fill-current" : "text-gray-100"} />)}
+                                                                {[1,2,3,4,5].map(s => <Star key={s} size={10} className={s <= review.rating ? "text-orange-500 fill-current" : "text-gray-100 dark:text-slate-800"} />)}
                                                                 <span className="text-[9px] font-black text-orange-600 ml-2 uppercase tracking-widest">{review.rating}.0 RATING</span>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <div className="relative">
-                                                        <span className="absolute top-0 left-0 text-4xl font-serif text-gray-50 -mt-3 -ml-1 pointer-events-none">“</span>
-                                                        <p className="text-gray-600 text-xs md:text-sm italic leading-relaxed font-medium relative z-10 pl-3">{review.comment}</p>
+                                                        <span className="absolute top-0 left-0 text-4xl font-serif text-gray-50 dark:text-slate-800 -mt-3 -ml-1 pointer-events-none">“</span>
+                                                        <p className="text-gray-600 dark:text-slate-300 text-xs md:text-sm italic leading-relaxed font-medium relative z-10 pl-3">{review.comment}</p>
                                                     </div>
                                                     {review.reply && (
-                                                        <div className="mt-5 pt-4 border-t border-gray-50 flex gap-3">
-                                                            <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shrink-0"><Utensils size={12} /></div>
-                                                            <p className="text-[10px] text-gray-500 font-medium leading-relaxed italic"><span className="font-black text-orange-600 uppercase tracking-tighter mr-1">Owner:</span> {review.reply}</p>
+                                                        <div className="mt-5 pt-4 border-t border-gray-50 dark:border-white/5 flex gap-3">
+                                                            <div className="w-7 h-7 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 shrink-0"><Utensils size={12} /></div>
+                                                            <p className="text-[10px] text-gray-500 dark:text-slate-400 font-medium leading-relaxed italic"><span className="font-black text-orange-600 uppercase tracking-tighter mr-1">Owner:</span> {review.reply}</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -439,10 +435,10 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-32 bg-white rounded-[3rem] border border-gray-100">
-                                    <History size={48} className="mx-auto mb-6 text-gray-200" />
-                                    <h3 className="text-lg font-black text-gray-800">Belum Ada Jejak</h3>
-                                    <p className="text-gray-400 text-xs mt-2 font-medium">Beri ulasan pertamamu dan abadikan setiap momen ngopimu!</p>
+                                <div className="text-center py-32 bg-white dark:bg-slate-900 rounded-[3rem] border border-gray-100 dark:border-white/5">
+                                    <History size={48} className="mx-auto mb-6 text-gray-200 dark:text-slate-700" />
+                                    <h3 className="text-lg font-black text-gray-800 dark:text-white uppercase">Belum Ada Jejak</h3>
+                                    <p className="text-gray-400 dark:text-slate-500 text-xs mt-2 font-medium">Beri ulasan pertamamu dan abadikan momen ngopimu!</p>
                                 </div>
                             )}
                         </div>
@@ -450,47 +446,46 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({
                 </div>
             )}
             
-            {/* NEW: Order Detail Modal */}
             <Modal 
                 isOpen={!!selectedOrder} 
                 onClose={() => setSelectedOrder(null)} 
                 title="Detail Pesanan"
-                className="!max-w-md w-full"
+                className="!max-w-md w-full dark:!bg-slate-900"
             >
                 {selectedOrder && (
                     <div className="space-y-6">
-                        <div className="flex items-center gap-4 border-b border-gray-100 pb-6">
-                            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-50 shrink-0">
+                        <div className="flex items-center gap-4 border-b border-gray-100 dark:border-white/5 pb-6">
+                            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-800 shrink-0">
                                 <LazyImage src={selectedOrder.cafes?.image || DEFAULT_CAFE_IMG} className="w-full h-full object-cover" alt="" />
                             </div>
                             <div className="min-w-0">
-                                <h3 className="font-black text-lg text-gray-900 truncate">{selectedOrder.cafes?.name}</h3>
+                                <h3 className="font-black text-lg text-gray-900 dark:text-white truncate uppercase">{selectedOrder.cafes?.name}</h3>
                                 <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">{selectedOrder.order_number}</p>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{new Date(selectedOrder.created_at).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit'})}</p>
+                                <p className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase mt-1">{new Date(selectedOrder.created_at).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit'})}</p>
                             </div>
                         </div>
 
                         <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Item yang dipesan</h4>
+                            <h4 className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest px-1">Item yang dipesan</h4>
                             {selectedOrder.order_items?.map((item: OrderItem) => (
                                 <div key={item.id} className="flex justify-between items-start gap-4">
                                     <div className="flex-1">
-                                        <p className="font-bold text-gray-900 text-sm">{item.menu_item?.name}</p>
-                                        <p className="text-xs text-gray-500">{item.quantity}x @ Rp {item.price_at_order.toLocaleString()}</p>
-                                        {item.notes && <p className="text-[10px] text-orange-600 italic mt-1 font-medium bg-orange-50 px-2 py-0.5 rounded-lg inline-block">Notes: {item.notes}</p>}
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm">{item.menu_item?.name}</p>
+                                        <p className="text-xs text-gray-500 dark:text-slate-400">{item.quantity}x @ Rp {item.price_at_order.toLocaleString()}</p>
+                                        {item.notes && <p className="text-[10px] text-orange-600 italic mt-1 font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-lg inline-block">Notes: {item.notes}</p>}
                                     </div>
-                                    <p className="font-black text-gray-900 text-sm">Rp {(item.quantity * item.price_at_order).toLocaleString()}</p>
+                                    <p className="font-black text-gray-900 dark:text-white text-sm">Rp {(item.quantity * item.price_at_order).toLocaleString()}</p>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="bg-gray-50 rounded-2xl p-5 space-y-3">
-                            <div className="flex justify-between items-center text-xs font-bold text-gray-500">
+                        <div className="bg-gray-50 dark:bg-slate-800/50 rounded-2xl p-5 space-y-3">
+                            <div className="flex justify-between items-center text-xs font-bold text-gray-500 dark:text-slate-400">
                                 <span>Tipe Pesanan</span>
-                                <span className="uppercase tracking-widest text-gray-900">{selectedOrder.order_type === 'dine-in' ? `Dine In (Meja ${selectedOrder.table_number})` : 'Takeaway'}</span>
+                                <span className="uppercase tracking-widest text-gray-900 dark:text-white">{selectedOrder.order_type === 'dine-in' ? `Dine In (Meja ${selectedOrder.table_number})` : 'Takeaway'}</span>
                             </div>
-                            <div className="flex justify-between items-center border-t border-gray-100 pt-3">
-                                <span className="text-sm font-black text-gray-900 uppercase tracking-widest">Total Bayar</span>
+                            <div className="flex justify-between items-center border-t border-gray-100 dark:border-white/5 pt-3">
+                                <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Total Bayar</span>
                                 <span className="text-xl font-black text-orange-600">Rp {selectedOrder.total_amount.toLocaleString()}</span>
                             </div>
                         </div>

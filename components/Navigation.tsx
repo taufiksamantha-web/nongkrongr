@@ -41,7 +41,6 @@ export const Navigation: React.FC<NavigationProps> = ({
   const currentTranslateY = useRef(0);
   const scrollTimeout = useRef<any>(null);
 
-  // REAL-TIME SCROLL SYNC LOGIC
   useEffect(() => {
     if (isDesktop) return;
 
@@ -192,7 +191,6 @@ export const Navigation: React.FC<NavigationProps> = ({
         style={{ transform: 'translate(-50%, 0%)', willChange: 'transform' }}
         className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom)+0.3rem)] left-1/2 z-[9000] w-[92%] max-w-md pointer-events-none"
       >
-        {/* SOLID BACKGROUND (No glassmorphism) */}
         <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-[2.2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.25)] p-2 flex items-center justify-between pointer-events-auto ring-1 ring-black/5">
           {navItems.map((item) => {
             const isActive = currentView === item.id;
@@ -220,10 +218,6 @@ export const Navigation: React.FC<NavigationProps> = ({
                   <span className="ml-2.5 text-[11px] font-black uppercase tracking-widest whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-300">
                     {item.label}
                   </span>
-                )}
-                
-                {isActive && (
-                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full shadow-[0_0_8px_#fff]"></div>
                 )}
               </button>
             );

@@ -1,9 +1,9 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import React from 'react';
-import { Star, MapPin, Search as SearchIcon, Flame, Coffee, ArrowRight, Sparkles, ChevronRight, Radio, Heart, Zap, Camera, Laptop, Music, Users, Moon, Sun, Utensils, Compass, Globe, MapPinned, TrendingUp, History, MessageCircle, Loader2, Smartphone, Download, PlusSquare, Share, Share2, X as CloseIcon } from 'lucide-react';
+import { Star, MapPin, Search as SearchIcon, Flame, Coffee, ArrowRight, Sparkles, ChevronRight, Radio, Heart, Zap, Camera, Laptop, Music, Users, Moon, Sun, Utensils, Compass, Globe, MapPinned, TrendingUp, History, MessageCircle, Loader2, Smartphone, Download, PlusSquare, Share, Share2, X as CloseIcon, SmartphoneIcon } from 'lucide-react';
 import { Cafe, HeroConfig, CollectionItem, AppNotification, User } from '../types';
-import { getOptimizedImageUrl, formatRating, SEARCH_PLACEHOLDERS, LOGO_HOME_URL } from '../constants';
+import { getOptimizedImageUrl, formatRating, SEARCH_PLACEHOLDERS, LOGO_HOME_URL, getCafeStatus } from '../constants';
 import { LazyImage, Badge, VerifiedBadge, Button } from '../components/UI';
 import { SEO } from '../components/SEO';
 import { Capacitor } from '@capacitor/core';
@@ -41,6 +41,7 @@ const HomeCafeCard = React.memo(({ cafe, onClick }: { cafe: Cafe, onClick: (c: C
     const optimizedImg = useMemo(() => getOptimizedImageUrl(cafe.image, 400), [cafe.image]);
     const rating = useMemo(() => formatRating(cafe.rating), [cafe.rating]);
     const address = useMemo(() => cafe.address.split(',')[0], [cafe.address]);
+    const status = useMemo(() => getCafeStatus(cafe.openingHours), [cafe.openingHours]);
     const shouldShowDistance = cafe.dist !== undefined && cafe.dist !== null && cafe.dist < 9999;
 
     return (
@@ -79,8 +80,10 @@ const HomeCafeCard = React.memo(({ cafe, onClick }: { cafe: Cafe, onClick: (c: C
                         <span className="truncate tracking-wide uppercase">{address}</span>
                     </div>
                     <div className="flex items-center gap-1 ml-1.5">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-[8px] font-bold text-green-400 uppercase tracking-tighter">Buka</span>
+                        <div className={`w-1.5 h-1.5 rounded-full ${status.isOpen ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                        <span className={`text-[8px] font-bold uppercase tracking-tighter ${status.isOpen ? 'text-green-400' : 'text-red-400'}`}>
+                            {status.isOpen ? 'Buka' : 'Tutup'}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -89,7 +92,6 @@ const HomeCafeCard = React.memo(({ cafe, onClick }: { cafe: Cafe, onClick: (c: C
 });
 HomeCafeCard.displayName = "HomeCafeCard";
 
-// --- UPDATED COMPONENT: PWA INSTALL BANNER (AGRESSIVE LOGIC) ---
 const PWAInstallSection = () => {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [platform, setPlatform] = useState<'ios' | 'android' | 'other'>('other');
@@ -223,14 +225,7 @@ interface HomeViewProps {
 export const HomeView: React.FC<HomeViewProps> = ({
     cafes, collections, onCafeClick, onCollectionClick, userLocation, heroConfig, user, selectedCityName, onExploreClick, onSearchClick, onCommunityClick, onPromoClick, onMapClick, stats
 }) => {
-    const greetingText = useMemo(() => {
-        const hour = new Date().getHours();
-        const firstName = user ? user.name.split(' ')[0] : 'Sobat';
-        if (hour < 11) return `Kopi pagi dulu, ${firstName}?`;
-        if (hour < 15) return `Makan siang asik, ${firstName}?`;
-        if (hour < 19) return `Nyantai sore yuk, ${firstName}!`;
-        return `Nongkrongr malam, ${firstName}?`;
-    }, [user]);
+    const isNativeApp = Capacitor.isNativePlatform();
 
     const featuredCafe = useMemo(() => {
         if (!cafes || cafes.length === 0) return null;
@@ -244,8 +239,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
     const shortcuts = [
         { id: 'promo', icon: Zap, label: "Promo", description: "Diskon 50%", color: "from-rose-500 to-orange-500", action: onPromoClick },
         { id: 'viral', icon: TrendingUp, label: "Populer", description: "Lagi Viral", color: "from-orange-500 to-yellow-500", action: () => onExploreClick(null, 'Populer') },
-        { id: 'near', icon: MapPin, label: "Terdekat", description: "Radius 2km", color: "from-blue-500 to-indigo-500", action: () => onExploreClick(null, 'Terdekat') },
         { id: 'new', icon: History, label: "Baru", description: "Baru Buka", color: "from-emerald-500 to-teal-500", action: () => onExploreClick(null, 'Terbaru') },
+        { id: 'near', icon: MapPin, label: "Terdekat", description: "Radius 2km", color: "from-blue-500 to-indigo-500", action: () => onExploreClick(null, 'Terdekat') },
         { id: 'aesthetic', icon: Camera, label: "Estetik", description: "Instagenic", color: "from-teal-500 to-emerald-500", action: () => onExploreClick('Aesthetic', 'Aesthetic') },
         { id: 'coffee', icon: Coffee, label: "Ngopi", description: "Coffee Shop", color: "from-orange-600 to-orange-400", action: () => onExploreClick('Coffee', 'Ngopi') },
         { id: 'food', icon: Utensils, label: "Makan", description: "Main Course", color: "from-emerald-600 to-green-400", action: () => onExploreClick('Main Course', 'Makan') },
@@ -256,6 +251,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
         { id: 'music', icon: Music, label: "Music", description: "Live Event", color: "from-purple-600 to-pink-500", action: () => onExploreClick('Live Music', 'Music') },
         { id: 'radar', icon: Compass, label: "Radar", description: "Teman Aktif", color: "from-orange-700 to-orange-500", action: () => onCommunityClick('nearby') },
     ];
+
+    // Main 4 Hero Shortcuts
+    const heroShortcuts = shortcuts.slice(0, 4);
 
     return (
         <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0F172A] transition-colors duration-300 relative">
@@ -270,66 +268,54 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 .animate-cta-btn {
                     animation: pulse-glow 2.5s infinite ease-in-out;
                 }
-                .mobile-bg-fixed {
-                    position: fixed;
-                    inset: 0;
-                    z-index: 0;
-                    pointer-events: none;
-                    opacity: 0.1;
-                }
-                .dark .mobile-bg-fixed {
-                    opacity: 0.05;
-                }
             `}</style>
-
-            {heroConfig?.backgroundImage && (
-                <div className="md:hidden mobile-bg-fixed">
-                    <img 
-                        src={getOptimizedImageUrl(heroConfig.backgroundImage, 800)} 
-                        className="w-full h-full object-cover" 
-                        alt="" 
-                    />
-                </div>
-            )}
 
             <div className="relative z-10">
                 <section className="relative overflow-hidden md:min-h-[65vh] flex flex-col justify-start md:pt-48 md:pb-12">
                     <div className="hidden md:block absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-orange-500/10 rounded-full blur-[120px]"></div>
                     <div className="hidden md:block absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[100px]"></div>
 
-                    <div className="md:hidden pt-[calc(env(safe-area-inset-top)+4.5rem)] px-5">
-                        <div className="relative h-[28vh] w-full bg-gradient-to-br from-orange-500 to-red-600 rounded-t-[2.5rem] rounded-b-[7rem] overflow-hidden shadow-2xl shadow-orange-500/30 border-b-[6px] border-orange-700/20">
-                            <div className="absolute inset-0 opacity-20 pointer-events-none">
+                    {/* UPDATED MOBILE HERO: COMPACT VERSION */}
+                    <div className="md:hidden pt-[calc(env(safe-area-inset-top)+4.8rem)] px-5">
+                        <div className="relative w-full bg-gradient-to-br from-orange-500 to-red-600 rounded-[2.2rem] overflow-hidden shadow-2xl shadow-orange-500/30 border-b-[4px] border-orange-700/20 p-5 flex flex-col items-center">
+                            <div className="absolute inset-0 opacity-10 pointer-events-none">
                                 <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                                     <path d="M0,20 Q25,0 50,20 T100,20" fill="none" stroke="white" strokeWidth="0.5" />
                                     <path d="M0,50 Q25,30 50,50 T100,50" fill="none" stroke="white" strokeWidth="0.5" />
-                                    <path d="M0,80 Q25,60 50,80 T100,80" fill="none" stroke="white" strokeWidth="0.5" />
                                 </svg>
                             </div>
 
-                            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                                <h1 className="text-xl font-display font-black text-white tracking-tighter leading-none uppercase italic mb-1 whitespace-nowrap overflow-hidden text-ellipsis w-full px-2">
-                                    {greetingText.split(',')[0]} <span className="text-orange-200">{user ? user.name.split(' ')[0] : 'Sobat'}?</span>
-                                </h1>
-                                
-                                <div className="flex flex-col gap-3 mt-5 w-full max-w-[260px] animate-in slide-in-from-bottom-2 duration-500">
+                            <button 
+                                onClick={() => onExploreClick('Buka', 'Terdekat Buka')}
+                                className="animate-cta-btn w-full bg-white text-orange-600 h-12 rounded-[1.2rem] flex items-center justify-center gap-3 shadow-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all border border-white/50 relative z-10"
+                            >
+                                <MapPin size={18} fill="currentColor" /> Cari Spot Terdekat
+                            </button>
+                            
+                            <div className="flex justify-center gap-4 text-white/90 font-black text-[9px] uppercase tracking-[0.15em] drop-shadow-md mt-3 mb-5 relative z-10">
+                                <span className="flex items-center gap-1">
+                                    <Zap size={10} className="text-yellow-300"/> {stats?.promoCount || 0} Promo
+                                </span>
+                                <div className="w-1 h-1 bg-white/30 rounded-full self-center"></div>
+                                <span className="flex items-center gap-1">
+                                    <Coffee size={10} className="text-orange-200"/> {stats?.openCount || 0} Buka
+                                </span>
+                            </div>
+
+                            {/* Integrated Quick Access - Grid of 4 */}
+                            <div className="grid grid-cols-4 gap-4 w-full pt-4 border-t border-white/10 relative z-10">
+                                {heroShortcuts.map((s) => (
                                     <button 
-                                        onClick={() => onExploreClick('Buka', 'Terdekat Buka')}
-                                        className="animate-cta-btn w-full bg-white text-orange-600 h-14 rounded-2xl flex items-center justify-center gap-3 shadow-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all border border-white/50"
+                                        key={s.id} 
+                                        onClick={s.action}
+                                        className="flex flex-col items-center gap-1.5 group active:scale-90 transition-all"
                                     >
-                                        <MapPin size={18} fill="currentColor" /> Cari Spot Terdekat
+                                        <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/20 shadow-lg">
+                                            <s.icon size={20} strokeWidth={2.5} />
+                                        </div>
+                                        <span className="text-[8px] font-black text-white/90 uppercase tracking-widest truncate w-full text-center">{s.label}</span>
                                     </button>
-                                    
-                                    <div className="flex justify-center gap-4 text-white/90 font-black text-[10px] uppercase tracking-[0.15em] drop-shadow-md">
-                                        <span className="flex items-center gap-1">
-                                            <Zap size={12} className="text-yellow-300"/> {stats?.promoCount || 0} Promo
-                                        </span>
-                                        <div className="w-1 h-1 bg-white/30 rounded-full self-center"></div>
-                                        <span className="flex items-center gap-1">
-                                            <Coffee size={12} className="text-orange-200"/> {stats?.openCount || 0} Buka
-                                        </span>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -338,10 +324,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         <div className="grid grid-cols-12 gap-12 items-center">
                             <div className="col-span-7 space-y-6">
                                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-2xl text-xs font-black uppercase tracking-widest border border-orange-100 dark:border-orange-800 animate-in fade-in slide-in-from-left duration-500">
-                                    <Sparkles size={16} /> Platform Kafe #1 di Indonesia
+                                    <span className="flex h-2 w-2 rounded-full bg-orange-500 animate-ping"></span> Platform Kafe #1 di Indonesia
                                 </div>
                                 <h1 className="text-5xl lg:text-6xl font-display font-black text-gray-900 dark:text-white leading-[1.1] tracking-tight animate-in fade-in slide-in-from-left duration-700">
-                                    {greetingText} <br/>
+                                    Cari Tempat <br/>
                                     <span className="text-orange-500">Nongkrongr</span> di Mana?
                                 </h1>
                                 <p className="text-lg text-gray-500 dark:text-gray-400 max-w-xl leading-relaxed animate-in fade-in slide-in-from-left duration-1000">
@@ -406,9 +392,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </section>
 
                 <div className="max-w-7xl mx-auto px-5 md:px-10 mt-6 md:mt-24 relative z-20 mb-6 md:mb-10">
-                    <div className="md:hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-[2rem] p-5 shadow-xl border border-white/30 dark:border-white/10 overflow-x-auto no-scrollbar ring-1 ring-black/5">
-                        <div className="flex gap-5">
-                            {shortcuts.map(item => (
+                    {/* Secondary Shortcuts on Mobile */}
+                    <div className="md:hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-md rounded-[2.2rem] p-6 shadow-xl border border-white/30 dark:border-white/10 overflow-x-auto no-scrollbar ring-1 ring-black/5">
+                        <div className="flex gap-6">
+                            {shortcuts.slice(4).map(item => (
                                 <MiniStory 
                                     key={item.id} 
                                     icon={item.icon} 
@@ -477,9 +464,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
                         </div>
                     </section>
 
-                    <PWAInstallSection />
+                    {!isNativeApp && <PWAInstallSection />}
 
-                    <footer className="pt-8 pb-32 md:pb-12 text-center border-t border-gray-100 dark:border-slate-800 animate-in fade-in duration-1000">
+                    {/* MOBILE APK DOWNLOAD LINK */}
+                    <div className="md:hidden flex flex-col items-center justify-center pt-2 pb-2 animate-in fade-in duration-1000 px-4">
+                        {!isNativeApp && (
+                             <a 
+                                href="http://nongkrongr.com/app/nongkrongr.apk" 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                download="nongkrongr.apk"
+                                className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-gray-50 dark:bg-slate-800/60 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 border border-gray-100 dark:border-slate-800 active:scale-95 transition-all shadow-sm"
+                            >
+                                <SmartphoneIcon size={14} className="text-orange-500" /> Download APK Android
+                            </a>
+                        )}
+                    </div>
+
+                    <footer className="hidden md:block pt-8 pb-12 text-center border-t border-gray-100 dark:border-slate-800 animate-in fade-in duration-1000">
                         <img 
                             src={getOptimizedImageUrl(LOGO_HOME_URL, 300)} 
                             className="h-7 mx-auto mb-8 grayscale opacity-30 dark:invert" 

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, MapPin, Star, Heart, Share2, Navigation, Check, Phone, MessageSquare, Clock, Map as MapIcon, ChevronDown, AlertCircle, MessageCircle, Send, Sparkles, Plus, ChevronRight, Share, Info, Calendar, Utensils } from 'lucide-react';
+import { ArrowLeft, MapPin, Star, Heart, Share2, Navigation, Check, Phone, MessageSquare, Clock, Map as MapIcon, ChevronDown, AlertCircle, MessageCircle, Send, Sparkles, Plus, ChevronRight, Share, Info, Calendar, Utensils, Camera, Wifi, Wind, TreePalm, Coffee as CoffeeIcon, Car, Zap, Droplets, UserCheck } from 'lucide-react';
 import { calculateDistance, getOptimizedImageUrl, getCafeStatus, formatRating, WEBSITE_URL } from '../constants';
 import { Cafe, Review, User } from '../types';
 import { Button, VerifiedBadge, LazyImage, Pagination } from './UI';
@@ -90,8 +90,18 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
 
     const handleShare = () => {
         const url = `${WEBSITE_URL}/#/cafe/${createCafeSlug(cafe)}`;
-        if (navigator.share) navigator.share({ title: cafe.name, text: cafe.description, url });
-        else { navigator.clipboard.writeText(url); addToast('success', 'Link disalin!'); }
+        const shareData = {
+            title: `${cafe.name} ☕`,
+            text: `Cek tempat nongkrong asik ini di Nongkrongr: ${cafe.name}`,
+            url: url
+        };
+        
+        if (navigator.share) {
+            navigator.share(shareData).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(url);
+            addToast('success', 'Link disalin!');
+        }
     };
 
     const handleNavigate = () => window.open(`https://www.google.com/maps/dir/?api=1&destination=${cafe.coordinates.lat},${cafe.coordinates.lng}`, '_blank');
@@ -120,6 +130,23 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
             setActiveTab('ULASAN');
         } catch (e: any) { throw e; }
     };
+
+    const summaryVibes = useMemo(() => {
+        const vibes = [];
+        const lowTags = cafe.tags.map(t => t.toLowerCase());
+        const lowFac = cafe.facilities.map(t => t.toLowerCase());
+        
+        if (lowFac.includes('ac') || lowTags.includes('indoor')) vibes.push({ label: 'Indoor AC', icon: Wind, color: 'text-blue-500 bg-blue-50' });
+        if (lowTags.includes('outdoor')) vibes.push({ label: 'Outdoor', icon: TreePalm, color: 'text-green-600 bg-green-50' });
+        if (lowFac.includes('wi-fi') || lowFac.includes('wifi')) vibes.push({ label: 'WiFi Kencang', icon: Wifi, color: 'text-indigo-500 bg-indigo-50' });
+        if (lowFac.includes('parking') || lowFac.includes('parkir')) vibes.push({ label: 'Parkir Luas', icon: Car, color: 'text-slate-600 bg-slate-50' });
+        if (lowFac.includes('socket') || lowFac.includes('colokan')) vibes.push({ label: 'Stop Kontak', icon: Zap, color: 'text-yellow-600 bg-yellow-50' });
+        if (lowFac.includes('musholla') || lowTags.includes('musholla')) vibes.push({ label: 'Musholla', icon: UserCheck, color: 'text-emerald-600 bg-emerald-50' });
+        if (lowFac.includes('toilet') || lowTags.includes('toilet')) vibes.push({ label: 'Toilet Bersih', icon: Droplets, color: 'text-cyan-600 bg-cyan-50' });
+        if (lowTags.includes('coffee') || lowTags.includes('kopi')) vibes.push({ label: 'Manual Brew', icon: CoffeeIcon, color: 'text-orange-600 bg-orange-50' });
+        
+        return vibes.slice(0, 8); // Tampilkan maksimal 8 agar rapi
+    }, [cafe.tags, cafe.facilities]);
 
     const dynamicCharacteristics = useMemo(() => {
         const all = Array.from(new Set([...(cafe.tags || []), ...(cafe.facilities || [])]));
@@ -155,13 +182,10 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
         </div>
     );
 
-    // FIXED: High Contrast Button Styles for Mobile
     const getHeaderBtnClass = (isScrolled: boolean, isRed?: boolean) => {
         if (isScrolled) {
-            // Saat di-scroll (Header Orange), gunakan putih semi-transparan agar manis
             return `w-11 h-11 flex items-center justify-center bg-white/20 text-white rounded-full transition-all active:scale-90`;
         } else {
-            // Saat di Atas (Transparent), gunakan Putih Solid dengan icon Hitam/Orange agar terlihat jelas
             return `w-11 h-11 flex items-center justify-center bg-white text-gray-900 rounded-full transition-all active:scale-90 shadow-2xl border border-black/5 ${isRed ? 'text-red-500' : 'text-gray-900'}`;
         }
     };
@@ -170,7 +194,6 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
         <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0F172A] text-gray-900 dark:text-gray-100 pb-32 transition-colors">
             <SEO title={cafe.name} image={cafe.image} />
             
-            {/* MOBILE VIEW - ULTRA COMPACT */}
             <div className="md:hidden">
                 <div className={`fixed top-0 left-0 right-0 z-[100] px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-3 flex justify-between items-center transition-all duration-300 ${
                     isHeaderScrolled ? 'bg-orange-500 shadow-md' : 'bg-transparent'
@@ -207,7 +230,7 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
                                 <div className="flex flex-wrap gap-1 mb-1.5">
                                     {cafe.tags.slice(0, 2).map(t => <span key={t} className="text-[8px] font-black uppercase text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md">{t}</span>)}
                                 </div>
-                                <h1 className="text-2xl font-display font-black text-gray-900 dark:text-white leading-tight truncate">{cafe.name}</h1>
+                                <h1 className="text-2xl font-display font-black text-gray-900 dark:text-white leading-tight whitespace-normal break-words">{cafe.name}</h1>
                             </div>
                             <div className="bg-orange-500 px-2.5 py-1.5 rounded-xl text-white font-black text-sm flex items-center gap-1 shrink-0 shadow-lg border border-white/20">
                                 <Star size={14} fill="currentColor" /> {formatRating(cafe.rating)}
@@ -243,11 +266,22 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
                 <div className="px-4 py-6 space-y-6">
                     {activeTab === 'RINGKASAN' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
+                            {summaryVibes.length > 0 && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {summaryVibes.map((v, i) => (
+                                        <div key={i} className={`flex items-center gap-2.5 p-3.5 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm ${isDarkMode ? 'bg-slate-800/40' : v.bg}`}>
+                                            <div className={`${v.color} p-1.5 rounded-lg shrink-0`}><v.icon size={16} strokeWidth={2.5} /></div>
+                                            <span className="text-[10px] font-black uppercase tracking-tight dark:text-slate-200 truncate">{v.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             <div className="bg-gray-50 dark:bg-[#1E293B]/50 border border-gray-100 dark:border-slate-800 rounded-[1.8rem] p-5 flex gap-4">
                                 <div className="w-11 h-11 bg-blue-500 text-white rounded-[1.2rem] flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20"><MapPin size={22} /></div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Alamat</p>
-                                    <p className="text-[13px] font-bold text-gray-700 dark:text-slate-200 leading-normal line-clamp-2">{cafe.address}</p>
+                                    <p className="text-[13px] font-bold text-gray-700 dark:text-slate-200 leading-normal">{cafe.address}</p>
                                 </div>
                             </div>
 
@@ -275,7 +309,7 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
                             </div>
 
                             <div className="pt-2 space-y-4">
-                                <h3 className="text-lg font-display font-black flex items-center gap-2 tracking-tight px-1">Rekomendasi Terdekat <Sparkles size={16} className="text-orange-400" /></h3>
+                                <h3 className="text-lg font-display font-black flex items-center gap-2 tracking-tight px-1 uppercase">Rekomendasi Terdekat <Sparkles size={16} className="text-orange-400" /></h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     {recommendations.map(c => (
                                         <div key={c.id} onClick={() => onCafeClick(c)} className="group relative aspect-[5/6] rounded-[2rem] overflow-hidden shadow-md active:scale-95 transition-transform border border-black/5">
@@ -299,6 +333,22 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
                              <div className="bg-gray-50 dark:bg-[#1E293B]/50 border border-gray-100 dark:border-slate-800 rounded-[2.2rem] p-7">
                                 <h3 className="text-base font-black mb-4 font-display uppercase tracking-widest text-orange-600">Tentang</h3>
                                 <p className="text-gray-600 dark:text-slate-400 leading-relaxed font-medium text-sm mb-10">{cafe.description || `Kafe asik dengan suasana nyaman.`}</p>
+                                
+                                {cafe.photoSpots && cafe.photoSpots.length > 0 && (
+                                    <div className="mb-10">
+                                        <h3 className="text-base font-black mb-6 font-display uppercase tracking-widest text-orange-600 flex items-center gap-2">Spot Foto <Camera size={18}/></h3>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {cafe.photoSpots.map((spot, i) => (
+                                                <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden border border-black/5">
+                                                    <LazyImage src={spot.image} className="w-full h-full object-cover" alt={spot.title} />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                                    <span className="absolute bottom-3 left-3 text-[9px] font-black text-white uppercase tracking-wider">{spot.title}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="h-px bg-gray-200 dark:bg-slate-800 mb-10"></div>
                                 <h3 className="text-base font-black mb-8 font-display uppercase tracking-widest text-orange-600">Fitur & Layanan</h3>
                                 <div className="space-y-8">
@@ -346,7 +396,6 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
                 </div>
             </div>
 
-            {/* DESKTOP VIEW */}
             <div className="hidden md:block">
                 <div className="max-w-7xl mx-auto px-8 pt-24">
                     <div className="relative h-[480px] w-full rounded-[3rem] overflow-hidden shadow-2xl group border border-gray-100 dark:border-slate-800/50">
@@ -379,8 +428,9 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
                                         </button>
                                     ))}
                                 </div>
+                                
                                 {activeTab === 'RINGKASAN' && (
-                                    <div className="space-y-10">
+                                    <div className="space-y-10 animate-in fade-in">
                                         <div className="grid grid-cols-2 gap-8">
                                             {Object.entries(dynamicCharacteristics).map(([title, items]) => renderCharacteristicsGroup(title, items as string[]))}
                                         </div>
@@ -390,7 +440,40 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
                                         </div>
                                     </div>
                                 )}
+                                
                                 {activeTab === 'MENU' && <MenuOrdering cafe={cafe} user={user} onLoginReq={onLoginReq} addToast={addToast} />}
+                                
+                                {activeTab === 'TENTANG' && (
+                                    <div className="space-y-10 animate-in fade-in">
+                                         <div className="grid grid-cols-2 gap-10">
+                                            <div className="space-y-8">
+                                                <h3 className="text-lg font-black font-display uppercase tracking-widest text-orange-600">Visi & Ambiance</h3>
+                                                <p className="text-gray-600 dark:text-slate-400 leading-relaxed text-sm font-medium">{cafe.description || `Kafe asik dengan suasana nyaman.`}</p>
+                                                
+                                                {cafe.photoSpots && cafe.photoSpots.length > 0 && (
+                                                    <div className="pt-4">
+                                                        <h3 className="text-lg font-black font-display uppercase tracking-widest text-orange-600 flex items-center gap-2 mb-6">Spot Foto Terpopuler <Camera size={20}/></h3>
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            {cafe.photoSpots.map((spot, i) => (
+                                                                <div key={i} className="group relative aspect-square rounded-[1.5rem] overflow-hidden shadow-lg">
+                                                                    <LazyImage src={spot.image} className="w-full h-full object-cover" alt="" />
+                                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                                    <span className="absolute bottom-4 left-4 text-xs font-black text-white uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">{spot.title}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <button onClick={() => setIsReportOpen(true)} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-red-500 transition-colors"><AlertCircle size={14} /> Lapor Kesalahan Data</button>
+                                            </div>
+                                            <div className="space-y-10">
+                                                {Object.entries(dynamicCharacteristics).map(([title, items]) => renderCharacteristicsGroup(title, items as string[]))}
+                                            </div>
+                                         </div>
+                                    </div>
+                                )}
+
                                 {activeTab === 'ULASAN' && (
                                     <div className="space-y-6">
                                         {reviews.length > 0 ? reviews.map(r => (
@@ -408,12 +491,34 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
                                     </div>
                                 )}
                             </div>
+
+                            <div className="pt-10">
+                                <h3 className="text-2xl font-display font-black text-gray-900 dark:text-white flex items-center gap-3 tracking-tight mb-8 uppercase">
+                                    Mungkin Kamu Suka <Sparkles size={24} className="text-orange-500 animate-pulse" />
+                                </h3>
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {recommendations.map(c => (
+                                        <div key={c.id} onClick={() => onCafeClick(c)} className="group relative aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-700 hover:-translate-y-2 cursor-pointer border border-gray-100 dark:border-slate-800">
+                                            <LazyImage src={getOptimizedImageUrl(c.image, 400)} className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" alt={c.name} />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-85"></div>
+                                            <div className="absolute bottom-6 left-6 right-6">
+                                                <h4 className="text-white font-black text-sm leading-tight truncate uppercase tracking-tight">{c.name}</h4>
+                                                <div className="flex items-center gap-1 mt-2">
+                                                    <Star size={12} className="text-yellow-400 fill-current" /> 
+                                                    <span className="text-xs font-black text-white">{formatRating(c.rating)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
                         <div className="col-span-4 space-y-6 sticky top-24">
                             <div className="bg-white dark:bg-[#151e32] border border-gray-100 dark:border-slate-800 rounded-[2.5rem] p-6 shadow-xl space-y-6 ring-1 ring-black/5">
                                 <div className="flex gap-3">
-                                    <button onClick={handleNavigate} className="flex-1 bg-orange-500 text-white font-black py-4 rounded-2xl shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 text-[11px] uppercase tracking-widest"><Navigation size={16} fill="currentColor" /> Navigasi</button>
+                                    <button onClick={handleNavigate} className="flex-1 bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 text-[11px] uppercase tracking-widest"><Navigation size={16} fill="currentColor" /> Navigasi</button>
+                                    <button onClick={() => onMapOverview(cafe)} className="w-14 h-14 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl flex items-center justify-center active:scale-95 shadow-md hover:bg-orange-500 hover:text-white transition-colors" title="Lihat di Peta"><MapIcon size={24} /></button>
                                     <button onClick={onToggleFavorite} className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all active:scale-90 ${isSaved ? 'bg-red-500 border-red-500 text-white shadow-lg' : 'bg-gray-50 border-gray-200 text-gray-400'}`}><Heart size={24} fill={isSaved ? "currentColor" : "none"} /></button>
                                 </div>
                                 <div className="bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-4">
@@ -426,6 +531,20 @@ export const CafeDetail: React.FC<CafeDetailProps> = (props) => {
                                 <div className="space-y-3">
                                     <button onClick={() => { setActiveTab('MENU'); window.scrollTo({ top: 400, behavior: 'smooth' }); }} className="w-full h-14 flex items-center justify-center gap-3 rounded-2xl bg-orange-50 text-orange-600 font-black hover:bg-orange-100 transition-all text-xs uppercase tracking-widest"><Utensils size={18} /> Menu & Pemesanan</button>
                                     <button onClick={() => user ? setShowReviewForm(true) : onLoginReq()} className="w-full h-14 flex items-center justify-center gap-3 rounded-2xl bg-gray-900 text-white font-black hover:bg-black transition-all text-xs uppercase tracking-widest"><Plus size={18} /> Tulis Ulasan</button>
+                                </div>
+                            </div>
+
+                            <div className="bg-white dark:bg-[#151e32] border border-gray-100 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-xl">
+                                <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest mb-6 flex items-center gap-3">
+                                    <Clock size={16} className="text-orange-500" /> Jam Operasional
+                                </h3>
+                                <div className="space-y-4">
+                                    {(cafe.openingHours?.schedules || []).sort((a,b) => a.day - b.day).map((s) => (
+                                        <div key={s.day} className="flex justify-between items-center text-[11px] font-bold">
+                                            <span className={new Date().getDay() === s.day ? "text-orange-600 font-black" : "text-gray-400 dark:text-slate-500"}>{DAY_NAMES[s.day]}</span>
+                                            <span className="text-gray-700 dark:text-slate-300 uppercase">{s.isClosed ? 'Tutup' : s.is24Hours ? '24 Jam' : `${s.open} - ${s.close}`}</span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>

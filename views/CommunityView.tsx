@@ -130,11 +130,9 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
         try {
             await sendWave(currentUser.id, targetUser.id, currentUser.name);
             addToast('success', `Kamu menyapa ${targetUser.name}! 👋`);
-            
             const newCooldowns = { ...waveCooldowns, [targetUser.id]: now };
             setWaveCooldowns(newCooldowns);
             localStorage.setItem('nongkrongr_wave_cooldowns', JSON.stringify(newCooldowns));
-            
             setTimeout(() => setWavingTo(null), 2000);
         } catch (e) {
             addToast('error', 'Gagal mengirim sapaan.');
@@ -154,7 +152,6 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                 const cityFilter = isGPS ? undefined : selectedCityName;
                 const leaderboard = await fetchLeaderboardUsers(cityFilter);
                 setTopUsers(leaderboard);
-                
                 setReviews([]);
                 setPage(1);
                 setHasMoreReviews(true);
@@ -169,7 +166,6 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
 
     useEffect(() => {
         if (activeTab !== 'feed') return;
-
         const channel = supabase.channel('public:reviews:realtime')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reviews' }, async (payload) => {
                 const newRev = payload.new as any;
@@ -177,14 +173,11 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                     .select(`*, profiles(name, avatar_url, role), cafes(name, image, address, latitude, longitude)`)
                     .eq('id', newRev.id)
                     .single();
-                
                 if (data) {
-                    // Logic: Cek apakah ulasan baru masuk radius user
                     if (userLocation && data.cafes?.latitude) {
                          const dist = calculateDistance(userLocation.lat, userLocation.lng, data.cafes.latitude, data.cafes.longitude);
-                         if (dist > 50) return; // Ignore if too far
+                         if (dist > 50) return;
                     }
-
                     const mapped: Review = {
                         id: data.id, userId: data.user_id, userName: data.profiles?.name, 
                         userAvatar: data.profiles?.avatar_url || DEFAULT_USER_AVATAR,
@@ -201,7 +194,6 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                 }
             })
             .subscribe();
-
         return () => { supabase.removeChannel(channel); };
     }, [activeTab, userLocation]);
 
@@ -210,7 +202,6 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
         try {
             const limit = 10;
             const { data } = await fetchCommunityReviewsPaginated(pageNum, limit, userLocation);
-            
             if (data && data.length > 0) {
                 setReviews(prev => {
                     const existingIds = new Set(prev.map(r => r.id));
@@ -237,7 +228,6 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
 
     useEffect(() => {
         if (activeTab !== 'feed' || !hasMoreReviews || isFetchingMore || initialDataLoading) return;
-        
         const observer = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting) {
                 setPage(prev => {
@@ -247,16 +237,47 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                 });
             }
         }, { threshold: 0.5 });
-
         if (loaderRef.current) observer.observe(loaderRef.current);
         return () => { if (loaderRef.current) observer.unobserve(loaderRef.current); };
     }, [hasMoreReviews, isFetchingMore, activeTab, initialDataLoading, loadReviewsBatch]);
+
+    const handleReviewCafeClick = (cafeId?: string) => {
+        if (!cafeId) return;
+        // Cari data kafe lengkap dari list cafes yang ada di props
+        const fullCafeData = cafes.find(c => String(c.id) === String(cafeId));
+        if (fullCafeData) {
+            onCafeClick(fullCafeData);
+        } else {
+            // Fallback: Jika tidak ditemukan (mungkin belum ter-fetch), minimal buat object dummy agar navigasi jalan
+            supabase.from('cafes').select('*').eq('id', cafeId).single().then(({data}) => {
+                if (data) {
+                    // Mapping data DB ke tipe Cafe
+                    const mappedCafe: Cafe = {
+                        id: String(data.id),
+                        name: data.name,
+                        description: data.description || '',
+                        rating: Number(data.rating) || 0,
+                        reviewsCount: data.reviews_count || 0,
+                        address: data.address || '',
+                        coordinates: { lat: Number(data.latitude), lng: Number(data.longitude) },
+                        image: data.image || '',
+                        images: data.images || [],
+                        tags: data.tags || [],
+                        facilities: data.facilities || [],
+                        priceRange: data.price_range || '',
+                        isOpen: data.is_open !== false,
+                        openingHours: data.opening_hours,
+                    };
+                    onCafeClick(mappedCafe);
+                }
+            });
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-[#0F172A] pb-32 transition-colors">
             <SEO title="Komunitas" />
             <div className="max-w-6xl mx-auto px-4 pt-[calc(env(safe-area-inset-top)+5.5rem)]">
-                
                 <div className="flex justify-center mb-10">
                     <div className="bg-white/80 backdrop-blur-xl dark:bg-slate-800/80 p-1.5 rounded-full shadow-2xl border border-white/20 dark:border-slate-700 inline-flex overflow-hidden">
                         <button onClick={() => setActiveTab('feed')} className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-500 ${activeTab === 'feed' ? 'bg-orange-500 text-white shadow-lg' : 'text-gray-400 hover:text-orange-500'}`}>Live Feed</button>
@@ -275,26 +296,34 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                                     </div>
                                 ) : reviews.length > 0 ? (
                                     <>
-                                        {reviews.map(review => (
-                                            <div key={review.id} className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 md:p-8 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-500">
-                                                <div className="flex justify-between items-start mb-6">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-orange-500 to-yellow-500 overflow-hidden shrink-0"><LazyImage src={review.userAvatar} className="w-full h-full rounded-full object-cover border-2 border-white dark:border-slate-800" alt={review.userName} /></div>
-                                                        <div><h4 className="font-bold dark:text-white text-base leading-tight">{review.userName}</h4><p className="text-[11px] text-gray-400 font-medium">{new Date(review.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
+                                        {reviews.map(review => {
+                                            return (
+                                                <div key={review.id} className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-6 md:p-8 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-500">
+                                                    <div className="flex justify-between items-start mb-6">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-orange-500 to-yellow-500 overflow-hidden shrink-0"><LazyImage src={review.userAvatar} className="w-full h-full rounded-full object-cover border-2 border-white dark:border-slate-800" alt={review.userName} /></div>
+                                                            <div><h4 className="font-bold dark:text-white text-base leading-tight">{review.userName}</h4><p className="text-[11px] text-gray-400 font-medium">{new Date(review.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 px-4 py-2 rounded-2xl text-orange-600 dark:text-orange-400 font-bold text-sm shadow-sm"><Star size={16} fill="currentColor" /> {review.rating}.0</div>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 px-4 py-2 rounded-2xl text-orange-600 dark:text-orange-400 font-bold text-sm shadow-sm"><Star size={16} fill="currentColor" /> {review.rating}.0</div>
-                                                </div>
-                                                <p className="text-gray-600 dark:text-slate-300 text-base italic leading-relaxed mb-6 font-medium">"{review.comment}"</p>
-                                                <div className="bg-gray-50 dark:bg-slate-900/50 p-5 rounded-[2rem] cursor-pointer group active:scale-95 transition-transform border border-transparent hover:border-orange-200 dark:hover:border-orange-900/30" onClick={() => { const c = cafes.find(c => c.id === review.cafeId); if(c) onCafeClick(c); }}>
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 shadow-sm"><LazyImage src={getOptimizedImageUrl(review.cafeImage || '', 200)} className="w-full h-full object-cover" alt="Cafe" /></div>
-                                                        <div className="min-w-0 flex-1"><h5 className="font-bold text-sm dark:text-white truncate group-hover:text-orange-500 transition-colors">{review.cafeName}</h5><p className="text-[11px] text-gray-500 truncate flex items-center gap-1"><MapPin size={10} className="text-orange-400" /> {review.cafeAddress}</p></div>
-                                                        <ArrowRight size={16} className="text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
+                                                    <p className="text-gray-600 dark:text-slate-300 text-base italic leading-relaxed mb-6 font-medium">"{review.comment}"</p>
+                                                    
+                                                    <div 
+                                                        className="bg-gray-50 dark:bg-slate-900/50 p-5 rounded-[2rem] cursor-pointer group active:scale-95 transition-all border border-transparent hover:border-orange-200 dark:hover:border-orange-900/30 relative z-10" 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleReviewCafeClick(review.cafeId);
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center gap-4 pointer-events-none">
+                                                            <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 shadow-sm"><LazyImage src={getOptimizedImageUrl(review.cafeImage || '', 200)} className="w-full h-full object-cover" alt="Cafe" /></div>
+                                                            <div className="min-w-0 flex-1"><h5 className="font-bold text-sm dark:text-white truncate group-hover:text-orange-500 transition-colors">{review.cafeName}</h5><p className="text-[11px] text-gray-500 truncate flex items-center gap-1"><MapPin size={10} className="text-orange-400" /> {review.cafeAddress}</p></div>
+                                                            <ArrowRight size={16} className="text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                        
+                                            );
+                                        })}
                                         <div ref={loaderRef} className="py-12 flex flex-col items-center justify-center gap-4 opacity-50">
                                             {isFetchingMore ? (
                                                 <>
@@ -326,7 +355,6 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                                         <RadarVisual active={currentUser?.isLocationShared || false} avatar={currentUser?.avatar_url} />
                                         <h2 className="text-3xl md:text-4xl font-black mb-3 tracking-tighter uppercase italic">Radar Warga</h2>
                                         <p className="text-indigo-200/60 mb-8 max-w-xs mx-auto font-bold text-xs uppercase tracking-widest leading-relaxed">Cari teman ngopi yang aktif di radius 5km darimu.</p>
-                                        
                                         {!currentUser ? (
                                             <div className="flex flex-col items-center gap-4">
                                                 <Button onClick={onLoginReq} className="rounded-2xl h-14 px-12 text-sm font-black uppercase tracking-widest shadow-2xl shadow-indigo-600/30 bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all">Mulai Radar</Button>
@@ -344,7 +372,6 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                                         )}
                                     </div>
                                 </div>
-                                
                                 {currentUser?.isLocationShared && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 animate-in slide-in-from-bottom-4 duration-700">
                                         {loadingRadar ? (
@@ -385,19 +412,15 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                             </div>
                         )}
                     </div>
-
                     <div className="lg:col-span-4">
                         <div className="bg-white dark:bg-[#1E293B] rounded-[3rem] p-6 md:p-8 border border-gray-100 dark:border-slate-700 shadow-2xl sticky top-24">
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex flex-col">
                                     <h3 className="font-bold text-xl flex items-center gap-2 dark:text-white"><Trophy size={24} className="text-yellow-500" /> Leaderboard</h3>
-                                    <p className="text-[11px] font-bold text-orange-500 tracking-tight mt-1 animate-in slide-in-from-left duration-300">
-                                        Pahlawan Nongkrong Lokal
-                                    </p>
+                                    <p className="text-[11px] font-bold text-orange-500 tracking-tight mt-1 animate-in slide-in-from-left duration-300">Pahlawan Nongkrong Lokal</p>
                                 </div>
                                 <Sparkles size={20} className="text-orange-300 animate-pulse" />
                             </div>
-
                             {podiumUsers.length > 0 ? (
                                 <div className="flex justify-center items-end gap-1 md:gap-3 mb-10 mt-10 min-h-[180px]">
                                     {podiumUsers[1] && (
@@ -414,7 +437,6 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                                             </div>
                                         </div>
                                     )}
-
                                     {podiumUsers[0] && (
                                         <div className="flex flex-col items-center animate-in zoom-in duration-700 flex-1 z-10 scale-110">
                                             <div className="relative mb-4 -mt-10">
@@ -431,11 +453,10 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                                             </div>
                                         </div>
                                     )}
-
                                     {podiumUsers[2] && (
                                         <div className="flex flex-col items-center animate-in slide-in-from-bottom duration-700 delay-200 flex-1">
                                             <div className="relative mb-3">
-                                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-[3px] border-orange-300 shadow-xl overflow-hidden aspect-square ring-4 ring-orange-50 dark:ring-orange-900/10">
+                                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-[3px] border-orange-300 shadow-xl overflow-hidden aspect-square ring-4 ring-orange dark:ring-orange-900/10">
                                                     <LazyImage src={podiumUsers[2].avatar_url} className="w-full h-full object-cover" alt="Rank 3" />
                                                 </div>
                                                 <div className="absolute -bottom-1 -right-1 bg-orange-300 text-orange-900 text-[10px] font-black px-2 py-0.5 rounded-lg shadow-md border border-white">#3</div>
@@ -453,7 +474,6 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Belum Ada Aktivitas</p>
                                 </div>
                             )}
-
                             <div className="space-y-3">
                                 {restOfUsers.map((u, idx) => (
                                     <div key={u.id} className="flex items-center gap-4 p-3 rounded-2xl bg-gray-50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 transition-all border border-transparent hover:border-gray-100 dark:hover:border-slate-700 hover:shadow-md group">

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Search, Bell, User as UserIcon, ChevronDown } from 'lucide-react';
+import { MapPin, Search, Bell, User as UserIcon, ChevronDown, Loader2, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { User } from '../types';
 import { LazyImage } from './UI';
 import { debounce } from '../services/dataService';
@@ -17,11 +17,15 @@ interface MobileTopHeaderProps {
     unreadCount: number;
     currentView: string;
     customTitle?: string | null;
+    isLocating?: boolean;
+    locationStatus?: 'prompt' | 'granted' | 'denied' | 'unsupported';
+    onRequestGPS?: () => void;
 }
 
 export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
     user, onSearchClick, 
-    onNotifClick, onProfileClick, unreadCount, currentView, selectedCityName, customTitle
+    onNotifClick, onProfileClick, unreadCount, currentView, selectedCityName, customTitle, 
+    isLocating, locationStatus, onRequestGPS
 }) => {
     const [isScrolled, setIsScrolled] = useState(false);
 
@@ -38,8 +42,7 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
 
     const isHome = currentView === 'HOME';
     
-    // SOLID HEADER LOGIC (No transparency even at the top of Home)
-    // Menggunakan solid white agar teks dan logo selalu terbaca jelas sesuai permintaan Bos.
+    // SOLID HEADER LOGIC
     const bgClass = 'bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 shadow-sm';
     
     // High contrast content colors
@@ -59,6 +62,34 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
 
     const pageTitle = customTitle || getViewTitle(currentView);
 
+    // Dynamic Location Badge UI
+    const renderLocationInfo = () => {
+        if (locationStatus === 'denied') {
+            return (
+                <button 
+                    onClick={onRequestGPS}
+                    className="flex items-center gap-1 mb-0.5 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-lg border border-red-100 dark:border-red-900/40 animate-pulse"
+                >
+                    <ShieldAlert size={10} className="text-red-500" />
+                    <span className="text-[9px] font-black uppercase text-red-600 dark:text-red-400 tracking-tight">GPS Mati ⚠️</span>
+                </button>
+            );
+        }
+
+        return (
+            <div className="flex items-center gap-1 mb-0.5">
+                {isLocating ? (
+                    <Loader2 size={10} className="text-orange-500 animate-spin" />
+                ) : (
+                    <MapPin size={10} className={locationStatus === 'granted' ? "text-green-500" : "text-orange-500"} fill="currentColor" />
+                )}
+                <span className={`text-[10px] font-black uppercase tracking-widest truncate max-w-[120px] ${subTextColor} ${isLocating ? 'animate-pulse' : ''}`}>
+                    {String(selectedCityName)}
+                </span>
+            </div>
+        );
+    };
+
     return (
         <div className={`
             fixed top-0 left-0 right-0 z-[60] md:hidden transition-all duration-300
@@ -68,13 +99,7 @@ export const MobileTopHeader: React.FC<MobileTopHeaderProps> = ({
             <div className="flex items-center justify-between h-14">
                 <div className="flex items-center gap-3 overflow-hidden">
                     <div className="flex flex-col">
-                        {/* Lokasi selalu di atas judul (High Hierarchy) */}
-                        <div className="flex items-center gap-1 mb-0.5">
-                            <MapPin size={10} className="text-orange-500" fill="currentColor" />
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${subTextColor}`}>
-                                {String(selectedCityName)}
-                            </span>
-                        </div>
+                        {renderLocationInfo()}
                         
                         {isHome ? (
                             <img 
